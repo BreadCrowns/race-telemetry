@@ -3,16 +3,34 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Pit Wall Command & Autocross Timer</title>
+  <title>Pit Wall Command & Autocross Dashboard</title>
   
   <!-- Leaflet CSS for Map -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-    body { background: #0b0f19; color: #f8fafc; padding: 16px; max-width: 680px; margin: 0 auto; display: flex; flex-direction: column; gap: 14px; }
-    header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #1e293b; padding-bottom: 10px; }
-    h1 { font-size: 17px; font-weight: 800; color: #f97316; letter-spacing: 1px; text-transform: uppercase; }
+    body { 
+      background: #0b0f19; 
+      color: #f8fafc; 
+      padding: 16px; 
+      min-height: 100vh;
+      display: flex; 
+      flex-direction: column; 
+      gap: 14px; 
+    }
+
+    header { 
+      display: flex; 
+      justify-content: space-between; 
+      align-items: center; 
+      border-bottom: 1px solid #1e293b; 
+      padding-bottom: 10px; 
+      max-width: 1400px;
+      margin: 0 auto;
+      width: 100%;
+    }
+    h1 { font-size: 18px; font-weight: 800; color: #f97316; letter-spacing: 1px; text-transform: uppercase; }
 
     /* Telemetry Watchdog Banner */
     .telemetry-banner {
@@ -24,6 +42,9 @@
       border: 1px solid #334155;
       background: #1e293b;
       transition: all 0.3s ease;
+      max-width: 1400px;
+      margin: 0 auto;
+      width: 100%;
     }
     .telemetry-banner.live { background: rgba(34, 197, 94, 0.12); border-color: #22c55e; }
     .telemetry-banner.stale { background: rgba(234, 179, 8, 0.12); border-color: #eab308; }
@@ -42,34 +63,69 @@
     .signal-detail { font-size: 11px; color: #94a3b8; font-family: ui-monospace, monospace; }
     .ping-display { font-size: 11px; font-weight: 700; font-family: ui-monospace, monospace; padding: 4px 8px; border-radius: 6px; background: rgba(0,0,0,0.3); color: #cbd5e1; }
 
+    /* Responsive Grid Layout */
+    .dashboard-container {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 14px;
+      max-width: 1400px;
+      margin: 0 auto;
+      width: 100%;
+    }
+
+    @media (min-width: 900px) {
+      .dashboard-container {
+        grid-template-columns: 420px 1fr;
+        align-items: start;
+      }
+    }
+
+    .col-left, .col-right {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
     /* Panels */
     .panel { background: #131b2e; border: 1px solid #1e293b; border-radius: 10px; padding: 14px; }
     .panel-title { font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px; color: #94a3b8; font-weight: 700; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
 
-    /* Live HUD Preview Stage */
-    .preview-stage { background: #060913; border: 1px dashed #334155; border-radius: 8px; padding: 20px 14px; display: flex; justify-content: center; align-items: center; }
-    .hud-card { display: inline-flex; flex-direction: column; background: rgba(10, 14, 23, 0.95); border: 1px solid rgba(255, 255, 255, 0.1); border-left: 6px solid #f97316; border-radius: 8px; padding: 10px 18px; color: #fff; box-shadow: 0 10px 30px rgba(0,0,0,0.6); gap: 6px; }
-    .hud-main-row { display: flex; align-items: center; }
-    .driver-col { display: flex; flex-direction: column; margin-right: 20px; padding-right: 18px; border-right: 1px solid rgba(255, 255, 255, 0.15); }
+    /* Live HUD Preview */
+    .preview-stage { background: #060913; border: 1px dashed #334155; border-radius: 8px; padding: 18px 14px; display: flex; justify-content: center; align-items: center; }
+    .hud-card { display: inline-flex; flex-direction: column; background: rgba(10, 14, 23, 0.95); border: 1px solid rgba(255, 255, 255, 0.1); border-left: 6px solid #f97316; border-radius: 8px; padding: 10px 18px; color: #fff; box-shadow: 0 10px 30px rgba(0,0,0,0.6); gap: 6px; width: 100%; max-width: 360px; }
+    .hud-main-row { display: flex; align-items: center; justify-content: space-between; }
+    .driver-col { display: flex; flex-direction: column; margin-right: 14px; padding-right: 14px; border-right: 1px solid rgba(255, 255, 255, 0.15); flex: 1; }
     .driver-tag { font-size: 9px; font-weight: 800; color: #f97316; letter-spacing: 2px; text-transform: uppercase; }
-    .driver-val { font-size: 20px; font-weight: 700; max-width: 140px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .driver-val { font-size: 18px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .status-badge { font-size: 9px; font-weight: 800; padding: 2px 6px; border-radius: 4px; background: #334155; color: #cbd5e1; align-self: flex-start; margin-top: 3px; }
     .status-badge.in-pits { background: #b45309; color: #fef3c7; }
     .status-badge.driver-swap { background: #6d28d9; color: #ede9fe; }
     .speed-col { display: flex; align-items: baseline; gap: 5px; }
-    .speed-val { font-size: 46px; font-weight: 900; letter-spacing: -2px; font-variant-numeric: tabular-nums; }
+    .speed-val { font-size: 44px; font-weight: 900; letter-spacing: -2px; font-variant-numeric: tabular-nums; }
     .unit-val { font-size: 13px; font-weight: 700; color: #94a3b8; }
     .gps-preview-bar { display: flex; align-items: center; gap: 8px; font-family: ui-monospace, monospace; font-size: 10px; color: #94a3b8; border-top: 1px solid rgba(255, 255, 255, 0.08); padding-top: 4px; }
     .gps-coords { color: #cbd5e1; }
     .gps-acc { color: #64748b; margin-left: auto; }
 
-    /* Map Box */
-    #map { height: 260px; width: 100%; border-radius: 8px; border: 1px solid #334155; }
+    /* Map Box (Expands dynamically on desktop) */
+    #map { 
+      height: 320px; 
+      width: 100%; 
+      border-radius: 8px; 
+      border: 1px solid #334155; 
+      min-height: 280px;
+    }
+
+    @media (min-width: 900px) {
+      #map {
+        height: 420px;
+      }
+    }
 
     /* Autocross Timing Box */
     .timer-display { text-align: center; padding: 12px; background: #060913; border: 1px solid #1e293b; border-radius: 8px; margin-bottom: 10px; }
     .timer-status { font-size: 10px; font-weight: 800; letter-spacing: 1.5px; color: #f97316; text-transform: uppercase; margin-bottom: 2px; }
-    .timer-clock { font-size: 42px; font-weight: 900; font-family: ui-monospace, monospace; letter-spacing: -1px; color: #ffffff; }
+    .timer-clock { font-size: 46px; font-weight: 900; font-family: ui-monospace, monospace; letter-spacing: -1px; color: #ffffff; }
     .timer-gate-info { display: flex; justify-content: space-around; font-size: 11px; color: #94a3b8; margin-top: 6px; font-family: ui-monospace, monospace; }
 
     .gate-controls { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 10px; }
@@ -79,8 +135,8 @@
 
     /* Lap Times List */
     .laps-table { width: 100%; font-size: 12px; border-collapse: collapse; margin-top: 8px; font-family: ui-monospace, monospace; }
-    .laps-table th { text-align: left; color: #64748b; padding: 4px 6px; border-bottom: 1px solid #1e293b; font-size: 10px; }
-    .laps-table td { padding: 5px 6px; border-bottom: 1px solid #0f172a; color: #cbd5e1; }
+    .laps-table th { text-align: left; color: #64748b; padding: 6px 8px; border-bottom: 1px solid #1e293b; font-size: 10px; }
+    .laps-table td { padding: 6px 8px; border-bottom: 1px solid #0f172a; color: #cbd5e1; }
     .best-lap { color: #4ade80 !important; font-weight: 800; }
 
     /* Form Controls */
@@ -90,11 +146,11 @@
     input[type="text"]:focus { border-color: #f97316; }
 
     .quick-drivers { display: flex; gap: 6px; margin-top: 6px; flex-wrap: wrap; }
-    .chip { background: #1e293b; color: #cbd5e1; border: 1px solid #334155; padding: 4px 10px; border-radius: 16px; font-size: 11px; cursor: pointer; }
+    .chip { background: #1e293b; color: #cbd5e1; border: 1px solid #334155; padding: 5px 12px; border-radius: 16px; font-size: 11px; cursor: pointer; }
     .chip:active { background: #f97316; color: white; }
 
     .status-btn-group { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; }
-    .status-btn { background: #1e293b; color: #cbd5e1; border: 1px solid #334155; padding: 8px; border-radius: 6px; font-weight: 700; font-size: 11px; cursor: pointer; text-align: center; }
+    .status-btn { background: #1e293b; color: #cbd5e1; border: 1px solid #334155; padding: 10px 6px; border-radius: 6px; font-weight: 700; font-size: 11px; cursor: pointer; text-align: center; }
     .status-btn.active { background: #f97316; color: white; border-color: #f97316; }
   </style>
 </head>
@@ -102,7 +158,7 @@
 
   <header>
     <h1>Pit Wall Command</h1>
-    <span style="font-size: 11px; color: #64748b; font-family: ui-monospace, monospace;">LIVE TELEMETRY</span>
+    <span style="font-size: 11px; color: #64748b; font-family: ui-monospace, monospace;">REAL-TIME AUTOCROSS</span>
   </header>
 
   <!-- Realtime GPS Signal Status -->
@@ -117,95 +173,106 @@
     <div class="ping-display" id="watchdog-ping">-- ms</div>
   </div>
 
-  <!-- PRISM Live Overlay Preview -->
-  <div class="panel">
-    <div class="panel-title">PRISM Live HUD Preview</div>
-    <div class="preview-stage">
-      <div class="hud-card">
-        <div class="hud-main-row">
-          <div class="driver-col">
-            <span class="driver-tag">Driver</span>
-            <span class="driver-val" id="prev-driver">Driver 1</span>
-            <span class="status-badge" id="prev-status">ON TRACK</span>
-          </div>
-          <div class="speed-col">
-            <span class="speed-val" id="prev-speed">0</span>
-            <span class="unit-val">MPH</span>
-          </div>
-        </div>
-        <div class="gps-preview-bar">
-          <span class="gps-coords" id="prev-gps-coords">--.----°, --.----°</span>
-          <span class="gps-acc" id="prev-gps-acc">OFFLINE</span>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Live Map View -->
-  <div class="panel">
-    <div class="panel-title">
-      <span>Track Map & Telemetry Trail</span>
-      <span id="map-speed" style="color: #f97316; font-size: 12px;">0 MPH</span>
-    </div>
-    <div id="map"></div>
-  </div>
-
-  <!-- Autocross Lap Timer & Gate Setup -->
-  <div class="panel">
-    <div class="panel-title">Autocross Automated Lap Timer</div>
+  <!-- Responsive Command Layout -->
+  <div class="dashboard-container">
     
-    <div class="timer-display">
-      <div class="timer-status" id="timer-status">DISARMED (SET GATES)</div>
-      <div class="timer-clock" id="timer-clock">00:00.00</div>
-      <div class="timer-gate-info">
-        <span id="start-dist-label">Start Gate: Unset</span>
-        <span id="finish-dist-label">Finish Gate: Unset</span>
+    <!-- Left Column: HUD & Driver Controls -->
+    <div class="col-left">
+      <!-- PRISM Live Overlay Preview -->
+      <div class="panel">
+        <div class="panel-title">PRISM Live HUD Preview</div>
+        <div class="preview-stage">
+          <div class="hud-card">
+            <div class="hud-main-row">
+              <div class="driver-col">
+                <span class="driver-tag">Driver</span>
+                <span class="driver-val" id="prev-driver">Driver 1</span>
+                <span class="status-badge" id="prev-status">ON TRACK</span>
+              </div>
+              <div class="speed-col">
+                <span class="speed-val" id="prev-speed">0</span>
+                <span class="unit-val">MPH</span>
+              </div>
+            </div>
+            <div class="gps-preview-bar">
+              <span class="gps-coords" id="prev-gps-coords">--.----°, --.----°</span>
+              <span class="gps-acc" id="prev-gps-acc">OFFLINE</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Driver Stint & Status Control (Instant Sync) -->
+      <div class="panel">
+        <div class="panel-title">Driver Stint Control (Instant Sync)</div>
+        <div class="field">
+          <label for="driver-input">Active Driver</label>
+          <input type="text" id="driver-input" placeholder="Type driver name..." value="Driver 1" />
+          <div class="quick-drivers">
+            <button type="button" class="chip" onclick="quickSetDriver('Jeff')">Jeff</button>
+            <button type="button" class="chip" onclick="quickSetDriver('Sylvia')">Sylvia</button>
+            <button type="button" class="chip" onclick="quickSetDriver('Driver 2')">Driver 2</button>
+          </div>
+        </div>
+
+        <div class="field">
+          <label>Car State Banner</label>
+          <div class="status-btn-group">
+            <button type="button" class="status-btn active" id="btn-track" onclick="instantSetStatus('ON TRACK')">ON TRACK</button>
+            <button type="button" class="status-btn" id="btn-pit" onclick="instantSetStatus('IN PITS')">IN PITS</button>
+            <button type="button" class="status-btn" id="btn-change" onclick="instantSetStatus('DRIVER SWAP')">DRIVER SWAP</button>
+          </div>
+        </div>
       </div>
     </div>
 
-    <div class="gate-controls">
-      <button type="button" class="btn-gate" id="btn-set-start" onclick="setGateFromCurrentPos('start')">📍 Set Start</button>
-      <button type="button" class="btn-gate" id="btn-set-finish" onclick="setGateFromCurrentPos('finish')">🏁 Set Finish</button>
-      <button type="button" class="btn-gate" onclick="resetTimerState()">🔄 Reset Timer</button>
-    </div>
+    <!-- Right Column: Interactive Map & Autocross Gate Timing -->
+    <div class="col-right">
+      <!-- Live Map View -->
+      <div class="panel">
+        <div class="panel-title">
+          <span>Track Map & Telemetry Trail</span>
+          <span id="map-speed" style="color: #f97316; font-size: 12px; font-weight: 800;">0 MPH</span>
+        </div>
+        <div id="map"></div>
+      </div>
 
-    <!-- Times Table -->
-    <table class="laps-table">
-      <thead>
-        <tr>
-          <th>RUN #</th>
-          <th>DRIVER</th>
-          <th>TIME</th>
-          <th>STATUS</th>
-        </tr>
-      </thead>
-      <tbody id="laps-body">
-        <tr><td colspan="4" style="color:#64748b; text-align:center;">No timed runs recorded yet</td></tr>
-      </tbody>
-    </table>
-  </div>
+      <!-- Autocross Lap Timer & Gate Setup -->
+      <div class="panel">
+        <div class="panel-title">Autocross Automated Lap Timer</div>
+        
+        <div class="timer-display">
+          <div class="timer-status" id="timer-status">DISARMED (SET GATES)</div>
+          <div class="timer-clock" id="timer-clock">00:00.00</div>
+          <div class="timer-gate-info">
+            <span id="start-dist-label">Start Gate: Unset</span>
+            <span id="finish-dist-label">Finish Gate: Unset</span>
+          </div>
+        </div>
 
-  <!-- Driver Stint & Status Control (Instant Sync) -->
-  <div class="panel">
-    <div class="panel-title">Driver Stint Control (Instant Sync)</div>
-    <div class="field">
-      <label for="driver-input">Active Driver</label>
-      <input type="text" id="driver-input" placeholder="Type driver name..." value="Driver 1" />
-      <div class="quick-drivers">
-        <button type="button" class="chip" onclick="quickSetDriver('Jeff')">Jeff</button>
-        <button type="button" class="chip" onclick="quickSetDriver('Sylvia')">Sylvia</button>
-        <button type="button" class="chip" onclick="quickSetDriver('Driver 2')">Driver 2</button>
+        <div class="gate-controls">
+          <button type="button" class="btn-gate" id="btn-set-start" onclick="setGateFromCurrentPos('start')">📍 Set Start</button>
+          <button type="button" class="btn-gate" id="btn-set-finish" onclick="setGateFromCurrentPos('finish')">🏁 Set Finish</button>
+          <button type="button" class="btn-gate" onclick="resetTimerState()">🔄 Reset Timer</button>
+        </div>
+
+        <!-- Times Table -->
+        <table class="laps-table">
+          <thead>
+            <tr>
+              <th>RUN #</th>
+              <th>DRIVER</th>
+              <th>TIME</th>
+              <th>STATUS</th>
+            </tr>
+          </thead>
+          <tbody id="laps-body">
+            <tr><td colspan="4" style="color:#64748b; text-align:center;">No timed runs recorded yet</td></tr>
+          </tbody>
+        </table>
       </div>
     </div>
 
-    <div class="field">
-      <label>Car State Banner</label>
-      <div class="status-btn-group">
-        <button type="button" class="status-btn active" id="btn-track" onclick="instantSetStatus('ON TRACK')">ON TRACK</button>
-        <button type="button" class="status-btn" id="btn-pit" onclick="instantSetStatus('IN PITS')">IN PITS</button>
-        <button type="button" class="status-btn" id="btn-change" onclick="instantSetStatus('DRIVER SWAP')">DRIVER SWAP</button>
-      </div>
-    </div>
   </div>
 
   <!-- Leaflet JS for Map -->
@@ -273,6 +340,11 @@
     let carMarker = null;
     const pathLine = L.polyline([], { color: '#f97316', weight: 4, opacity: 0.8 }).addTo(map);
     let mapCenteredOnce = false;
+
+    // Invalidate map size on layout resize so it never clips
+    window.addEventListener('resize', () => {
+      map.invalidateSize();
+    });
 
     // --- AUTOCROSS GATES & TIMING ENGINE ---
     const GATE_TRIGGER_RADIUS_METERS = 12;
@@ -494,7 +566,7 @@
         prevGpsCoords.textContent = `${lat.toFixed(4)}°, ${lon.toFixed(4)}°`;
         prevGpsAcc.textContent = `±${latestAccuracy}m`;
 
-        // Update Map
+        // Update Map Marker & Trail
         if (!carMarker) {
           carMarker = L.marker([lat, lon], { icon: carIcon }).addTo(map);
         } else {
