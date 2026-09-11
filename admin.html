@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Pit Wall Controller & GPS</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+    body {
+      background: #090d16;
+      color: #f1f5f9;
+      padding: 16px;
+      max-width: 520px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    h1 {
+      font-size: 18px;
+      color: #f97316;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+    .card {
+      background: #131b2e;
+      border: 1px solid #1e293b;
+      border-radius: 10px;
+      padding: 16px;
+    }
+    .card h2 {
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: #64748b;
+      margin-bottom: 12px;
+    }
+    .preview-canvas {
+      background: #050811;
+      padding: 18px;
+      border-radius: 8px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+    .hud-box {
+      display: inline-flex;
+      align-items: center;
+      background: rgba(10, 14, 23, 0.95);
+      border-left: 5px solid #f97316;
+      border-radius: 8px;
+      padding: 10px 18px;
+      color: #ffffff;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+    }
+    .driver-col {
+      display: flex;
+      flex-direction: column;
+      margin-right: 18px;
+      padding-right: 16px;
+      border-right: 1px solid rgba(255, 255, 255, 0.15);
+    }
+    .driver-label {
+      font-size: 9px;
+      font-weight: 800;
+      color: #f97316;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+    }
+    .driver-val {
+      font-size: 18px;
+      font-weight: 700;
+      max-width: 120px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .speed-col {
+      display: flex;
+      align-items: baseline;
+      gap: 5px;
+    }
+    .speed-val {
+      font-size: 42px;
+      font-weight: 900;
+      letter-spacing: -1px;
+      font-variant-numeric: tabular-nums;
+    }
+    .unit-val {
+      font-size: 12px;
+      font-weight: 700;
+      color: #94a3b8;
+    }
+    .form-row {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      margin-bottom: 12px;
+    }
+    label {
+      font-size: 12px;
+      color: #94a3b8;
+    }
+    input, select {
+      background: #0a0f1d;
+      border: 1px solid #334155;
+      padding: 12px;
+      border-radius: 6px;
+      color: #fff;
+      font-size: 16px;
+      outline: none;
+    }
+    input:focus, select:focus {
+      border-color: #f97316;
+    }
+    .btn {
+      background: #ea580c;
+      color: white;
+      border: none;
+      padding: 14px;
+      font-weight: 700;
+      border-radius: 6px;
+      font-size: 15px;
+      cursor: pointer;
+      width: 100%;
+    }
+    .btn-green {
+      background: #16a34a;
+    }
+    .btn-red {
+      background: #dc2626;
+    }
+    .status {
+      font-size: 12px;
+      color: #94a3b8;
+      margin-top: 8px;
+      line-height: 1.4;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Cockpit Telemetry Controller</h1>
+
+  <!-- Live Overlay Preview -->
+  <div class="card">
+    <h2>Live Preview</h2>
+    <div class="preview-canvas">
+      <div class="hud-box">
+        <div class="driver-col">
+          <span class="driver-label">Driver</span>
+          <span class="driver-val" id="prev-driver">Driver 1</span>
+        </div>
+        <div class="speed-col">
+          <span class="speed-val" id="prev-speed">0</span>
+          <span class="unit-val" id="prev-unit">MPH</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Driver Controls -->
+  <div class="card">
+    <h2>Race Session Info</h2>
+    <div class="form-row">
+      <label for="driver-name-in">Driver Name</label>
+      <input type="text" id="driver-name-in" value="Driver 1" placeholder="Enter driver name" />
+    </div>
+    <div class="form-row">
+      <label for="unit-select">Speed Unit</label>
+      <select id="unit-select">
+        <option value="MPH">MPH</option>
+        <option value="KMH">KM/H</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- GPS Sender -->
+  <div class="card">
+    <h2>Cockpit Phone GPS</h2>
+    <button class="btn btn-green" id="gps-toggle-btn" type="button">Start GPS Tracking</button>
+    <div class="status" id="gps-log">GPS idle. Mount phone with a clear windshield view.</div>
+  </div>
+
+  <!-- Firebase SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+
+  <script>
+    const firebaseConfig = {
+      apiKey: "YOUR_API_KEY",
+      authDomain: "YOUR_PROJECT.firebaseapp.com",
+      databaseURL: "https://YOUR_PROJECT-default-rtdb.firebaseio.com",
+      projectId: "YOUR_PROJECT",
+      storageBucket: "YOUR_PROJECT.appspot.com",
+      messagingSenderId: "YOUR_SENDER_ID",
+      appId: "YOUR_APP_ID"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database().ref("raceTelemetry");
+
+    const driverIn = document.getElementById("driver-name-in");
+    const unitSelect = document.getElementById("unit-select");
+    const gpsBtn = document.getElementById("gps-toggle-btn");
+    const gpsLog = document.getElementById("gps-log");
+
+    const prevDriver = document.getElementById("prev-driver");
+    const prevSpeed = document.getElementById("prev-speed");
+    const prevUnit = document.getElementById("prev-unit");
+
+    let watchId = null;
+    let wakeLock = null;
+    let lastPush = 0;
+
+    // Keep preview in sync with DB
+    db.on("value", (snap) => {
+      const data = snap.val();
+      if (!data) return;
+      prevDriver.textContent = data.driver || "Driver";
+      prevSpeed.textContent = Math.round(data.speed || 0);
+      prevUnit.textContent = data.unit || "MPH";
+    });
+
+    // Real-time update as you type
+    driverIn.addEventListener("input", (e) => {
+      db.update({ driver: e.target.value.trim() });
+    });
+
+    unitSelect.addEventListener("change", (e) => {
+      db.update({ unit: e.target.value });
+    });
+
+    // Keep screen awake while tracking
+    async function requestWakeLock() {
+      try {
+        if ("wakeLock" in navigator) {
+          wakeLock = await navigator.wakeLock.request("screen");
+        }
+      } catch (err) {
+        console.warn("WakeLock error:", err);
+      }
+    }
+
+    gpsBtn.addEventListener("click", () => {
+      if (watchId !== null) {
+        // Stop
+        navigator.geolocation.clearWatch(watchId);
+        watchId = null;
+        if (wakeLock) { wakeLock.release(); wakeLock = null; }
+        gpsBtn.textContent = "Start GPS Tracking";
+        gpsBtn.className = "btn btn-green";
+        gpsLog.textContent = "Tracking stopped.";
+        db.update({ speed: 0 });
+      } else {
+        // Start
+        if (!navigator.geolocation) {
+          gpsLog.textContent = "Geolocation unsupported on this browser.";
+          return;
+        }
+
+        requestWakeLock();
+        gpsBtn.textContent = "Stop GPS Tracking";
+        gpsBtn.className = "btn btn-red";
+        gpsLog.textContent = "Locking GPS satellites...";
+
+        watchId = navigator.geolocation.watchPosition(
+          (pos) => {
+            const now = Date.now();
+            // Throttle database pushes to once every 750ms to save battery and cell data
+            if (now - lastPush < 750) return;
+            lastPush = now;
+
+            const mps = pos.coords.speed || 0;
+            const unit = unitSelect.value;
+            const calcSpeed = unit === "MPH" ? (mps * 2.23694) : (mps * 3.6);
+
+            db.update({
+              speed: calcSpeed,
+              driver: driverIn.value.trim(),
+              unit: unit,
+              accuracy: Math.round(pos.coords.accuracy || 0),
+              timestamp: now
+            });
+
+            gpsLog.textContent = `Active | Speed: ${Math.round(calcSpeed)} ${unit} | Accuracy: ±${Math.round(pos.coords.accuracy)}m`;
+          },
+          (err) => {
+            gpsLog.textContent = `GPS Error (${err.code}): ${err.message}`;
+          },
+          {
+            enableHighAccuracy: true,
+            maximumAge: 500,
+            timeout: 5000
+          }
+        );
+      }
+    });
+  </script>
+</body>
+</html>
