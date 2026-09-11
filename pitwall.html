@@ -136,7 +136,7 @@
       <div class="status-beacon"></div>
       <div class="signal-meta">
         <span class="signal-title" id="watchdog-title">GPS OFFLINE</span>
-        <span class="signal-detail" id="watchdog-desc">No telemetry received from cockpit</span>
+        <span class="signal-detail" id="watchdog-desc">No telemetry received from OwnTracks</span>
       </div>
     </div>
     <div class="ping-display" id="watchdog-ping">-- ms</div>
@@ -231,60 +231,81 @@
 
     // Database listener
     db.on("value", (snap) => {
-      const data = snap.val();
-      if (!data) return;
+      const root = snap.val();
+      if (!root) return;
 
-      prevDriver.textContent = data.driver || "Driver";
-      prevSpeed.textContent = Math.round(data.speed || 0);
-
-      if (document.activeElement !== driverInput && data.driver) {
-        driverInput.value = data.driver;
+      prevDriver.textContent = root.driver || "Driver";
+      if (document.activeElement !== driverInput && root.driver) {
+        driverInput.value = root.driver;
       }
-      if (data.status) updateStatusUI(data.status);
+      if (root.status) updateStatusUI(root.status);
 
-      if (data.lastGpsTimestamp) {
-        lastKnownTimestamp = data.lastGpsTimestamp;
-        latestAccuracy = Math.round(data.accuracy || 0);
+      // Extract telemetry (handles direct keys OR OwnTracks nested POST keys)
+      let telem = root;
+      if (!root.lat && !root.latitude) {
+        const keys = Object.keys(root).filter(k => typeof root[k] === 'object' && root[k] !== null);
+        if (keys.length > 0) {
+          keys.sort((a, b) => (root[a].tst || root[a].lastGpsTimestamp || 0) - (root[b].tst || root[b].lastGpsTimestamp || 0));
+          telem = root[keys[keys.length - 1]];
+        }
       }
 
-      if (data.latitude && data.longitude) {
-        prevGpsCoords.textContent = `${Number(data.latitude).toFixed(4)}°, ${Number(data.longitude).toFixed(4)}°`;
-        prevGpsAcc.textContent = `±${latestAccuracy}m`;
+      // Convert speed from km/h
+      let calcMph = 0;
+      if (telem.vel !== undefined && telem.vel !== null) {
+        calcMph = Number(telem.vel) * 0.621371;
+      } else if (telem.speedMps !== undefined && telem.speedMps !== null) {
+        calcMph = Number(telem.speedMps) * 2.23694;
+      } else if (telem.speed !== undefined && telem.speed !== null) {
+        calcMph = Number(telem.speed);
+      }
+      if (calcMph < 2.5 || isNaN(calcMph)) calcMph = 0;
+      prevSpeed.textContent = Math.round(calcMph);
+
+      // Coordinate and timestamp handling
+      const lat = telem.lat !== undefined ? telem.lat : telem.latitude;
+      const lon = telem.lon !== undefined ? telem.lon : telem.longitude;
+      const acc = telem.acc !== undefined ? telem.acc : (telem.accuracy || 0);
+      latestAccuracy = Math.round(acc);
+
+      let ts = telem.tst ? (telem.tst * 1000) : (telem.lastGpsTimestamp || 0);
+      if (ts) lastKnownTimestamp = ts;
+
+      if (lat && lon) {
+        prevGpsCoords.textContent = `${Number(lat).toFixed(4)}°, ${Number(lon).toFixed(4)}°`;
       }
     });
 
     // 1-Second Watchdog Monitor Loop
     setInterval(() => {
       if (!lastKnownTimestamp) {
-        setWatchdogState("offline", "GPS OFFLINE", "Waiting for cockpit transmitter to start", "--");
+        setWatchdogState("offline", "GPS OFFLINE", "Waiting for OwnTracks to transmit", "--");
         return;
       }
 
       const elapsedMs = Date.now() - lastKnownTimestamp;
       const elapsedSec = (elapsedMs / 1000).toFixed(1);
 
-      if (elapsedMs <= 3000) {
-        // Active & healthy (< 3 seconds)
+      if (elapsedMs <= 4000) {
         setWatchdogState(
           "live", 
           "COCKPIT LIVE", 
-          `Transmitting | Accuracy: ±${latestAccuracy}m`, 
+          `OwnTracks Active | Acc: ±${latestAccuracy}m`, 
           `${elapsedMs} ms ago`
         );
-      } else if (elapsedMs <= 6000) {
-        // Degraded / Weak Signal (3 to 6 seconds)
+        prevGpsAcc.textContent = `±${latestAccuracy}m`;
+      } else if (elapsedMs <= 8000) {
         setWatchdogState(
           "stale", 
           "SIGNAL LAG", 
-          `Delayed | Last update ${elapsedSec}s ago`, 
+          `Delayed | Last packet ${elapsedSec}s ago`, 
           `${elapsedSec}s`
         );
       } else {
-        // Dropped / Offline (> 6 seconds)
         setWatchdogState(
           "offline", 
-          "TRANSMITTER HALTED", 
-          `No data for ${Math.round(elapsedSec)}s (Check phone screen / GPS)`, 
+          "SIGNAL LOST", 
+          `No packet for ${Math.round(elapsedSec)}s (Check OwnTracks)`, 
           `${Math.round(elapsedSec)}s`
         );
         prevGpsAcc.textContent = "DROPPED";
