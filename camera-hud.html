@@ -213,7 +213,7 @@
       text-shadow: 0 1px 3px #000;
     }
 
-    /* Slide-out Settings Drawer */
+    /* Settings Flyout Drawer */
     .drawer-overlay {
       position: fixed;
       top: 0;
@@ -318,7 +318,7 @@
       background: #334155;
     }
 
-    /* Initial Fullscreen Gate */
+    /* Initial Gate */
     #start-overlay-btn {
       position: absolute;
       top: 50%;
@@ -376,7 +376,7 @@
     </div>
   </div>
 
-  <!-- Slide-out Settings Menu -->
+  <!-- Settings Drawer -->
   <div class="drawer-overlay" id="drawer-overlay"></div>
   <div class="settings-drawer" id="settings-drawer">
     <div class="drawer-header">
@@ -384,7 +384,6 @@
       <button class="btn-close" id="btn-close-drawer" type="button">✕</button>
     </div>
 
-    <!-- Lens Selection -->
     <div class="field-group">
       <label class="field-label" for="camera-select">Select Lens / Camera</label>
       <select class="camera-dropdown" id="camera-select">
@@ -456,7 +455,11 @@
     let rawAx = 0;
     let rawAy = 0;
 
-    // Listen to Firebase for pit wall updates
+    // Stationary noise gate thresholds
+    const SPEED_CUTOFF_MPH = 2.5; 
+    const SPEED_CUTOFF_KMH = 4.0;
+
+    // Sync state with Firebase from Pit Wall
     db.on("value", (snap) => {
       const val = snap.val();
       if (!val) return;
@@ -471,15 +474,21 @@
       if (st === "DRIVER SWAP") statusVal.classList.add("driver-swap");
     });
 
-    // Speed interpolation
+    // Speed interpolation with fast decay and hard zero clamp
     function animate() {
-      smoothSpeed += (targetSpeed - smoothSpeed) * 0.15;
+      if (targetSpeed === 0) {
+        smoothSpeed += (0 - smoothSpeed) * 0.35;
+        if (smoothSpeed < 0.4) smoothSpeed = 0;
+      } else {
+        smoothSpeed += (targetSpeed - smoothSpeed) * 0.18;
+      }
+
       speedVal.textContent = Math.round(smoothSpeed);
       requestAnimationFrame(animate);
     }
     requestAnimationFrame(animate);
 
-    // Enumerate all cameras on the device
+    // Camera scanning
     async function populateCameras() {
       try {
         const devices = await navigator.mediaDevices.enumerateDevices();
@@ -493,11 +502,10 @@
           opt.value = dev.deviceId;
           const label = dev.label.toLowerCase();
           
-          // Friendly name formatting
           let cleanName = dev.label || `Camera ${index + 1}`;
           if (label.includes("ultra") || label.includes("wide") || label.includes("0.5x")) {
             cleanName = `🏎️ Ultra-Wide Lens (${dev.label})`;
-            if (!preferredId) preferredId = dev.deviceId; // Auto-select ultra-wide if found
+            if (!preferredId) preferredId = dev.deviceId;
           } else if (label.includes("back") || label.includes("environment")) {
             cleanName = `📷 Rear Standard (${dev.label})`;
           } else if (label.includes("front") || label.includes("user")) {
@@ -509,7 +517,6 @@
           cameraSelect.appendChild(opt);
         });
 
-        // Default to ultra-wide or first back camera
         if (!selectedDeviceId && preferredId) {
           selectedDeviceId = preferredId;
           cameraSelect.value = preferredId;
@@ -519,7 +526,7 @@
       }
     }
 
-    // Launch camera with Stabilization & High-Res constraints
+    // Camera initiation
     async function startCamera(deviceId = null) {
       if (currentStream) {
         currentStream.getTracks().forEach(t => t.stop());
@@ -529,7 +536,6 @@
         width: { ideal: 3840, min: 1920 },
         height: { ideal: 2160, min: 1080 },
         frameRate: { ideal: 60, min: 30 },
-        // Native browser stabilization request
         imageStabilization: true
       };
 
@@ -551,12 +557,10 @@
         selectedDeviceId = settings.deviceId;
         isFrontCamera = settings.facingMode === "user";
 
-        // Refresh dropdown labels once camera permissions are granted
         await populateCameras();
         if (selectedDeviceId) cameraSelect.value = selectedDeviceId;
 
       } catch (err) {
-        // Fallback for devices that reject ultra-high res constraints
         currentStream = await navigator.mediaDevices.getUserMedia({
           audio: false,
           video: deviceId ? { deviceId: { exact: deviceId } } : { facingMode: "environment" }
@@ -565,13 +569,11 @@
       }
     }
 
-    // Camera Switch from Dropdown
     cameraSelect.addEventListener("change", async (e) => {
       selectedDeviceId = e.target.value;
       await startCamera(selectedDeviceId);
     });
 
-    // Drawer Management
     function openDrawer() {
       drawerOverlay.classList.add("open");
       settingsDrawer.classList.add("open");
@@ -585,7 +587,6 @@
     btnCloseDrawer.addEventListener("click", closeDrawer);
     drawerOverlay.addEventListener("click", closeDrawer);
 
-    // Zero Gyro / Mount angle
     btnZeroG.addEventListener("click", () => {
       offsetAx = rawAx;
       offsetAy = rawAy;
@@ -593,7 +594,6 @@
       setTimeout(() => btnZeroG.style.borderColor = "#334155", 500);
     });
 
-    // Fullscreen Toggle
     btnFullscreen.addEventListener("click", () => {
       if (!document.fullscreenElement) {
         document.documentElement.requestFullscreen().catch(() => {});
@@ -602,7 +602,6 @@
       }
     });
 
-    // Launch Button
     startBtn.addEventListener("click", async () => {
       startBtn.style.display = "none";
       hudUi.style.display = "flex";
@@ -618,7 +617,7 @@
 
       await startCamera();
 
-      // Start GPS
+      // GPS Watcher with Noise Gate
       if (navigator.geolocation) {
         navigator.geolocation.watchPosition(
           (pos) => {
@@ -630,18 +629,31 @@
             gpsStatusText.textContent = `GPS LOCK (±${acc}m)`;
             gpsCoords.textContent = `${lat}°, ${lon}°`;
 
-            const mps = pos.coords.speed || 0;
-            targetSpeed = currentUnit === "MPH" ? (mps * 2.23694) : (mps * 3.6);
+            let rawMps = pos.coords.speed;
+            if (rawMps === null || isNaN(rawMps) || rawMps < 0) {
+              rawMps = 0;
+            }
+
+            let calcSpeed = currentUnit === "MPH" ? (rawMps * 2.23694) : (rawMps * 3.6);
+            const cutoff = currentUnit === "MPH" ? SPEED_CUTOFF_MPH : SPEED_CUTOFF_KMH;
+
+            // Deadband: eliminate idle satellite jitter under 2.5 MPH
+            if (calcSpeed < cutoff) {
+              calcSpeed = 0;
+            }
+
+            targetSpeed = calcSpeed;
           },
           (err) => {
             gpsDot.classList.remove("active");
             gpsStatusText.textContent = `GPS ERR: ${err.message}`;
+            targetSpeed = 0;
           },
           { enableHighAccuracy: true, maximumAge: 300, timeout: 5000 }
         );
       }
 
-      // Start Gyro / G-Force
+      // Gyro / Accelerometer
       if (window.DeviceMotionEvent) {
         if (typeof DeviceMotionEvent.requestPermission === "function") {
           try { await DeviceMotionEvent.requestPermission(); } catch (e) {}
@@ -656,7 +668,6 @@
           const deltaX = rawAx - offsetAx;
           const deltaY = rawAy - offsetAy;
 
-          // Invert horizontal axis if front camera is active
           const sign = isFrontCamera ? -1 : 1;
           const gX = Math.max(-26, Math.min(26, deltaX * 2.4 * sign));
           const gY = Math.max(-26, Math.min(26, deltaY * 2.4));
