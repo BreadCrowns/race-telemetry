@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Pit Wall Command Center</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    body { background: #0b0f19; color: #f8fafc; padding: 20px; max-width: 580px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px; }
+    header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #1e293b; padding-bottom: 12px; }
+    h1 { font-size: 18px; font-weight: 800; color: #f97316; letter-spacing: 1px; text-transform: uppercase; }
+    .heartbeat { font-size: 12px; color: #94a3b8; display: flex; align-items: center; gap: 6px; }
+    .dot { width: 8px; height: 8px; border-radius: 50%; background: #ef4444; display: inline-block; }
+    .dot.live { background: #22c55e; box-shadow: 0 0 8px #22c55e; }
+
+    .panel { background: #131b2e; border: 1px solid #1e293b; border-radius: 12px; padding: 16px; }
+    .panel-title { font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px; color: #64748b; font-weight: 700; margin-bottom: 12px; }
+
+    /* Live HUD Preview */
+    .preview-stage { background: #060913; border: 1px dashed #334155; border-radius: 8px; padding: 24px 16px; display: flex; justify-content: center; align-items: center; }
+    .hud-box { display: inline-flex; align-items: center; background: rgba(10, 14, 23, 0.95); border: 1px solid rgba(255, 255, 255, 0.1); border-left: 6px solid #f97316; border-radius: 8px; padding: 10px 20px; color: #fff; box-shadow: 0 10px 30px rgba(0,0,0,0.6); }
+    .driver-col { display: flex; flex-direction: column; margin-right: 20px; padding-right: 18px; border-right: 1px solid rgba(255, 255, 255, 0.15); }
+    .driver-tag { font-size: 9px; font-weight: 800; color: #f97316; letter-spacing: 2px; text-transform: uppercase; }
+    .driver-val { font-size: 20px; font-weight: 700; max-width: 140px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .status-badge { font-size: 9px; font-weight: 800; padding: 2px 6px; border-radius: 4px; background: #334155; color: #cbd5e1; align-self: flex-start; margin-top: 3px; }
+    .speed-col { display: flex; align-items: baseline; gap: 5px; }
+    .speed-val { font-size: 46px; font-weight: 900; letter-spacing: -2px; font-variant-numeric: tabular-nums; }
+    .unit-val { font-size: 13px; font-weight: 700; color: #94a3b8; }
+
+    /* Controls */
+    .field { margin-bottom: 14px; }
+    label { font-size: 12px; color: #94a3b8; display: block; margin-bottom: 6px; font-weight: 600; }
+    input[type="text"], select { width: 100%; background: #0a0e1a; border: 1px solid #334155; padding: 12px; border-radius: 8px; color: #fff; font-size: 16px; outline: none; }
+    input[type="text"]:focus, select:focus { border-color: #f97316; }
+
+    .quick-drivers { display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
+    .chip { background: #1e293b; color: #cbd5e1; border: 1px solid #334155; padding: 6px 12px; border-radius: 20px; font-size: 12px; cursor: pointer; }
+    .chip:active { background: #f97316; color: white; }
+
+    .status-btn-group { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-top: 6px; }
+    .status-btn { background: #1e293b; color: #cbd5e1; border: 1px solid #334155; padding: 10px; border-radius: 8px; font-weight: 700; font-size: 12px; cursor: pointer; text-align: center; }
+    .status-btn.active { background: #f97316; color: white; border-color: #f97316; }
+
+    .btn-apply { background: #ea580c; color: white; border: none; padding: 14px; width: 100%; border-radius: 8px; font-weight: 700; font-size: 15px; cursor: pointer; margin-top: 8px; }
+    .btn-apply:active { background: #c2410c; }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>Pit Wall Command</h1>
+    <div class="heartbeat">
+      <span class="dot" id="live-dot"></span>
+      <span id="live-text">Car Offline</span>
+    </div>
+  </header>
+
+  <!-- Live Overlay Preview -->
+  <div class="panel">
+    <div class="panel-title">PRISM Live Overlay Preview</div>
+    <div class="preview-stage">
+      <div class="hud-box">
+        <div class="driver-col">
+          <span class="driver-tag">Driver</span>
+          <span class="driver-val" id="prev-driver">Driver 1</span>
+          <span class="status-badge" id="prev-status">ON TRACK</span>
+        </div>
+        <div class="speed-col">
+          <span class="speed-val" id="prev-speed">0</span>
+          <span class="unit-val" id="prev-unit">MPH</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Driver Controls -->
+  <div class="panel">
+    <div class="panel-title">Driver Stint Control</div>
+    <div class="field">
+      <label for="driver-input">Active Driver</label>
+      <input type="text" id="driver-input" placeholder="Type driver name..." />
+      <div class="quick-drivers">
+        <button type="button" class="chip" onclick="setDriver('Jeff')">Jeff</button>
+        <button type="button" class="chip" onclick="setDriver('Sylvia')">Sylvia</button>
+        <button type="button" class="chip" onclick="setDriver('Driver 2')">Driver 2</button>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Car State Banner</label>
+      <div class="status-btn-group">
+        <button type="button" class="status-btn active" id="btn-track" onclick="setStatus('ON TRACK')">ON TRACK</button>
+        <button type="button" class="status-btn" id="btn-pit" onclick="setStatus('IN PITS')">IN PITS</button>
+        <button type="button" class="status-btn" id="btn-change" onclick="setStatus('DRIVER SWAP')">DRIVER SWAP</button>
+      </div>
+    </div>
+
+    <div class="field">
+      <label for="unit-select">Speed Metric</label>
+      <select id="unit-select">
+        <option value="MPH">MPH (Miles per hour)</option>
+        <option value="KMH">KM/H (Kilometers per hour)</option>
+      </select>
+    </div>
+
+    <button class="btn-apply" id="apply-btn" type="button">Push Changes to Stream</button>
+  </div>
+
+  <!-- Firebase SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+
+  <script>
+    const firebaseConfig = {
+		apiKey: "AIzaSyCC4JUzjr5lk9zaT78wwZ1RcjUguP5Q70s",
+		authDomain: "fiero-telemetry.firebaseapp.com",
+		databaseURL: "https://fiero-telemetry-default-rtdb.firebaseio.com",
+		projectId: "fiero-telemetry",
+		storageBucket: "fiero-telemetry.firebasestorage.app",
+		messagingSenderId: "183922450878",
+		appId: "1:183922450878:web:5faabfd6d163f1c6c119ef"
+	};
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database().ref("raceTelemetry");
+
+    const driverInput = document.getElementById("driver-input");
+    const unitSelect = document.getElementById("unit-select");
+    const applyBtn = document.getElementById("apply-btn");
+    const liveDot = document.getElementById("live-dot");
+    const liveText = document.getElementById("live-text");
+
+    const prevDriver = document.getElementById("prev-driver");
+    const prevStatus = document.getElementById("prev-status");
+    const prevSpeed = document.getElementById("prev-speed");
+    const prevUnit = document.getElementById("prev-unit");
+
+    let currentStatus = "ON TRACK";
+
+    // Keep preview in sync with database
+    db.on("value", (snap) => {
+      const data = snap.val();
+      if (!data) return;
+
+      prevDriver.textContent = data.driver || "Driver";
+      prevStatus.textContent = data.status || "ON TRACK";
+      prevSpeed.textContent = Math.round(data.speed || 0);
+      prevUnit.textContent = data.unit || "MPH";
+
+      // If we haven't typed yet, populate the inputs
+      if (document.activeElement !== driverInput) {
+        driverInput.value = data.driver || "";
+      }
+      unitSelect.value = data.unit || "MPH";
+      updateStatusUI(data.status || "ON TRACK");
+
+      // Check car heartbeat (last telemetry update within 5 seconds)
+      const isLive = data.lastGpsTimestamp && (Date.now() - data.lastGpsTimestamp < 5000);
+      if (isLive) {
+        liveDot.classList.add("live");
+        liveText.textContent = `Car Active (±${data.accuracy || 0}m)`;
+      } else {
+        liveDot.classList.remove("live");
+        liveText.textContent = "Car Offline";
+      }
+    });
+
+    function setDriver(name) {
+      driverInput.value = name;
+      pushUpdates();
+    }
+
+    function setStatus(status) {
+      currentStatus = status;
+      updateStatusUI(status);
+      pushUpdates();
+    }
+
+    function updateStatusUI(status) {
+      currentStatus = status;
+      prevStatus.textContent = status;
+      document.querySelectorAll(".status-btn").forEach(btn => btn.classList.remove("active"));
+      if (status === "ON TRACK") document.getElementById("btn-track").classList.add("active");
+      if (status === "IN PITS") document.getElementById("btn-pit").classList.add("active");
+      if (status === "DRIVER SWAP") document.getElementById("btn-change").classList.add("active");
+    }
+
+    function pushUpdates() {
+      db.update({
+        driver: driverInput.value.trim() || "Driver",
+        status: currentStatus,
+        unit: unitSelect.value
+      });
+    }
+
+    applyBtn.addEventListener("click", pushUpdates);
+    unitSelect.addEventListener("change", pushUpdates);
+    driverInput.addEventListener("change", pushUpdates);
+  </script>
+</body>
+</html>

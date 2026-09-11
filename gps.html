@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Cockpit GPS Transmitter</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: monospace; }
+    body { background: #000; color: #fff; height: 100vh; display: flex; flex-direction: column; justify-content: space-between; padding: 20px; text-align: center; }
+    .top-bar { font-size: 14px; color: #64748b; }
+    .speed-display { font-size: 110px; font-weight: 900; line-height: 1; color: #f97316; }
+    .unit-display { font-size: 24px; color: #94a3b8; }
+    .btn { background: #16a34a; color: white; border: none; padding: 24px; font-size: 20px; font-weight: bold; border-radius: 12px; cursor: pointer; }
+    .btn.active { background: #dc2626; }
+    .status { font-size: 13px; color: #64748b; }
+  </style>
+</head>
+<body>
+
+  <div class="top-bar" id="driver-indicator">DRIVER: --</div>
+
+  <div>
+    <div class="speed-display" id="speed-val">0</div>
+    <div class="unit-display" id="unit-val">MPH</div>
+  </div>
+
+  <div>
+    <button class="btn" id="start-btn" type="button">START TRANSMITTING</button>
+    <div class="status" id="status-text" style="margin-top: 10px;">Tap button and place in windshield mount</div>
+  </div>
+
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+
+  <script>
+    const firebaseConfig = {
+		apiKey: "AIzaSyCC4JUzjr5lk9zaT78wwZ1RcjUguP5Q70s",
+		authDomain: "fiero-telemetry.firebaseapp.com",
+		databaseURL: "https://fiero-telemetry-default-rtdb.firebaseio.com",
+		projectId: "fiero-telemetry",
+		storageBucket: "fiero-telemetry.firebasestorage.app",
+		messagingSenderId: "183922450878",
+		appId: "1:183922450878:web:5faabfd6d163f1c6c119ef"
+	};
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database().ref("raceTelemetry");
+
+    const startBtn = document.getElementById("start-btn");
+    const speedVal = document.getElementById("speed-val");
+    const unitVal = document.getElementById("unit-val");
+    const statusText = document.getElementById("status-text");
+    const driverInd = document.getElementById("driver-indicator");
+
+    let watchId = null;
+    let wakeLock = null;
+    let currentUnit = "MPH";
+    let lastPush = 0;
+
+    // Listen for driver/unit changes sent from the pit wall
+    db.on("value", (snap) => {
+      const data = snap.val();
+      if (!data) return;
+      if (data.unit) { currentUnit = data.unit; unitVal.textContent = data.unit; }
+      if (data.driver) { driverInd.textContent = `DRIVER: ${data.driver.toUpperCase()}`; }
+    });
+
+    startBtn.addEventListener("click", async () => {
+      if (watchId !== null) {
+        navigator.geolocation.clearWatch(watchId);
+        watchId = null;
+        if (wakeLock) { wakeLock.release(); wakeLock = null; }
+        startBtn.textContent = "START TRANSMITTING";
+        startBtn.className = "btn";
+        statusText.textContent = "Transmitter stopped.";
+        db.update({ speed: 0, lastGpsTimestamp: 0 });
+      } else {
+        if ("wakeLock" in navigator) {
+          try { wakeLock = await navigator.wakeLock.request("screen"); } catch (e) {}
+        }
+
+        startBtn.textContent = "STOP TRANSMITTING";
+        startBtn.className = "btn active";
+        statusText.textContent = "Locking GPS satellites...";
+
+        watchId = navigator.geolocation.watchPosition(
+          (pos) => {
+            const now = Date.now();
+            if (now - lastPush < 650) return; // ~1.5 updates/sec
+            lastPush = now;
+
+            const mps = pos.coords.speed || 0;
+            const speed = currentUnit === "MPH" ? (mps * 2.23694) : (mps * 3.6);
+
+            speedVal.textContent = Math.round(speed);
+            statusText.textContent = `Broadcasting | Accuracy: ±${Math.round(pos.coords.accuracy || 0)}m`;
+
+            db.update({
+              speed: speed,
+              accuracy: Math.round(pos.coords.accuracy || 0),
+              lastGpsTimestamp: now
+            });
+          },
+          (err) => { statusText.textContent = `GPS Error: ${err.message}`; },
+          { enableHighAccuracy: true, maximumAge: 300, timeout: 4000 }
+        );
+      }
+    });
+  </script>
+</body>
+</html>

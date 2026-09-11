@@ -2,88 +2,64 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Race Telemetry Overlay</title>
+  <title>PRISM Stream HUD</title>
   <style>
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-    }
-    body {
-      background-color: transparent;
-      overflow: hidden;
-      padding: 16px;
-    }
-    .hud-box {
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    body { background: transparent; overflow: hidden; padding: 14px; }
+    .hud-card {
       display: inline-flex;
       align-items: center;
       background: rgba(10, 14, 23, 0.88);
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
       border: 1px solid rgba(255, 255, 255, 0.12);
-      border-left: 6px solid #f97316; /* Race orange accent */
+      border-left: 6px solid #f97316;
       border-radius: 8px;
       padding: 10px 20px;
-      color: #ffffff;
-      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.6);
+      color: #fff;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.65);
     }
-    .driver-col {
+    .driver-meta {
       display: flex;
       flex-direction: column;
-      margin-right: 22px;
+      margin-right: 20px;
       padding-right: 18px;
       border-right: 1px solid rgba(255, 255, 255, 0.15);
     }
-    .driver-label {
-      font-size: 10px;
+    .driver-tag { font-size: 9px; font-weight: 800; color: #f97316; letter-spacing: 2px; text-transform: uppercase; }
+    .driver-name { font-size: 20px; font-weight: 700; max-width: 150px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .status-badge {
+      font-size: 9px;
       font-weight: 800;
-      color: #f97316;
-      letter-spacing: 2px;
-      text-transform: uppercase;
+      padding: 2px 6px;
+      border-radius: 4px;
+      background: #334155;
+      color: #cbd5e1;
+      align-self: flex-start;
+      margin-top: 3px;
+      letter-spacing: 0.5px;
     }
-    .driver-val {
-      font-size: 20px;
-      font-weight: 700;
-      max-width: 150px;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-    .speed-col {
-      display: flex;
-      align-items: baseline;
-      gap: 6px;
-    }
-    .speed-val {
-      font-size: 52px;
-      font-weight: 900;
-      letter-spacing: -2px;
-      font-variant-numeric: tabular-nums;
-      color: #f8fafc;
-      min-width: 75px;
-      text-align: right;
-    }
-    .unit-val {
-      font-size: 14px;
-      font-weight: 700;
-      color: #94a3b8;
-    }
+    .status-badge.in-pits { background: #b45309; color: #fef3c7; }
+    .status-badge.driver-swap { background: #6d28d9; color: #ede9fe; }
+    .speed-container { display: flex; align-items: baseline; gap: 6px; }
+    .speed-num { font-size: 50px; font-weight: 900; letter-spacing: -2px; font-variant-numeric: tabular-nums; min-width: 70px; text-align: right; }
+    .speed-unit { font-size: 13px; font-weight: 700; color: #94a3b8; }
   </style>
 </head>
 <body>
 
-  <div class="hud-box">
-    <div class="driver-col">
-      <span class="driver-label">Driver</span>
-      <span class="driver-val" id="driver-name">--</span>
+  <div class="hud-card">
+    <div class="driver-meta">
+      <span class="driver-tag">Driver</span>
+      <span class="driver-name" id="driver-val">--</span>
+      <span class="status-badge" id="status-val">ON TRACK</span>
     </div>
-    <div class="speed-col">
-      <span class="speed-val" id="speed-display">0</span>
-      <span class="unit-val" id="unit-display">MPH</span>
+    <div class="speed-container">
+      <span class="speed-num" id="speed-val">0</span>
+      <span class="speed-unit" id="unit-val">MPH</span>
     </div>
   </div>
 
-  <!-- Firebase SDKs -->
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 
@@ -101,27 +77,34 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database().ref("raceTelemetry");
 
-    const driverEl = document.getElementById("driver-name");
-    const speedEl = document.getElementById("speed-display");
-    const unitEl = document.getElementById("unit-display");
+    const driverEl = document.getElementById("driver-val");
+    const statusEl = document.getElementById("status-val");
+    const speedEl = document.getElementById("speed-val");
+    const unitEl = document.getElementById("unit-val");
 
     let targetSpeed = 0;
-    let renderedSpeed = 0;
+    let smoothSpeed = 0;
 
-    // Smooth speed transitions between 1 Hz GPS hits
-    function smoothSpeed() {
-      renderedSpeed += (targetSpeed - renderedSpeed) * 0.15;
-      speedEl.textContent = Math.round(renderedSpeed);
-      requestAnimationFrame(smoothSpeed);
+    // Linear interpolation loop to keep speed changes smooth
+    function animate() {
+      smoothSpeed += (targetSpeed - smoothSpeed) * 0.15;
+      speedEl.textContent = Math.round(smoothSpeed);
+      requestAnimationFrame(animate);
     }
-    requestAnimationFrame(smoothSpeed);
+    requestAnimationFrame(animate);
 
     db.on("value", (snap) => {
-      const val = snap.val();
-      if (!val) return;
-      driverEl.textContent = val.driver || "Driver";
-      unitEl.textContent = val.unit || "MPH";
-      targetSpeed = Math.max(0, val.speed || 0);
+      const d = snap.val();
+      if (!d) return;
+      driverEl.textContent = d.driver || "Driver";
+      unitEl.textContent = d.unit || "MPH";
+      targetSpeed = Math.max(0, d.speed || 0);
+
+      const st = d.status || "ON TRACK";
+      statusEl.textContent = st;
+      statusEl.className = "status-badge";
+      if (st === "IN PITS") statusEl.classList.add("in-pits");
+      if (st === "DRIVER SWAP") statusEl.classList.add("driver-swap");
     });
   </script>
 </body>
