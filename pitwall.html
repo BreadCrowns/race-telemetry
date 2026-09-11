@@ -10,158 +10,253 @@
 
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-    body { 
-      background: #0b0f19; 
-      color: #f8fafc; 
-      padding: 16px; 
+    
+    /* Mobile-first: standard scroll */
+    html, body {
+      background: #0b0f19;
+      color: #f8fafc;
       min-height: 100vh;
-      display: flex; 
-      flex-direction: column; 
-      gap: 14px; 
     }
 
-    header { 
-      display: flex; 
-      justify-content: space-between; 
-      align-items: center; 
-      border-bottom: 1px solid #1e293b; 
-      padding-bottom: 10px; 
-      max-width: 1400px;
-      margin: 0 auto;
-      width: 100%;
+    body {
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
     }
-    h1 { font-size: 18px; font-weight: 800; color: #f97316; letter-spacing: 1px; text-transform: uppercase; }
+
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid #1e293b;
+      padding-bottom: 8px;
+      flex-shrink: 0;
+    }
+    h1 { font-size: 16px; font-weight: 800; color: #f97316; letter-spacing: 1px; text-transform: uppercase; }
 
     /* Telemetry Watchdog Banner */
     .telemetry-banner {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 10px 14px;
-      border-radius: 8px;
+      padding: 8px 12px;
+      border-radius: 6px;
       border: 1px solid #334155;
       background: #1e293b;
       transition: all 0.3s ease;
-      max-width: 1400px;
-      margin: 0 auto;
-      width: 100%;
+      flex-shrink: 0;
     }
     .telemetry-banner.live { background: rgba(34, 197, 94, 0.12); border-color: #22c55e; }
     .telemetry-banner.stale { background: rgba(234, 179, 8, 0.12); border-color: #eab308; }
     .telemetry-banner.offline { background: rgba(239, 68, 68, 0.15); border-color: #ef4444; }
 
-    .signal-left { display: flex; align-items: center; gap: 10px; }
-    .status-beacon { width: 12px; height: 12px; border-radius: 50%; background: #64748b; }
+    .signal-left { display: flex; align-items: center; gap: 8px; }
+    .status-beacon { width: 10px; height: 10px; border-radius: 50%; background: #64748b; }
     .telemetry-banner.live .status-beacon { background: #22c55e; box-shadow: 0 0 8px #22c55e; }
-    .telemetry-banner.stale .status-beacon { background: #eab308; box-shadow: 0 0 6px #eab308; }
+    .telemetry-banner.stale .status-beacon { background: #eab308; }
     .telemetry-banner.offline .status-beacon { background: #ef4444; }
 
-    .signal-title { font-size: 12px; font-weight: 800; text-transform: uppercase; }
+    .signal-title { font-size: 11px; font-weight: 800; text-transform: uppercase; }
     .telemetry-banner.live .signal-title { color: #4ade80; }
     .telemetry-banner.stale .signal-title { color: #facc15; }
     .telemetry-banner.offline .signal-title { color: #f87171; }
-    .signal-detail { font-size: 11px; color: #94a3b8; font-family: ui-monospace, monospace; }
-    .ping-display { font-size: 11px; font-weight: 700; font-family: ui-monospace, monospace; padding: 4px 8px; border-radius: 6px; background: rgba(0,0,0,0.3); color: #cbd5e1; }
+    .signal-detail { font-size: 10px; color: #94a3b8; font-family: ui-monospace, monospace; }
+    .ping-display { font-size: 10px; font-weight: 700; font-family: ui-monospace, monospace; padding: 2px 6px; border-radius: 4px; background: rgba(0,0,0,0.3); color: #cbd5e1; }
 
-    /* Responsive Grid Layout */
+    /* Layout Engine */
     .dashboard-container {
-      display: grid;
-      grid-template-columns: 1fr;
-      gap: 14px;
-      max-width: 1400px;
-      margin: 0 auto;
-      width: 100%;
-    }
-
-    @media (min-width: 900px) {
-      .dashboard-container {
-        grid-template-columns: 420px 1fr;
-        align-items: start;
-      }
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      flex: 1;
+      min-height: 0;
     }
 
     .col-left, .col-right {
       display: flex;
       flex-direction: column;
-      gap: 14px;
+      gap: 10px;
+      min-height: 0;
     }
 
     /* Panels */
-    .panel { background: #131b2e; border: 1px solid #1e293b; border-radius: 10px; padding: 14px; }
-    .panel-title { font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px; color: #94a3b8; font-weight: 700; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
+    .panel {
+      background: #131b2e;
+      border: 1px solid #1e293b;
+      border-radius: 8px;
+      padding: 10px 12px;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+    }
+    .panel-title {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: #94a3b8;
+      font-weight: 700;
+      margin-bottom: 8px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-shrink: 0;
+    }
 
-    /* Live HUD Preview */
-    .preview-stage { background: #060913; border: 1px dashed #334155; border-radius: 8px; padding: 18px 14px; display: flex; justify-content: center; align-items: center; }
-    .hud-card { display: inline-flex; flex-direction: column; background: rgba(10, 14, 23, 0.95); border: 1px solid rgba(255, 255, 255, 0.1); border-left: 6px solid #f97316; border-radius: 8px; padding: 10px 18px; color: #fff; box-shadow: 0 10px 30px rgba(0,0,0,0.6); gap: 6px; width: 100%; max-width: 360px; }
+    /* HUD Preview */
+    .preview-stage {
+      background: #060913;
+      border: 1px dashed #334155;
+      border-radius: 6px;
+      padding: 10px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+    .hud-card {
+      display: inline-flex;
+      flex-direction: column;
+      background: rgba(10, 14, 23, 0.95);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-left: 5px solid #f97316;
+      border-radius: 6px;
+      padding: 8px 14px;
+      color: #fff;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+      gap: 4px;
+      width: 100%;
+      max-width: 320px;
+    }
     .hud-main-row { display: flex; align-items: center; justify-content: space-between; }
-    .driver-col { display: flex; flex-direction: column; margin-right: 14px; padding-right: 14px; border-right: 1px solid rgba(255, 255, 255, 0.15); flex: 1; }
-    .driver-tag { font-size: 9px; font-weight: 800; color: #f97316; letter-spacing: 2px; text-transform: uppercase; }
-    .driver-val { font-size: 18px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .status-badge { font-size: 9px; font-weight: 800; padding: 2px 6px; border-radius: 4px; background: #334155; color: #cbd5e1; align-self: flex-start; margin-top: 3px; }
+    .driver-col { display: flex; flex-direction: column; margin-right: 10px; padding-right: 10px; border-right: 1px solid rgba(255, 255, 255, 0.15); flex: 1; }
+    .driver-tag { font-size: 8px; font-weight: 800; color: #f97316; letter-spacing: 1.5px; text-transform: uppercase; }
+    .driver-val { font-size: 16px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .status-badge { font-size: 8px; font-weight: 800; padding: 2px 5px; border-radius: 4px; background: #334155; color: #cbd5e1; align-self: flex-start; margin-top: 2px; }
     .status-badge.in-pits { background: #b45309; color: #fef3c7; }
     .status-badge.driver-swap { background: #6d28d9; color: #ede9fe; }
-    .speed-col { display: flex; align-items: baseline; gap: 5px; }
-    .speed-val { font-size: 44px; font-weight: 900; letter-spacing: -2px; font-variant-numeric: tabular-nums; }
-    .unit-val { font-size: 13px; font-weight: 700; color: #94a3b8; }
-    .gps-preview-bar { display: flex; align-items: center; gap: 8px; font-family: ui-monospace, monospace; font-size: 10px; color: #94a3b8; border-top: 1px solid rgba(255, 255, 255, 0.08); padding-top: 4px; }
+    .speed-col { display: flex; align-items: baseline; gap: 4px; }
+    .speed-val { font-size: 38px; font-weight: 900; letter-spacing: -1.5px; font-variant-numeric: tabular-nums; }
+    .unit-val { font-size: 11px; font-weight: 700; color: #94a3b8; }
+    .gps-preview-bar { display: flex; align-items: center; gap: 6px; font-family: ui-monospace, monospace; font-size: 9px; color: #94a3b8; border-top: 1px solid rgba(255, 255, 255, 0.08); padding-top: 4px; }
     .gps-coords { color: #cbd5e1; }
     .gps-acc { color: #64748b; margin-left: auto; }
 
-    /* Map Box (Expands dynamically on desktop) */
-    #map { 
-      height: 320px; 
-      width: 100%; 
-      border-radius: 8px; 
-      border: 1px solid #334155; 
-      min-height: 280px;
-    }
-
-    @media (min-width: 900px) {
-      #map {
-        height: 420px;
-      }
+    /* Map Box */
+    #map {
+      height: 240px;
+      width: 100%;
+      border-radius: 6px;
+      border: 1px solid #334155;
     }
 
     /* Autocross Timing Box */
-    .timer-display { text-align: center; padding: 12px; background: #060913; border: 1px solid #1e293b; border-radius: 8px; margin-bottom: 10px; }
-    .timer-status { font-size: 10px; font-weight: 800; letter-spacing: 1.5px; color: #f97316; text-transform: uppercase; margin-bottom: 2px; }
-    .timer-clock { font-size: 46px; font-weight: 900; font-family: ui-monospace, monospace; letter-spacing: -1px; color: #ffffff; }
-    .timer-gate-info { display: flex; justify-content: space-around; font-size: 11px; color: #94a3b8; margin-top: 6px; font-family: ui-monospace, monospace; }
+    .timer-display {
+      text-align: center;
+      padding: 8px;
+      background: #060913;
+      border: 1px solid #1e293b;
+      border-radius: 6px;
+      margin-bottom: 8px;
+      flex-shrink: 0;
+    }
+    .timer-status { font-size: 9px; font-weight: 800; letter-spacing: 1px; color: #f97316; text-transform: uppercase; margin-bottom: 2px; }
+    .timer-clock { font-size: 38px; font-weight: 900; font-family: ui-monospace, monospace; letter-spacing: -1px; color: #ffffff; line-height: 1; }
+    .timer-gate-info { display: flex; justify-content: space-around; font-size: 10px; color: #94a3b8; margin-top: 4px; font-family: ui-monospace, monospace; }
 
-    .gate-controls { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 10px; }
-    .btn-gate { background: #1e293b; color: #cbd5e1; border: 1px solid #334155; padding: 8px; border-radius: 6px; font-size: 11px; font-weight: 700; cursor: pointer; text-align: center; }
+    .gate-controls { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; margin-bottom: 8px; flex-shrink: 0; }
+    .btn-gate { background: #1e293b; color: #cbd5e1; border: 1px solid #334155; padding: 6px; border-radius: 6px; font-size: 10px; font-weight: 700; cursor: pointer; text-align: center; }
     .btn-gate:active { background: #f97316; color: #fff; }
     .btn-gate.active { border-color: #22c55e; color: #4ade80; }
 
-    /* Lap Times List */
-    .laps-table { width: 100%; font-size: 12px; border-collapse: collapse; margin-top: 8px; font-family: ui-monospace, monospace; }
-    .laps-table th { text-align: left; color: #64748b; padding: 6px 8px; border-bottom: 1px solid #1e293b; font-size: 10px; }
-    .laps-table td { padding: 6px 8px; border-bottom: 1px solid #0f172a; color: #cbd5e1; }
+    /* Lap Times List (Self-scrolling internally) */
+    .table-scroll-wrap {
+      flex: 1;
+      overflow-y: auto;
+      max-height: 180px;
+      border: 1px solid #1e293b;
+      border-radius: 4px;
+    }
+    .laps-table { width: 100%; font-size: 11px; border-collapse: collapse; font-family: ui-monospace, monospace; }
+    .laps-table th { position: sticky; top: 0; background: #0f172a; text-align: left; color: #64748b; padding: 5px 6px; border-bottom: 1px solid #1e293b; font-size: 9px; }
+    .laps-table td { padding: 4px 6px; border-bottom: 1px solid #0f172a; color: #cbd5e1; }
     .best-lap { color: #4ade80 !important; font-weight: 800; }
 
     /* Form Controls */
-    .field { margin-bottom: 12px; }
-    label { font-size: 11px; color: #94a3b8; display: block; margin-bottom: 4px; font-weight: 600; }
-    input[type="text"] { width: 100%; background: #0a0e1a; border: 1px solid #334155; padding: 10px; border-radius: 6px; color: #fff; font-size: 15px; outline: none; }
+    .field { margin-bottom: 8px; }
+    label { font-size: 10px; color: #94a3b8; display: block; margin-bottom: 3px; font-weight: 600; }
+    input[type="text"] { width: 100%; background: #0a0e1a; border: 1px solid #334155; padding: 8px; border-radius: 6px; color: #fff; font-size: 14px; outline: none; }
     input[type="text"]:focus { border-color: #f97316; }
 
-    .quick-drivers { display: flex; gap: 6px; margin-top: 6px; flex-wrap: wrap; }
-    .chip { background: #1e293b; color: #cbd5e1; border: 1px solid #334155; padding: 5px 12px; border-radius: 16px; font-size: 11px; cursor: pointer; }
+    .quick-drivers { display: flex; gap: 5px; margin-top: 5px; flex-wrap: wrap; }
+    .chip { background: #1e293b; color: #cbd5e1; border: 1px solid #334155; padding: 4px 10px; border-radius: 12px; font-size: 10px; cursor: pointer; }
     .chip:active { background: #f97316; color: white; }
 
-    .status-btn-group { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; }
-    .status-btn { background: #1e293b; color: #cbd5e1; border: 1px solid #334155; padding: 10px 6px; border-radius: 6px; font-weight: 700; font-size: 11px; cursor: pointer; text-align: center; }
+    .status-btn-group { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 5px; }
+    .status-btn { background: #1e293b; color: #cbd5e1; border: 1px solid #334155; padding: 8px 4px; border-radius: 6px; font-weight: 700; font-size: 10px; cursor: pointer; text-align: center; }
     .status-btn.active { background: #f97316; color: white; border-color: #f97316; }
+
+    /* WIDESCREEN DASHBOARD (NO SCROLL, CONSTRAINED TO 100vh) */
+    @media (min-width: 960px) {
+      body {
+        height: 100vh;
+        overflow: hidden;
+        padding: 12px 18px;
+        gap: 8px;
+      }
+
+      .dashboard-container {
+        display: grid;
+        grid-template-columns: 360px 1fr;
+        gap: 12px;
+        flex: 1;
+        min-height: 0;
+      }
+
+      .col-left {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        min-height: 0;
+      }
+
+      .col-right {
+        display: grid;
+        grid-template-rows: 1fr 1fr;
+        gap: 10px;
+        min-height: 0;
+      }
+
+      .map-panel {
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
+      }
+      #map {
+        height: 100% !important;
+        flex: 1;
+        min-height: 0;
+      }
+
+      .timer-panel {
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
+      }
+      .table-scroll-wrap {
+        max-height: none;
+        flex: 1;
+      }
+    }
   </style>
 </head>
 <body>
 
   <header>
     <h1>Pit Wall Command</h1>
-    <span style="font-size: 11px; color: #64748b; font-family: ui-monospace, monospace;">REAL-TIME AUTOCROSS</span>
+    <span style="font-size: 10px; color: #64748b; font-family: ui-monospace, monospace;">REAL-TIME TELEMETRY</span>
   </header>
 
-  <!-- Realtime GPS Signal Status -->
+  <!-- Realtime GPS Signal Status Banner -->
   <div class="telemetry-banner offline" id="watchdog-banner">
     <div class="signal-left">
       <div class="status-beacon"></div>
@@ -173,10 +268,10 @@
     <div class="ping-display" id="watchdog-ping">-- ms</div>
   </div>
 
-  <!-- Responsive Command Layout -->
+  <!-- Adaptive Dashboard Grid -->
   <div class="dashboard-container">
     
-    <!-- Left Column: HUD & Driver Controls -->
+    <!-- Left Column: Controls & PRISM Preview -->
     <div class="col-left">
       <!-- PRISM Live Overlay Preview -->
       <div class="panel">
@@ -202,9 +297,9 @@
         </div>
       </div>
 
-      <!-- Driver Stint & Status Control (Instant Sync) -->
-      <div class="panel">
-        <div class="panel-title">Driver Stint Control (Instant Sync)</div>
+      <!-- Driver Stint & Status Control -->
+      <div class="panel" style="flex: 1; justify-content: space-around;">
+        <div class="panel-title">Driver Stint Control (Live Sync)</div>
         <div class="field">
           <label for="driver-input">Active Driver</label>
           <input type="text" id="driver-input" placeholder="Type driver name..." value="Driver 1" />
@@ -215,7 +310,7 @@
           </div>
         </div>
 
-        <div class="field">
+        <div class="field" style="margin-bottom: 0;">
           <label>Car State Banner</label>
           <div class="status-btn-group">
             <button type="button" class="status-btn active" id="btn-track" onclick="instantSetStatus('ON TRACK')">ON TRACK</button>
@@ -229,24 +324,24 @@
     <!-- Right Column: Interactive Map & Autocross Gate Timing -->
     <div class="col-right">
       <!-- Live Map View -->
-      <div class="panel">
+      <div class="panel map-panel">
         <div class="panel-title">
           <span>Track Map & Telemetry Trail</span>
-          <span id="map-speed" style="color: #f97316; font-size: 12px; font-weight: 800;">0 MPH</span>
+          <span id="map-speed" style="color: #f97316; font-size: 11px; font-weight: 800;">0 MPH</span>
         </div>
         <div id="map"></div>
       </div>
 
       <!-- Autocross Lap Timer & Gate Setup -->
-      <div class="panel">
+      <div class="panel timer-panel">
         <div class="panel-title">Autocross Automated Lap Timer</div>
         
         <div class="timer-display">
           <div class="timer-status" id="timer-status">DISARMED (SET GATES)</div>
           <div class="timer-clock" id="timer-clock">00:00.00</div>
           <div class="timer-gate-info">
-            <span id="start-dist-label">Start Gate: Unset</span>
-            <span id="finish-dist-label">Finish Gate: Unset</span>
+            <span id="start-dist-label">Start: Unset</span>
+            <span id="finish-dist-label">Finish: Unset</span>
           </div>
         </div>
 
@@ -257,19 +352,21 @@
         </div>
 
         <!-- Times Table -->
-        <table class="laps-table">
-          <thead>
-            <tr>
-              <th>RUN #</th>
-              <th>DRIVER</th>
-              <th>TIME</th>
-              <th>STATUS</th>
-            </tr>
-          </thead>
-          <tbody id="laps-body">
-            <tr><td colspan="4" style="color:#64748b; text-align:center;">No timed runs recorded yet</td></tr>
-          </tbody>
-        </table>
+        <div class="table-scroll-wrap">
+          <table class="laps-table">
+            <thead>
+              <tr>
+                <th>RUN #</th>
+                <th>DRIVER</th>
+                <th>TIME</th>
+                <th>STATUS</th>
+              </tr>
+            </thead>
+            <tbody id="laps-body">
+              <tr><td colspan="4" style="color:#64748b; text-align:center;">No timed runs recorded yet</td></tr>
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
 
@@ -324,7 +421,7 @@
     let currentCarPos = null;
 
     // --- LEAFLET MAP SETUP ---
-    const map = L.map('map').setView([37.7709, -122.2608], 16);
+    const map = L.map('map', { zoomControl: true }).setView([37.7709, -122.2608], 16);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       maxZoom: 19,
       attribution: '© OpenStreetMap'
@@ -332,27 +429,28 @@
 
     const carIcon = L.divIcon({
       className: 'custom-car-marker',
-      html: '<div style="background:#f97316; width:14px; height:14px; border-radius:50%; border:2px solid #fff; box-shadow:0 0 10px #f97316;"></div>',
-      iconSize: [14, 14],
-      iconAnchor: [7, 7]
+      html: '<div style="background:#f97316; width:12px; height:12px; border-radius:50%; border:2px solid #fff; box-shadow:0 0 8px #f97316;"></div>',
+      iconSize: [12, 12],
+      iconAnchor: [6, 6]
     });
 
     let carMarker = null;
     const pathLine = L.polyline([], { color: '#f97316', weight: 4, opacity: 0.8 }).addTo(map);
     let mapCenteredOnce = false;
 
-    // Invalidate map size on layout resize so it never clips
     window.addEventListener('resize', () => {
       map.invalidateSize();
     });
 
-    // --- AUTOCROSS GATES & TIMING ENGINE ---
-    const GATE_TRIGGER_RADIUS_METERS = 12;
+    // --- AUTOCROSS GATES & TIMING ENGINE (STAGING & LAUNCH AWARE) ---
+    const GATE_TRIGGER_RADIUS_METERS = 14;
+    const LAUNCH_SPEED_MPH = 5.0; // Must punch throttle over 5 MPH to start run
     let startGate = null;
     let finishGate = null;
     let startCircle = null;
     let finishCircle = null;
 
+    // States: IDLE, ARMED, STAGED, RUNNING, FINISHED
     let timingState = "IDLE";
     let runStartTime = 0;
     let clockInterval = null;
@@ -372,7 +470,7 @@
 
     function setGateFromCurrentPos(type) {
       if (!currentCarPos) {
-        alert("No GPS fix yet! Wait for cockpit telemetry signal.");
+        alert("No GPS fix yet! Wait for telemetry signal.");
         return;
       }
       setGateCoord(type, currentCarPos.lat, currentCarPos.lon);
@@ -394,11 +492,11 @@
       }
 
       if (startGate && !finishGate) {
-        timerStatusEl.textContent = "WAITING FOR FINISH GATE (OR SET BOTH)";
+        timerStatusEl.textContent = "WAITING FOR FINISH GATE";
       } else if (startGate && finishGate) {
         timingState = "ARMED";
-        timerStatusEl.textContent = "ARMED - DRIVE ACROSS START LINE";
-        timerStatusEl.style.color = "#22c55e";
+        timerStatusEl.textContent = "ARMED - PULL UP TO START LINE";
+        timerStatusEl.style.color = "#f59e0b";
       }
     }
 
@@ -409,13 +507,40 @@
       const distToStart = getDistanceMeters(lat, lon, startGate.lat, startGate.lon);
       const distToFinish = getDistanceMeters(lat, lon, finishGate.lat, finishGate.lon);
 
+      // 1. Staging detection: car is sitting inside start beam waiting for green flag
       if (timingState === "ARMED" || timingState === "FINISHED") {
-        if (distToStart <= GATE_TRIGGER_RADIUS_METERS && speedMph > 2.5 && (now - lastGateCrossTime > 5000)) {
+        if (distToStart <= GATE_TRIGGER_RADIUS_METERS) {
+          if (speedMph < 3.0) {
+            timingState = "STAGED";
+            timerStatusEl.textContent = "STAGED (READY TO LAUNCH)";
+            timerStatusEl.style.color = "#22c55e";
+            timerClockEl.textContent = "00:00.00";
+            return;
+          } else if (speedMph >= LAUNCH_SPEED_MPH && (now - lastGateCrossTime > 6000)) {
+            startTimer();
+            lastGateCrossTime = now;
+            return;
+          }
+        }
+      }
+
+      // 2. Launch trigger: car was staged at the line and has now dumped the clutch
+      if (timingState === "STAGED") {
+        if (speedMph >= LAUNCH_SPEED_MPH) {
           startTimer();
           lastGateCrossTime = now;
+          return;
         }
-      } else if (timingState === "RUNNING") {
-        if (distToFinish <= GATE_TRIGGER_RADIUS_METERS && (now - runStartTime > 3000)) {
+        if (distToStart > (GATE_TRIGGER_RADIUS_METERS * 1.5)) {
+          timingState = "ARMED";
+          timerStatusEl.textContent = "ARMED - PULL UP TO START LINE";
+          timerStatusEl.style.color = "#f59e0b";
+        }
+      }
+
+      // 3. Finish Line Crossing
+      if (timingState === "RUNNING") {
+        if (distToFinish <= GATE_TRIGGER_RADIUS_METERS && (now - runStartTime > 4000)) {
           finishTimer();
           lastGateCrossTime = now;
         }
@@ -473,7 +598,7 @@
     function resetTimerState() {
       clearInterval(clockInterval);
       timingState = (startGate && finishGate) ? "ARMED" : "IDLE";
-      timerStatusEl.textContent = timingState === "ARMED" ? "ARMED - DRIVE ACROSS START LINE" : "DISARMED (SET GATES)";
+      timerStatusEl.textContent = timingState === "ARMED" ? "ARMED - PULL UP TO START LINE" : "DISARMED (SET GATES)";
       timerStatusEl.style.color = "#f97316";
       timerClockEl.textContent = "00:00.00";
     }
@@ -549,7 +674,7 @@
       prevSpeed.textContent = Math.round(calcMph);
       mapSpeedEl.textContent = `${Math.round(calcMph)} MPH`;
 
-      // Coordinates & diagnostic readout
+      // Coordinates & diagnostics
       const rawLat = telem.latitude !== undefined ? telem.latitude : telem.lat;
       const rawLon = telem.longitude !== undefined ? telem.longitude : telem.lon;
       const rawAcc = telem.accuracy !== undefined ? telem.accuracy : (telem.acc || 0);
@@ -566,7 +691,7 @@
         prevGpsCoords.textContent = `${lat.toFixed(4)}°, ${lon.toFixed(4)}°`;
         prevGpsAcc.textContent = `±${latestAccuracy}m`;
 
-        // Update Map Marker & Trail
+        // Update Map Marker & Tail
         if (!carMarker) {
           carMarker = L.marker([lat, lon], { icon: carIcon }).addTo(map);
         } else {
@@ -576,6 +701,7 @@
 
         if (!mapCenteredOnce) {
           map.setView([lat, lon], 17);
+          map.invalidateSize();
           mapCenteredOnce = true;
         }
 
