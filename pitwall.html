@@ -136,7 +136,7 @@
       <div class="status-beacon"></div>
       <div class="signal-meta">
         <span class="signal-title" id="watchdog-title">GPS OFFLINE</span>
-        <span class="signal-detail" id="watchdog-desc">No telemetry received from OwnTracks</span>
+        <span class="signal-detail" id="watchdog-desc">Waiting for cockpit transmitter to start</span>
       </div>
     </div>
     <div class="ping-display" id="watchdog-ping">-- ms</div>
@@ -229,57 +229,70 @@
     let lastKnownTimestamp = 0;
     let latestAccuracy = 0;
 
-    // Database listener
+    // Database listener with error handler & debug logging
     db.on("value", (snap) => {
       const root = snap.val();
+      console.log("Pitwall received packet:", root);
       if (!root) return;
 
-      prevDriver.textContent = root.driver || "Driver";
-      if (document.activeElement !== driverInput && root.driver) {
-        driverInput.value = root.driver;
+      if (root.driver) {
+        prevDriver.textContent = root.driver;
+        if (document.activeElement !== driverInput) {
+          driverInput.value = root.driver;
+        }
       }
       if (root.status) updateStatusUI(root.status);
 
-      // Extract telemetry (handles direct keys OR OwnTracks nested POST keys)
+      // Handle direct properties or nested push objects
       let telem = root;
-      if (!root.lat && !root.latitude) {
+      if (root.lat === undefined && root.latitude === undefined) {
         const keys = Object.keys(root).filter(k => typeof root[k] === 'object' && root[k] !== null);
         if (keys.length > 0) {
-          keys.sort((a, b) => (root[a].tst || root[a].lastGpsTimestamp || 0) - (root[b].tst || root[b].lastGpsTimestamp || 0));
+          keys.sort((a, b) => {
+            const timeA = Number(root[a].lastGpsTimestamp || (root[a].tst ? root[a].tst * 1000 : 0));
+            const timeB = Number(root[b].lastGpsTimestamp || (root[b].tst ? root[b].tst * 1000 : 0));
+            return timeA - timeB;
+          });
           telem = root[keys[keys.length - 1]];
         }
       }
 
-      // Convert speed from km/h
+      // Speed calculation (handles MPH from worker or raw km/h)
       let calcMph = 0;
-      if (telem.vel !== undefined && telem.vel !== null) {
-        calcMph = Number(telem.vel) * 0.621371;
-      } else if (telem.speedMps !== undefined && telem.speedMps !== null) {
-        calcMph = Number(telem.speedMps) * 2.23694;
-      } else if (telem.speed !== undefined && telem.speed !== null) {
+      if (telem.speed !== undefined && telem.speed !== null) {
         calcMph = Number(telem.speed);
+      } else if (telem.vel !== undefined && telem.vel !== null) {
+        calcMph = Number(telem.vel) * 0.621371;
       }
       if (calcMph < 2.5 || isNaN(calcMph)) calcMph = 0;
       prevSpeed.textContent = Math.round(calcMph);
 
-      // Coordinate and timestamp handling
-      const lat = telem.lat !== undefined ? telem.lat : telem.latitude;
-      const lon = telem.lon !== undefined ? telem.lon : telem.longitude;
-      const acc = telem.acc !== undefined ? telem.acc : (telem.accuracy || 0);
-      latestAccuracy = Math.round(acc);
+      // Coordinate and accuracy handling
+      const rawLat = telem.latitude !== undefined ? telem.latitude : telem.lat;
+      const rawLon = telem.longitude !== undefined ? telem.longitude : telem.lon;
+      const rawAcc = telem.accuracy !== undefined ? telem.accuracy : (telem.acc || 0);
+      latestAccuracy = Math.round(Number(rawAcc) || 0);
 
-      let ts = telem.tst ? (telem.tst * 1000) : (telem.lastGpsTimestamp || 0);
-      if (ts) lastKnownTimestamp = ts;
-
-      if (lat && lon) {
-        prevGpsCoords.textContent = `${Number(lat).toFixed(4)}°, ${Number(lon).toFixed(4)}°`;
+      // Parse timestamp to number
+      let ts = telem.lastGpsTimestamp || (telem.tst ? telem.tst * 1000 : 0);
+      if (ts) {
+        lastKnownTimestamp = Number(ts);
       }
+
+      if (rawLat !== undefined && rawLon !== undefined && rawLat !== 0 && rawLon !== 0) {
+        prevGpsCoords.textContent = `${Number(rawLat).toFixed(4)}°, ${Number(rawLon).toFixed(4)}°`;
+      }
+    }, (error) => {
+      console.error("Firebase connection/read error:", error);
+      bannerTitle.textContent = "AUTH PERMISSION ERROR";
+      bannerDesc.textContent = "Check Firebase Security Rules (.read must be true)";
+      banner.className = "telemetry-banner offline";
     });
 
     // 1-Second Watchdog Monitor Loop
     setInterval(() => {
       if (!lastKnownTimestamp) {
-        setWatchdogState("offline", "GPS OFFLINE", "Waiting for OwnTracks to transmit", "--");
+        setWatchdogState("offline", "GPS OFFLINE", "Waiting for telemetry transmitter", "--");
         return;
       }
 
@@ -290,7 +303,7 @@
         setWatchdogState(
           "live", 
           "COCKPIT LIVE", 
-          `OwnTracks Active | Acc: ±${latestAccuracy}m`, 
+          `Transmitting | Acc: ±${latestAccuracy}m`, 
           `${elapsedMs} ms ago`
         );
         prevGpsAcc.textContent = `±${latestAccuracy}m`;
@@ -305,7 +318,7 @@
         setWatchdogState(
           "offline", 
           "SIGNAL LOST", 
-          `No packet for ${Math.round(elapsedSec)}s (Check OwnTracks)`, 
+          `No packet for ${Math.round(elapsedSec)}s (Check phone/Traccar)`, 
           `${Math.round(elapsedSec)}s`
         );
         prevGpsAcc.textContent = "DROPPED";
@@ -348,6 +361,8 @@
         driver: driverInput.value.trim() || "Driver",
         status: currentStatus,
         unit: "MPH"
+      }).catch(err => {
+        console.error("Firebase write error:", err);
       });
     }
 
