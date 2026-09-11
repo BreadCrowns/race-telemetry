@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+  <title>Cockpit Camera + Telemetry HUD</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+    body, html {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: #000;
+    }
+    /* Fullscreen Camera Feed */
+    video#camera-feed {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      min-width: 100%;
+      min-height: 100%;
+      width: auto;
+      height: auto;
+      transform: translate(-50%, -50%);
+      object-fit: cover;
+      z-index: 1;
+    }
+
+    /* Small GPS Diagnostic HUD (Top-Left) */
+    .gps-diag {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      z-index: 20;
+      background: rgba(0, 0, 0, 0.65);
+      backdrop-filter: blur(4px);
+      -webkit-backdrop-filter: blur(4px);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 4px;
+      padding: 4px 8px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 10px;
+      color: #94a3b8;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      pointer-events: none;
+    }
+    .gps-diag .live-row {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .gps-diag .status-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #ef4444; /* red when searching */
+    }
+    .gps-diag .status-dot.active {
+      background: #22c55e; /* green when receiving fixes */
+      box-shadow: 0 0 6px #22c55e;
+    }
+    .gps-coords {
+      color: #e2e8f0;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+    }
+
+    /* Primary HUD Overlay Layer */
+    .hud-layer {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 10;
+      pointer-events: none;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+      padding: 24px;
+    }
+    .hud-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      width: 100%;
+    }
+    .hud-card {
+      display: inline-flex;
+      align-items: center;
+      background: rgba(10, 14, 23, 0.85);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-left: 6px solid #f97316;
+      border-radius: 8px;
+      padding: 8px 18px;
+      color: #fff;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+    }
+    .driver-meta {
+      display: flex;
+      flex-direction: column;
+      margin-right: 18px;
+      padding-right: 16px;
+      border-right: 1px solid rgba(255, 255, 255, 0.2);
+    }
+    .driver-tag {
+      font-size: 9px;
+      font-weight: 800;
+      color: #f97316;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+    }
+    .driver-val {
+      font-size: 20px;
+      font-weight: 700;
+      max-width: 140px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .status-badge {
+      font-size: 9px;
+      font-weight: 800;
+      padding: 2px 6px;
+      border-radius: 4px;
+      background: #334155;
+      color: #cbd5e1;
+      align-self: flex-start;
+      margin-top: 2px;
+    }
+    .status-badge.in-pits { background: #b45309; color: #fef3c7; }
+    .speed-meta {
+      display: flex;
+      align-items: baseline;
+      gap: 4px;
+    }
+    .speed-val {
+      font-size: 48px;
+      font-weight: 900;
+      letter-spacing: -2px;
+      font-variant-numeric: tabular-nums;
+      min-width: 65px;
+      text-align: right;
+    }
+    .unit-val {
+      font-size: 13px;
+      font-weight: 700;
+      color: #94a3b8;
+    }
+
+    /* G-Force Circle Indicator */
+    .g-meter {
+      width: 74px;
+      height: 74px;
+      border-radius: 50%;
+      background: rgba(10, 14, 23, 0.85);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .g-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: #f97316;
+      position: absolute;
+      transform: translate(0, 0);
+      transition: transform 0.08s ease-out;
+    }
+    .g-label {
+      position: absolute;
+      bottom: -18px;
+      font-size: 10px;
+      color: #cbd5e1;
+      font-weight: 700;
+      text-shadow: 0 1px 3px #000;
+    }
+
+    /* Launch Button */
+    #start-overlay-btn {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      z-index: 50;
+      padding: 16px 28px;
+      font-size: 18px;
+      font-weight: bold;
+      color: #fff;
+      background: #f97316;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      box-shadow: 0 6px 20px rgba(0,0,0,0.6);
+    }
+  </style>
+</head>
+<body>
+
+  <video id="camera-feed" autoplay playsinline muted></video>
+
+  <!-- Top-Left Mini GPS Status -->
+  <div class="gps-diag" id="gps-diag" style="display: none;">
+    <div class="live-row">
+      <span class="status-dot" id="gps-dot"></span>
+      <span id="gps-status-text">ACQUIRING GPS...</span>
+    </div>
+    <div class="gps-coords" id="gps-coords">--.----°, --.----°</div>
+  </div>
+
+  <button id="start-overlay-btn" type="button">LAUNCH RACE HUD</button>
+
+  <div class="hud-layer" id="hud-ui" style="display: none;">
+    <div class="hud-row">
+      <!-- Driver + Speed Block -->
+      <div class="hud-card">
+        <div class="driver-meta">
+          <span class="driver-tag">Driver</span>
+          <span class="driver-val" id="driver-val">Driver</span>
+          <span class="status-badge" id="status-val">ON TRACK</span>
+        </div>
+        <div class="speed-meta">
+          <span class="speed-val" id="speed-val">0</span>
+          <span class="unit-val" id="unit-val">MPH</span>
+        </div>
+      </div>
+
+      <!-- Accelerometer / Lateral G-meter -->
+      <div class="g-meter">
+        <div class="g-dot" id="g-dot"></div>
+        <div class="g-label" id="g-text">0.0G</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Firebase SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+
+  <script>
+    const firebaseConfig = {
+		apiKey: "AIzaSyCC4JUzjr5lk9zaT78wwZ1RcjUguP5Q70s",
+		authDomain: "fiero-telemetry.firebaseapp.com",
+		databaseURL: "https://fiero-telemetry-default-rtdb.firebaseio.com",
+		projectId: "fiero-telemetry",
+		storageBucket: "fiero-telemetry.firebasestorage.app",
+		messagingSenderId: "183922450878",
+		appId: "1:183922450878:web:5faabfd6d163f1c6c119ef"
+	};
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database().ref("raceTelemetry");
+
+    const video = document.getElementById("camera-feed");
+    const startBtn = document.getElementById("start-overlay-btn");
+    const hudUi = document.getElementById("hud-ui");
+    const gpsDiag = document.getElementById("gps-diag");
+    const gpsDot = document.getElementById("gps-dot");
+    const gpsStatusText = document.getElementById("gps-status-text");
+    const gpsCoords = document.getElementById("gps-coords");
+
+    const driverVal = document.getElementById("driver-val");
+    const statusVal = document.getElementById("status-val");
+    const speedVal = document.getElementById("speed-val");
+    const unitVal = document.getElementById("unit-val");
+    const gDot = document.getElementById("g-dot");
+    const gText = document.getElementById("g-text");
+
+    let currentUnit = "MPH";
+    let targetSpeed = 0;
+    let smoothSpeed = 0;
+
+    // Listen to Firebase for Pit Wall changes
+    db.on("value", (snap) => {
+      const val = snap.val();
+      if (!val) return;
+      driverVal.textContent = val.driver || "Driver";
+      unitVal.textContent = val.unit || "MPH";
+      currentUnit = val.unit || "MPH";
+
+      const st = val.status || "ON TRACK";
+      statusVal.textContent = st;
+      statusVal.className = "status-badge";
+      if (st === "IN PITS") statusVal.classList.add("in-pits");
+    });
+
+    // Smooth speed animation loop
+    function animate() {
+      smoothSpeed += (targetSpeed - smoothSpeed) * 0.15;
+      speedVal.textContent = Math.round(smoothSpeed);
+      requestAnimationFrame(animate);
+    }
+    requestAnimationFrame(animate);
+
+    startBtn.addEventListener("click", async () => {
+      startBtn.style.display = "none";
+      hudUi.style.display = "flex";
+      gpsDiag.style.display = "flex";
+
+      // 1. Keep Screen Awake
+      if ("wakeLock" in navigator) {
+        try { await navigator.wakeLock.request("screen"); } catch (e) {}
+      }
+
+      // 2. Start Video Stream (Environment camera)
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            facingMode: { ideal: "environment" },
+            width: { ideal: 1920 },
+            height: { ideal: 1080 }
+          },
+          audio: false
+        });
+        video.srcObject = stream;
+      } catch (err) {
+        alert("Camera error: " + err.message);
+      }
+
+      // 3. Start High-Accuracy GPS Tracking
+      if (navigator.geolocation) {
+        navigator.geolocation.watchPosition(
+          (pos) => {
+            const lat = pos.coords.latitude.toFixed(4);
+            const lon = pos.coords.longitude.toFixed(4);
+            const acc = Math.round(pos.coords.accuracy || 0);
+
+            // Update mini diagnostic HUD
+            gpsDot.classList.add("active");
+            gpsStatusText.textContent = `GPS LOCK (±${acc}m)`;
+            gpsCoords.textContent = `${lat}°, ${lon}°`;
+
+            // Calculate Speed
+            const mps = pos.coords.speed || 0;
+            targetSpeed = currentUnit === "MPH" ? (mps * 2.23694) : (mps * 3.6);
+          },
+          (err) => {
+            gpsDot.classList.remove("active");
+            gpsStatusText.textContent = `GPS ERR: ${err.message}`;
+          },
+          {
+            enableHighAccuracy: true,
+            maximumAge: 300,
+            timeout: 5000
+          }
+        );
+      } else {
+        gpsStatusText.textContent = "GPS NOT SUPPORTED";
+      }
+
+      // 4. Start G-Force / Accelerometer
+      if (window.DeviceMotionEvent) {
+        if (typeof DeviceMotionEvent.requestPermission === "function") {
+          try { await DeviceMotionEvent.requestPermission(); } catch (e) {}
+        }
+        window.addEventListener("devicemotion", (e) => {
+          const acc = e.accelerationIncludingGravity;
+          if (!acc) return;
+          const gX = Math.max(-25, Math.min(25, (acc.x || 0) * 2.5));
+          const gY = Math.max(-25, Math.min(25, (acc.y || 0) * 2.5));
+          gDot.style.transform = `translate(${gX}px, ${gY}px)`;
+          const totalG = (Math.sqrt((acc.x || 0)**2 + (acc.y || 0)**2) / 9.8).toFixed(1);
+          gText.textContent = `${totalG}G`;
+        });
+      }
+    });
+  </script>
+</body>
+</html>
