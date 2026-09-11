@@ -2,107 +2,296 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
   <title>Cockpit GPS Transmitter</title>
   <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; font-family: monospace; }
-    body { background: #000; color: #fff; height: 100vh; display: flex; flex-direction: column; justify-content: space-between; padding: 20px; text-align: center; }
-    .top-bar { font-size: 14px; color: #64748b; }
-    .speed-display { font-size: 110px; font-weight: 900; line-height: 1; color: #f97316; }
-    .unit-display { font-size: 24px; color: #94a3b8; }
-    .btn { background: #16a34a; color: white; border: none; padding: 24px; font-size: 20px; font-weight: bold; border-radius: 12px; cursor: pointer; }
-    .btn.active { background: #dc2626; }
-    .status { font-size: 13px; color: #64748b; }
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, monospace;
+      -webkit-tap-highlight-color: transparent;
+    }
+    body {
+      background: #050811;
+      color: #fff;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 24px;
+      text-align: center;
+      overflow: hidden;
+    }
+
+    /* Top Metadata Bar */
+    .top-meta {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 13px;
+      color: #94a3b8;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      padding-bottom: 10px;
+    }
+    .driver-tag {
+      font-weight: 800;
+      color: #f97316;
+      letter-spacing: 1px;
+    }
+    .status-pill {
+      background: #1e293b;
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 700;
+    }
+
+    /* Big Speed Readout */
+    .speed-section {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+    .speed-display {
+      font-size: 120px;
+      font-weight: 900;
+      line-height: 1;
+      color: #f8fafc;
+      font-variant-numeric: tabular-nums;
+      letter-spacing: -3px;
+    }
+    .unit-display {
+      font-size: 20px;
+      font-weight: 800;
+      color: #f97316;
+      letter-spacing: 2px;
+      margin-top: 4px;
+    }
+
+    /* GPS Diagnostic Info */
+    .coords-box {
+      background: rgba(15, 23, 42, 0.75);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 8px;
+      padding: 10px 14px;
+      margin: 0 auto;
+      width: 100%;
+      max-width: 360px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, monospace;
+      font-size: 12px;
+      color: #cbd5e1;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .coords-line {
+      display: flex;
+      justify-content: space-between;
+    }
+    .coords-label { color: #64748b; }
+    .coords-val { font-weight: 600; color: #38bdf8; }
+
+    /* Action Button & Status */
+    .controls-section {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .btn {
+      background: #16a34a;
+      color: white;
+      border: none;
+      padding: 22px;
+      font-size: 18px;
+      font-weight: 800;
+      border-radius: 12px;
+      cursor: pointer;
+      box-shadow: 0 4px 20px rgba(22, 163, 74, 0.35);
+      letter-spacing: 1px;
+    }
+    .btn:active {
+      transform: scale(0.98);
+    }
+    .btn.active {
+      background: #dc2626;
+      box-shadow: 0 4px 20px rgba(220, 38, 38, 0.4);
+    }
+    .log-status {
+      font-size: 12px;
+      color: #64748b;
+      font-family: ui-monospace, monospace;
+    }
   </style>
 </head>
 <body>
 
-  <div class="top-bar" id="driver-indicator">DRIVER: --</div>
+  <!-- Top Bar: Pit Wall Driver Name & Session Status -->
+  <div class="top-meta">
+    <span class="driver-tag" id="driver-indicator">DRIVER: --</span>
+    <span class="status-pill" id="session-indicator">ON TRACK</span>
+  </div>
 
-  <div>
+  <!-- Center Speedometer -->
+  <div class="speed-section">
     <div class="speed-display" id="speed-val">0</div>
-    <div class="unit-display" id="unit-val">MPH</div>
+    <div class="unit-display">MPH</div>
   </div>
 
-  <div>
+  <!-- Live GPS Coordinate Diagnostics -->
+  <div class="coords-box">
+    <div class="coords-line">
+      <span class="coords-label">COORDINATES:</span>
+      <span class="coords-val" id="coords-val">--.----°, --.----°</span>
+    </div>
+    <div class="coords-line">
+      <span class="coords-label">ACCURACY / PING:</span>
+      <span class="coords-val" id="accuracy-val">STANDBY</span>
+    </div>
+  </div>
+
+  <!-- Action Controls -->
+  <div class="controls-section">
     <button class="btn" id="start-btn" type="button">START TRANSMITTING</button>
-    <div class="status" id="status-text" style="margin-top: 10px;">Tap button and place in windshield mount</div>
+    <div class="log-status" id="log-status">Tap button & leave phone screen awake</div>
   </div>
 
+  <!-- Firebase SDKs -->
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 
   <script>
     const firebaseConfig = {
-		apiKey: "AIzaSyCC4JUzjr5lk9zaT78wwZ1RcjUguP5Q70s",
-		authDomain: "fiero-telemetry.firebaseapp.com",
-		databaseURL: "https://fiero-telemetry-default-rtdb.firebaseio.com",
-		projectId: "fiero-telemetry",
-		storageBucket: "fiero-telemetry.firebasestorage.app",
-		messagingSenderId: "183922450878",
-		appId: "1:183922450878:web:5faabfd6d163f1c6c119ef"
-	};
+      apiKey: "AIzaSyCC4JUzjr5lk9zaT78wwZ1RcjUguP5Q70s",
+      authDomain: "fiero-telemetry.firebaseapp.com",
+      databaseURL: "https://fiero-telemetry-default-rtdb.firebaseio.com",
+      projectId: "fiero-telemetry",
+      storageBucket: "fiero-telemetry.firebasestorage.app",
+      messagingSenderId: "183922450878",
+      appId: "1:183922450878:web:5faabfd6d163f1c6c119ef"
+    };
 
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database().ref("raceTelemetry");
 
     const startBtn = document.getElementById("start-btn");
     const speedVal = document.getElementById("speed-val");
-    const unitVal = document.getElementById("unit-val");
-    const statusText = document.getElementById("status-text");
-    const driverInd = document.getElementById("driver-indicator");
+    const logStatus = document.getElementById("log-status");
+    const driverIndicator = document.getElementById("driver-indicator");
+    const sessionIndicator = document.getElementById("session-indicator");
+    const coordsVal = document.getElementById("coords-val");
+    const accuracyVal = document.getElementById("accuracy-val");
 
     let watchId = null;
     let wakeLock = null;
-    let currentUnit = "MPH";
     let lastPush = 0;
 
-    // Listen for driver/unit changes sent from the pit wall
+    // Minimum speed threshold to kill 1 mph idle jitter
+    const SPEED_CUTOFF_MPH = 2.5;
+
+    // Listen to changes from Pit Wall
     db.on("value", (snap) => {
       const data = snap.val();
       if (!data) return;
-      if (data.unit) { currentUnit = data.unit; unitVal.textContent = data.unit; }
-      if (data.driver) { driverInd.textContent = `DRIVER: ${data.driver.toUpperCase()}`; }
+      if (data.driver) {
+        driverIndicator.textContent = `DRIVER: ${data.driver.toUpperCase()}`;
+      }
+      if (data.status) {
+        sessionIndicator.textContent = data.status;
+      }
     });
 
     startBtn.addEventListener("click", async () => {
       if (watchId !== null) {
+        // Stop Transmitting
         navigator.geolocation.clearWatch(watchId);
         watchId = null;
-        if (wakeLock) { wakeLock.release(); wakeLock = null; }
+        if (wakeLock) {
+          wakeLock.release().catch(() => {});
+          wakeLock = null;
+        }
+
         startBtn.textContent = "START TRANSMITTING";
         startBtn.className = "btn";
-        statusText.textContent = "Transmitter stopped.";
-        db.update({ speed: 0, lastGpsTimestamp: 0 });
+        logStatus.textContent = "Transmitter stopped.";
+        speedVal.textContent = "0";
+        accuracyVal.textContent = "STANDBY";
+
+        // Push clean zeroed state
+        db.update({
+          speed: 0,
+          lastGpsTimestamp: 0
+        });
       } else {
+        // Start Transmitting
+        if (!navigator.geolocation) {
+          logStatus.textContent = "Geolocation unsupported on this device/browser.";
+          return;
+        }
+
+        // Request Screen Wake Lock so transmission never sleeps
         if ("wakeLock" in navigator) {
-          try { wakeLock = await navigator.wakeLock.request("screen"); } catch (e) {}
+          try {
+            wakeLock = await navigator.wakeLock.request("screen");
+          } catch (e) {
+            console.warn("WakeLock error:", e);
+          }
         }
 
         startBtn.textContent = "STOP TRANSMITTING";
         startBtn.className = "btn active";
-        statusText.textContent = "Locking GPS satellites...";
+        logStatus.textContent = "Acquiring satellite lock...";
 
         watchId = navigator.geolocation.watchPosition(
           (pos) => {
             const now = Date.now();
-            if (now - lastPush < 650) return; // ~1.5 updates/sec
+            // Throttle network writes to ~1.5 updates per second
+            if (now - lastPush < 650) return;
             lastPush = now;
 
-            const mps = pos.coords.speed || 0;
-            const speed = currentUnit === "MPH" ? (mps * 2.23694) : (mps * 3.6);
+            const lat = pos.coords.latitude;
+            const lon = pos.coords.longitude;
+            const acc = Math.round(pos.coords.accuracy || 0);
 
-            speedVal.textContent = Math.round(speed);
-            statusText.textContent = `Broadcasting | Accuracy: ±${Math.round(pos.coords.accuracy || 0)}m`;
+            let rawMps = pos.coords.speed;
+            if (rawMps === null || isNaN(rawMps) || rawMps < 0) {
+              rawMps = 0;
+            }
 
+            // Convert m/s to MPH
+            let speedMph = rawMps * 2.23694;
+
+            // Deadband: prevent 1 MPH drift when sitting still
+            if (speedMph < SPEED_CUTOFF_MPH) {
+              speedMph = 0;
+            }
+
+            // Update on-screen phone UI
+            speedVal.textContent = Math.round(speedMph);
+            coordsVal.textContent = `${lat.toFixed(4)}°, ${lon.toFixed(4)}°`;
+            accuracyVal.textContent = `±${acc}m | ${new Date(now).toLocaleTimeString()}`;
+            logStatus.textContent = `BROADCASTING TO PIT WALL & PRISM`;
+
+            // Push all telemetry to Firebase
             db.update({
-              speed: speed,
-              accuracy: Math.round(pos.coords.accuracy || 0),
+              speed: speedMph,
+              latitude: lat,
+              longitude: lon,
+              accuracy: acc,
+              unit: "MPH",
               lastGpsTimestamp: now
             });
           },
-          (err) => { statusText.textContent = `GPS Error: ${err.message}`; },
-          { enableHighAccuracy: true, maximumAge: 300, timeout: 4000 }
+          (err) => {
+            logStatus.textContent = `GPS Error (${err.code}): ${err.message}`;
+            accuracyVal.textContent = "ERROR";
+          },
+          {
+            enableHighAccuracy: true,
+            maximumAge: 300,
+            timeout: 5000
+          }
         );
       }
     });
