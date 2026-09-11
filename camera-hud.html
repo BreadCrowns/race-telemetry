@@ -3,83 +3,48 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
-  <title>Race Cockpit Camera HUD</title>
+  <title>Cockpit Camera + Telemetry HUD</title>
   <style>
     * {
       box-sizing: border-box;
       margin: 0;
       padding: 0;
-      user-select: none;
-      -webkit-user-select: none;
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      -webkit-tap-highlight-color: transparent;
     }
     body, html {
       width: 100%;
       height: 100%;
       overflow: hidden;
       background: #000;
+      position: fixed;
     }
 
-    /* Video feed filling screen */
-    #camera-feed {
+    /* Native Camera Viewport - Full view, highest aspect match */
+    video#camera-feed {
       position: absolute;
-      top: 50%;
-      left: 50%;
-      min-width: 100%;
-      min-height: 100%;
-      width: auto;
-      height: auto;
-      transform: translate(-50%, -50%);
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
       object-fit: cover;
       z-index: 1;
       background: #000;
     }
 
-    /* Floating control bar (top-right) */
-    .controls-bar {
-      position: absolute;
-      top: 12px;
-      right: 12px;
-      z-index: 30;
-      display: flex;
-      gap: 8px;
-    }
-    .ctrl-btn {
-      background: rgba(15, 23, 42, 0.75);
-      backdrop-filter: blur(8px);
-      -webkit-backdrop-filter: blur(8px);
-      border: 1px solid rgba(255, 255, 255, 0.2);
-      color: #fff;
-      font-size: 11px;
-      font-weight: 700;
-      letter-spacing: 0.5px;
-      padding: 7px 12px;
-      border-radius: 6px;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      gap: 5px;
-      text-transform: uppercase;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
-    }
-    .ctrl-btn:active {
-      background: #f97316;
-      border-color: #f97316;
-    }
-
-    /* Small GPS Diagnostic HUD (Top-Left) */
+    /* Mini GPS Diagnostic HUD (Top-Left) */
     .gps-diag {
       position: absolute;
       top: 12px;
       left: 12px;
-      z-index: 25;
-      background: rgba(10, 14, 23, 0.75);
-      backdrop-filter: blur(6px);
-      -webkit-backdrop-filter: blur(6px);
-      border: 1px solid rgba(255, 255, 255, 0.15);
-      border-radius: 6px;
-      padding: 5px 10px;
-      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      z-index: 15;
+      background: rgba(0, 0, 0, 0.65);
+      backdrop-filter: blur(5px);
+      -webkit-backdrop-filter: blur(5px);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 4px;
+      padding: 4px 8px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, monospace;
       font-size: 10px;
       color: #94a3b8;
       display: flex;
@@ -90,59 +55,71 @@
     .gps-diag .live-row {
       display: flex;
       align-items: center;
-      gap: 6px;
+      gap: 5px;
     }
     .gps-diag .status-dot {
-      width: 7px;
-      height: 7px;
+      width: 6px;
+      height: 6px;
       border-radius: 50%;
       background: #ef4444;
-      transition: background 0.2s, box-shadow 0.2s;
     }
     .gps-diag .status-dot.active {
       background: #22c55e;
-      box-shadow: 0 0 8px #22c55e;
+      box-shadow: 0 0 6px #22c55e;
     }
     .gps-coords {
-      color: #f1f5f9;
+      color: #e2e8f0;
       font-weight: 600;
       letter-spacing: 0.5px;
     }
 
-    /* Primary HUD bottom overlay layer */
+    /* Primary HUD Overlay Layer */
     .hud-layer {
       position: absolute;
-      bottom: 0;
+      top: 0;
       left: 0;
       width: 100%;
-      z-index: 20;
+      height: 100%;
+      z-index: 10;
       pointer-events: none;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+      padding: 24px;
+    }
+    .hud-row {
       display: flex;
       justify-content: space-between;
       align-items: flex-end;
-      padding: 20px 24px;
+      width: 100%;
     }
 
-    /* Driver & Speed HUD Card */
+    /* Interactive Driver HUD Card */
     .hud-card {
+      pointer-events: auto;
+      cursor: pointer;
       display: inline-flex;
       align-items: center;
-      background: rgba(10, 14, 23, 0.88);
-      backdrop-filter: blur(10px);
-      -webkit-backdrop-filter: blur(10px);
+      background: rgba(10, 14, 23, 0.85);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
       border: 1px solid rgba(255, 255, 255, 0.15);
       border-left: 6px solid #f97316;
       border-radius: 8px;
       padding: 8px 18px;
       color: #fff;
-      box-shadow: 0 8px 24px rgba(0,0,0,0.6);
+      box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+      transition: transform 0.1s ease, border-color 0.2s ease;
+    }
+    .hud-card:active {
+      transform: scale(0.97);
     }
     .driver-meta {
       display: flex;
       flex-direction: column;
       margin-right: 18px;
       padding-right: 16px;
-      border-right: 1px solid rgba(255, 255, 255, 0.18);
+      border-right: 1px solid rgba(255, 255, 255, 0.2);
     }
     .driver-tag {
       font-size: 9px;
@@ -150,11 +127,19 @@
       color: #f97316;
       letter-spacing: 2px;
       text-transform: uppercase;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .driver-tag::after {
+      content: '⚙';
+      font-size: 9px;
+      opacity: 0.6;
     }
     .driver-val {
       font-size: 20px;
       font-weight: 700;
-      max-width: 160px;
+      max-width: 140px;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
@@ -167,12 +152,10 @@
       background: #334155;
       color: #cbd5e1;
       align-self: flex-start;
-      margin-top: 3px;
-      letter-spacing: 0.5px;
+      margin-top: 2px;
     }
     .status-badge.in-pits { background: #b45309; color: #fef3c7; }
     .status-badge.driver-swap { background: #6d28d9; color: #ede9fe; }
-
     .speed-meta {
       display: flex;
       align-items: baseline;
@@ -192,151 +175,153 @@
       color: #94a3b8;
     }
 
-    /* Friction Circle G-Force Meter */
-    .g-container {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 4px;
-    }
+    /* G-Force Circle Indicator */
     .g-meter {
-      width: 78px;
-      height: 78px;
+      width: 76px;
+      height: 76px;
       border-radius: 50%;
       background: rgba(10, 14, 23, 0.85);
-      backdrop-filter: blur(8px);
-      -webkit-backdrop-filter: blur(8px);
-      border: 1px solid rgba(255, 255, 255, 0.25);
+      border: 1px solid rgba(255, 255, 255, 0.2);
       position: relative;
       display: flex;
       align-items: center;
       justify-content: center;
-      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+      box-shadow: 0 4px 15px rgba(0,0,0,0.4);
     }
-    /* Concentric target ring */
-    .g-meter::after {
+    .g-meter::before {
       content: '';
       position: absolute;
       width: 38px;
       height: 38px;
       border-radius: 50%;
-      border: 1px dashed rgba(255, 255, 255, 0.2);
-    }
-    /* Crosshairs */
-    .g-cross-h {
-      position: absolute;
-      width: 100%;
-      height: 1px;
-      background: rgba(255, 255, 255, 0.12);
-    }
-    .g-cross-v {
-      position: absolute;
-      height: 100%;
-      width: 1px;
-      background: rgba(255, 255, 255, 0.12);
+      border: 1px dashed rgba(255, 255, 255, 0.15);
     }
     .g-dot {
-      width: 11px;
-      height: 11px;
+      width: 10px;
+      height: 10px;
       border-radius: 50%;
       background: #f97316;
-      box-shadow: 0 0 8px #f97316;
       position: absolute;
       transform: translate(0, 0);
-      transition: transform 0.08s cubic-bezier(0.1, 0.7, 0.1, 1);
-      z-index: 2;
+      transition: transform 0.08s ease-out;
     }
     .g-label {
-      font-size: 11px;
-      color: #f1f5f9;
-      font-weight: 800;
-      font-family: ui-monospace, SFMono-Regular, monospace;
-      text-shadow: 0 2px 4px #000;
-    }
-
-    /* Calibration Toast Alert */
-    .toast {
       position: absolute;
-      top: 60px;
-      left: 50%;
-      transform: translateX(-50%);
-      background: rgba(249, 115, 22, 0.9);
-      color: #fff;
-      padding: 6px 16px;
-      border-radius: 20px;
-      font-size: 11px;
+      bottom: -18px;
+      font-size: 10px;
+      color: #cbd5e1;
       font-weight: 700;
-      z-index: 40;
-      opacity: 0;
-      transition: opacity 0.3s ease;
-      pointer-events: none;
-      letter-spacing: 0.5px;
-    }
-    .toast.show {
-      opacity: 1;
+      text-shadow: 0 1px 3px #000;
     }
 
-    /* Initial Fullscreen / Launch Overlay Screen */
-    #start-modal {
-      position: absolute;
-      inset: 0;
+    /* Slide-out Settings Drawer */
+    .drawer-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.5);
       z-index: 100;
-      background: rgba(6, 9, 17, 0.95);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.25s ease;
+    }
+    .drawer-overlay.open {
+      opacity: 1;
+      pointer-events: auto;
+    }
+    .settings-drawer {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      max-width: 420px;
+      background: rgba(15, 23, 42, 0.95);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border-top: 2px solid #f97316;
+      border-radius: 16px 16px 0 0;
+      padding: 24px;
+      z-index: 101;
+      transform: translateY(100%);
+      transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
       display: flex;
       flex-direction: column;
+      gap: 14px;
+    }
+    .settings-drawer.open {
+      transform: translateY(0);
+    }
+    .drawer-header {
+      display: flex;
+      justify-content: space-between;
       align-items: center;
-      justify-content: center;
-      gap: 16px;
-      padding: 24px;
-      text-align: center;
+      margin-bottom: 4px;
     }
-    #start-modal h1 {
-      color: #f97316;
-      font-size: 24px;
-      text-transform: uppercase;
-      letter-spacing: 2px;
-      font-weight: 900;
-    }
-    #start-modal p {
-      color: #94a3b8;
-      font-size: 13px;
-      max-width: 320px;
-      line-height: 1.5;
-    }
-    #launch-btn {
-      background: #ea580c;
-      color: white;
-      border: none;
-      padding: 16px 36px;
-      font-size: 16px;
+    .drawer-title {
+      font-size: 14px;
       font-weight: 800;
+      color: #f97316;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+    }
+    .btn-close {
+      background: #334155;
+      color: #fff;
+      border: none;
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      font-size: 14px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    .menu-btn {
+      background: #1e293b;
+      color: #f8fafc;
+      border: 1px solid #334155;
+      padding: 14px 16px;
+      font-size: 15px;
+      font-weight: 600;
       border-radius: 8px;
       cursor: pointer;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-      box-shadow: 0 4px 20px rgba(234, 88, 12, 0.5);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .menu-btn:active {
+      background: #334155;
+    }
+    .menu-btn.active {
+      border-color: #f97316;
+      color: #f97316;
+    }
+
+    /* Initial Fullscreen Gate */
+    #start-overlay-btn {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      z-index: 50;
+      padding: 18px 32px;
+      font-size: 18px;
+      font-weight: bold;
+      color: #fff;
+      background: #f97316;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      box-shadow: 0 6px 25px rgba(249, 115, 22, 0.4);
     }
   </style>
 </head>
 <body>
 
-  <!-- Fullscreen Camera Element -->
   <video id="camera-feed" autoplay playsinline muted></video>
 
-  <!-- Persistent Interactive Controls (Top Right) -->
-  <div class="controls-bar" id="controls-bar" style="display: none;">
-    <button class="ctrl-btn" id="btn-cam" title="Switch Front/Back Camera">
-      📷 <span id="cam-label">Back</span>
-    </button>
-    <button class="ctrl-btn" id="btn-cal" title="Zero G-force on current mount">
-      🎯 Zero G
-    </button>
-    <button class="ctrl-btn" id="btn-fs" title="Toggle Fullscreen">
-      ⛶ Fullscreen
-    </button>
-  </div>
-
-  <!-- Small Top-Left GPS Diagnostic Readout -->
+  <!-- GPS Diagnostic HUD -->
   <div class="gps-diag" id="gps-diag" style="display: none;">
     <div class="live-row">
       <span class="status-dot" id="gps-dot"></span>
@@ -345,48 +330,58 @@
     <div class="gps-coords" id="gps-coords">--.----°, --.----°</div>
   </div>
 
-  <!-- Calibration notification pop-up -->
-  <div class="toast" id="toast">G-FORCE ZEROED TO MOUNT</div>
+  <button id="start-overlay-btn" type="button">LAUNCH RACE HUD</button>
 
-  <!-- Primary HUD Display (Bottom) -->
+  <!-- Main HUD Layer -->
   <div class="hud-layer" id="hud-ui" style="display: none;">
-    <!-- Driver + Speed Block -->
-    <div class="hud-card">
-      <div class="driver-meta">
-        <span class="driver-tag">Driver</span>
-        <span class="driver-val" id="driver-val">Driver</span>
-        <span class="status-badge" id="status-val">ON TRACK</span>
+    <div class="hud-row">
+      <!-- Driver Card (Tap to open Settings Menu) -->
+      <div class="hud-card" id="hud-card-btn" title="Tap for Settings">
+        <div class="driver-meta">
+          <span class="driver-tag">Driver</span>
+          <span class="driver-val" id="driver-val">Driver</span>
+          <span class="status-badge" id="status-val">ON TRACK</span>
+        </div>
+        <div class="speed-meta">
+          <span class="speed-val" id="speed-val">0</span>
+          <span class="unit-val" id="unit-val">MPH</span>
+        </div>
       </div>
-      <div class="speed-meta">
-        <span class="speed-val" id="speed-val">0</span>
-        <span class="unit-val" id="unit-val">MPH</span>
-      </div>
-    </div>
 
-    <!-- Friction Circle G-Force Meter -->
-    <div class="g-container">
+      <!-- Accelerometer G-Meter -->
       <div class="g-meter">
-        <div class="g-cross-h"></div>
-        <div class="g-cross-v"></div>
         <div class="g-dot" id="g-dot"></div>
+        <div class="g-label" id="g-text">0.0G</div>
       </div>
-      <div class="g-label" id="g-text">0.0G</div>
     </div>
   </div>
 
-  <!-- Launch / Grant Permission Overlay Modal -->
-  <div id="start-modal">
-    <h1>Fiero Cockpit HUD</h1>
-    <p>Mount phone to windshield or roll cage. Tap below to engage fullscreen, camera, GPS, and G-force sensors.</p>
-    <button id="launch-btn" type="button">Launch Race HUD</button>
+  <!-- Slide-out Settings Menu -->
+  <div class="drawer-overlay" id="drawer-overlay"></div>
+  <div class="settings-drawer" id="settings-drawer">
+    <div class="drawer-header">
+      <span class="drawer-title">Cockpit Controls</span>
+      <button class="btn-close" id="btn-close-drawer" type="button">✕</button>
+    </div>
+    <button class="menu-btn" id="btn-toggle-cam" type="button">
+      <span>Switch Camera</span>
+      <span id="cam-mode-label" style="color: #94a3b8; font-size: 13px;">Back (Landscape)</span>
+    </button>
+    <button class="menu-btn" id="btn-zero-g" type="button">
+      <span>Zero G-Force / Gyro</span>
+      <span style="color: #f97316; font-size: 13px;">🎯 Calibrate</span>
+    </button>
+    <button class="menu-btn" id="btn-fullscreen" type="button">
+      <span>Toggle Fullscreen</span>
+      <span style="font-size: 16px;">⛶</span>
+    </button>
   </div>
 
-  <!-- Firebase App & RTDB SDKs -->
+  <!-- Firebase SDKs -->
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 
   <script>
-    // 1. Firebase Initialization with your project configuration
     const firebaseConfig = {
       apiKey: "AIzaSyCC4JUzjr5lk9zaT78wwZ1RcjUguP5Q70s",
       authDomain: "fiero-telemetry.firebaseapp.com",
@@ -400,14 +395,21 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database().ref("raceTelemetry");
 
-    // DOM Elements
     const video = document.getElementById("camera-feed");
-    const launchBtn = document.getElementById("launch-btn");
-    const startModal = document.getElementById("start-modal");
+    const startBtn = document.getElementById("start-overlay-btn");
     const hudUi = document.getElementById("hud-ui");
-    const controlsBar = document.getElementById("controls-bar");
-    const gpsDiag = document.getElementById("gps-diag");
+    const hudCardBtn = document.getElementById("hud-card-btn");
 
+    const drawerOverlay = document.getElementById("drawer-overlay");
+    const settingsDrawer = document.getElementById("settings-drawer");
+    const btnCloseDrawer = document.getElementById("btn-close-drawer");
+
+    const btnToggleCam = document.getElementById("btn-toggle-cam");
+    const camModeLabel = document.getElementById("cam-mode-label");
+    const btnZeroG = document.getElementById("btn-zero-g");
+    const btnFullscreen = document.getElementById("btn-fullscreen");
+
+    const gpsDiag = document.getElementById("gps-diag");
     const gpsDot = document.getElementById("gps-dot");
     const gpsStatusText = document.getElementById("gps-status-text");
     const gpsCoords = document.getElementById("gps-coords");
@@ -416,248 +418,23 @@
     const statusVal = document.getElementById("status-val");
     const speedVal = document.getElementById("speed-val");
     const unitVal = document.getElementById("unit-val");
-
     const gDot = document.getElementById("g-dot");
     const gText = document.getElementById("g-text");
-    const toast = document.getElementById("toast");
 
-    const btnCam = document.getElementById("btn-cam");
-    const btnCal = document.getElementById("btn-cal");
-    const btnFs = document.getElementById("btn-fs");
-    const camLabel = document.getElementById("cam-label");
-
-    // Telemetry State
-    let currentFacingMode = "environment"; // "environment" (back) or "user" (front)
-    let currentStream = null;
     let currentUnit = "MPH";
     let targetSpeed = 0;
     let smoothSpeed = 0;
-    let lastGpsPush = 0;
+    let currentStream = null;
+    let facingMode = "environment"; // default to rear camera
 
-    // G-Force Sensor Calibration & Offsets
-    // Calibrating stores the resting gravity vector (tilt of windshield mount)
-    let baselineX = 0;
-    let baselineY = 0;
-    let baselineZ = 0;
-    let rawAccX = 0;
-    let rawAccY = 0;
-    let rawAccZ = 0;
+    // Gyro baseline calibration offsets
+    let offsetAx = 0;
+    let offsetAy = 0;
 
-    // Cross-browser Fullscreen Helpers
-    function enterFullscreen() {
-      const el = document.documentElement;
-      if (el.requestFullscreen) {
-        el.requestFullscreen().catch(() => {});
-      } else if (el.webkitRequestFullscreen) {
-        el.webkitRequestFullscreen();
-      } else if (el.msRequestFullscreen) {
-        el.msRequestFullscreen();
-      }
-    }
-
-    function toggleFullscreen() {
-      if (!document.fullscreenElement && !document.webkitFullscreenElement) {
-        enterFullscreen();
-      } else {
-        if (document.exitFullscreen) {
-          document.exitFullscreen();
-        } else if (document.webkitExitFullscreen) {
-          document.webkitExitFullscreen();
-        }
-      }
-    }
-
-    btnFs.addEventListener("click", toggleFullscreen);
-
-    // Camera Stream Controller
-    async function startCamera(facingMode) {
-      if (currentStream) {
-        currentStream.getTracks().forEach(track => track.stop());
-      }
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: {
-            facingMode: { exact: facingMode },
-            width: { ideal: 1920 },
-            height: { ideal: 1080 }
-          },
-          audio: false
-        });
-        currentStream = stream;
-        video.srcObject = stream;
-        currentFacingMode = facingMode;
-        camLabel.textContent = facingMode === "environment" ? "Back" : "Front";
-      } catch (err) {
-        // Fallback without "exact" restriction if a device has atypical camera labels
-        try {
-          const stream = await navigator.mediaDevices.getUserMedia({
-            video: {
-              facingMode: facingMode,
-              width: { ideal: 1920 },
-              height: { ideal: 1080 }
-            },
-            audio: false
-          });
-          currentStream = stream;
-          video.srcObject = stream;
-          currentFacingMode = facingMode;
-          camLabel.textContent = facingMode === "environment" ? "Back" : "Front";
-        } catch (innerErr) {
-          console.warn("Camera init error:", innerErr);
-        }
-      }
-    }
-
-    // Toggle Front / Back Camera
-    btnCam.addEventListener("click", () => {
-      const nextMode = currentFacingMode === "environment" ? "user" : "environment";
-      startCamera(nextMode);
-    });
-
-    // Zero / Calibrate G-Force Offset
-    function calibrateGForce() {
-      baselineX = rawAccX;
-      baselineY = rawAccY;
-      baselineZ = rawAccZ;
-      showToast("G-METER ZEROED TO MOUNT");
-    }
-    btnCal.addEventListener("click", calibrateGForce);
-
-    function showToast(msg) {
-      toast.textContent = msg;
-      toast.classList.add("show");
-      setTimeout(() => toast.classList.remove("show"), 2000);
-    }
-
-    // Device Motion & G-Force Logic
-    // Accelerating forward creates an inertia force pulling backwards:
-    // With camera pointing out the windshield:
-    // - Forward Accel: Dot pulls DOWN (towards bottom of screen).
-    // - Hard Braking: Dot pulls UP (forward inertia).
-    // - Right Turn: Dot pushes LEFT. Left Turn: Dot pushes RIGHT.
-    // If switching between FRONT and BACK cameras, orientation inversions are handled.
-    function initMotionSensors() {
-      if (!window.DeviceMotionEvent) return;
-
-      // Handle iOS 13+ permission request
-      if (typeof DeviceMotionEvent.requestPermission === "function") {
-        DeviceMotionEvent.requestPermission().catch(() => {});
-      }
-
-      window.addEventListener("devicemotion", (e) => {
-        const acc = e.accelerationIncludingGravity;
-        if (!acc) return;
-
-        rawAccX = acc.x || 0;
-        rawAccY = acc.y || 0;
-        rawAccZ = acc.z || 0;
-
-        // Dynamic offset based on calibrated resting angle
-        const netX = rawAccX - baselineX;
-        const netY = rawAccY - baselineY;
-        const netZ = rawAccZ - baselineZ;
-
-        // Determine orientation mode: landscape vs portrait
-        const isLandscape = Math.abs(window.orientation || 0) === 90;
-        let lateralMps2 = 0;
-        let longitudinalMps2 = 0;
-
-        if (isLandscape) {
-          // In landscape: Y axis is lateral; X or Z is longitudinal
-          lateralMps2 = (window.orientation === 90) ? netY : -netY;
-          longitudinalMps2 = (currentFacingMode === "environment") ? -netX : netX;
-        } else {
-          // Portrait phone mount on dashboard
-          lateralMps2 = netX;
-          // In portrait, tilt forward/back moves along Y or Z depending on phone angle
-          longitudinalMps2 = -netY;
-        }
-
-        // Camera direction inversion
-        if (currentFacingMode === "user") {
-          lateralMps2 = -lateralMps2;
-        }
-
-        // Convert m/s^2 to G-Force (1G = 9.80665 m/s^2)
-        const latG = lateralMps2 / 9.80665;
-        const longG = longitudinalMps2 / 9.80665;
-
-        // Friction circle visual constraints
-        // Under forward acceleration, longG is positive -> move dot down (+px)
-        // Under braking, longG is negative -> move dot up (-px)
-        const maxPixelRadius = 26; // inside 78px circle
-        const scaleFactor = 22;    // pixels per 1.0G
-
-        let pixelX = Math.max(-maxPixelRadius, Math.min(maxPixelRadius, latG * scaleFactor));
-        let pixelY = Math.max(-maxPixelRadius, Math.min(maxPixelRadius, longG * scaleFactor));
-
-        gDot.style.transform = `translate(${pixelX}px, ${pixelY}px)`;
-
-        const resultantG = Math.sqrt(latG * latG + longG * longG).toFixed(1);
-        gText.textContent = `${resultantG}G`;
-      });
-    }
-
-    // Smooth speed interpolation loop
-    function speedLoop() {
-      smoothSpeed += (targetSpeed - smoothSpeed) * 0.15;
-      speedVal.textContent = Math.round(smoothSpeed);
-      requestAnimationFrame(speedLoop);
-    }
-    requestAnimationFrame(speedLoop);
-
-    // High-Accuracy GPS Position Tracker
-    function initGPS() {
-      if (!navigator.geolocation) {
-        gpsStatusText.textContent = "GPS NOT SUPPORTED";
-        return;
-      }
-
-      navigator.geolocation.watchPosition(
-        (pos) => {
-          const lat = pos.coords.latitude.toFixed(4);
-          const lon = pos.coords.longitude.toFixed(4);
-          const acc = Math.round(pos.coords.accuracy || 0);
-
-          // Update small diagnostic readout
-          gpsDot.classList.add("active");
-          gpsStatusText.textContent = `GPS LOCK (±${acc}m)`;
-          gpsCoords.textContent = `${lat}°, ${lon}°`;
-
-          // Calculate Speed
-          const mps = pos.coords.speed || 0;
-          targetSpeed = currentUnit === "MPH" ? (mps * 2.23694) : (mps * 3.6);
-
-          // Push GPS status and live speed to Firebase (throttled to ~1.2s to conserve data)
-          const now = Date.now();
-          if (now - lastGpsPush > 1200) {
-            lastGpsPush = now;
-            db.update({
-              speed: targetSpeed,
-              accuracy: acc,
-              lat: lat,
-              lon: lon,
-              lastGpsTimestamp: now
-            });
-          }
-        },
-        (err) => {
-          gpsDot.classList.remove("active");
-          gpsStatusText.textContent = `GPS ERR: ${err.message}`;
-        },
-        {
-          enableHighAccuracy: true,
-          maximumAge: 300,
-          timeout: 6000
-        }
-      );
-    }
-
-    // Listen to Firebase updates from pitwall.html
+    // Listen to Firebase for pit wall updates
     db.on("value", (snap) => {
       const val = snap.val();
       if (!val) return;
-
       driverVal.textContent = val.driver || "Driver";
       unitVal.textContent = val.unit || "MPH";
       currentUnit = val.unit || "MPH";
@@ -669,33 +446,156 @@
       if (st === "DRIVER SWAP") statusVal.classList.add("driver-swap");
     });
 
-    // Launch button click event
-    launchBtn.addEventListener("click", async () => {
-      // 1. Enter Fullscreen
-      enterFullscreen();
+    // Speed smoothing
+    function animate() {
+      smoothSpeed += (targetSpeed - smoothSpeed) * 0.15;
+      speedVal.textContent = Math.round(smoothSpeed);
+      requestAnimationFrame(animate);
+    }
+    requestAnimationFrame(animate);
 
-      // 2. Hide modal and reveal HUD layers
-      startModal.style.display = "none";
-      hudUi.style.display = "flex";
-      controlsBar.style.display = "flex";
-      gpsDiag.style.display = "flex";
-
-      // 3. Keep Screen Awake
-      if ("wakeLock" in navigator) {
-        try {
-          await navigator.wakeLock.request("screen");
-        } catch (e) {
-          console.warn("WakeLock error:", e);
-        }
+    // Camera initializer requesting highest resolution without forced digital zoom
+    async function initCamera(mode) {
+      if (currentStream) {
+        currentStream.getTracks().forEach(track => track.stop());
       }
 
-      // 4. Initialize Hardware Feeds
-      await startCamera(currentFacingMode);
-      initGPS();
-      initMotionSensors();
+      const constraints = {
+        audio: false,
+        video: {
+          facingMode: { ideal: mode },
+          width: { ideal: 3840, min: 1920 },
+          height: { ideal: 2160, min: 1080 }
+        }
+      };
 
-      // Auto-zero G-meter resting gravity 800ms after launch
-      setTimeout(calibrateGForce, 800);
+      try {
+        currentStream = await navigator.mediaDevices.getUserMedia(constraints);
+        video.srcObject = currentStream;
+        camModeLabel.textContent = mode === "environment" ? "Back (Landscape)" : "Front (Cockpit)";
+      } catch (err) {
+        // Fallback to standard HD if 4k/high-bitrate constraints fail on specific browsers
+        try {
+          currentStream = await navigator.mediaDevices.getUserMedia({
+            audio: false,
+            video: { facingMode: { ideal: mode } }
+          });
+          video.srcObject = currentStream;
+          camModeLabel.textContent = mode === "environment" ? "Back (Fallback)" : "Front (Fallback)";
+        } catch (e) {
+          alert("Camera access error: " + e.message);
+        }
+      }
+    }
+
+    // Toggle Settings Drawer
+    function openDrawer() {
+      drawerOverlay.classList.add("open");
+      settingsDrawer.classList.add("open");
+    }
+    function closeDrawer() {
+      drawerOverlay.classList.remove("open");
+      settingsDrawer.classList.remove("open");
+    }
+
+    hudCardBtn.addEventListener("click", openDrawer);
+    btnCloseDrawer.addEventListener("click", closeDrawer);
+    drawerOverlay.addEventListener("click", closeDrawer);
+
+    // Camera Switcher
+    btnToggleCam.addEventListener("click", async () => {
+      facingMode = facingMode === "environment" ? "user" : "environment";
+      await initCamera(facingMode);
+    });
+
+    // Gyro Calibration (Zero out current mount angle)
+    btnZeroG.addEventListener("click", () => {
+      offsetAx = rawAx;
+      offsetAy = rawAy;
+      btnZeroG.classList.add("active");
+      setTimeout(() => btnZeroG.classList.remove("active"), 400);
+    });
+
+    // Fullscreen Toggle
+    btnFullscreen.addEventListener("click", () => {
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen().catch(() => {});
+      } else {
+        document.exitFullscreen().catch(() => {});
+      }
+    });
+
+    let rawAx = 0;
+    let rawAy = 0;
+
+    startBtn.addEventListener("click", async () => {
+      startBtn.style.display = "none";
+      hudUi.style.display = "flex";
+      gpsDiag.style.display = "flex";
+
+      // Enter fullscreen automatically on launch
+      if (document.documentElement.requestFullscreen) {
+        document.documentElement.requestFullscreen().catch(() => {});
+      }
+
+      // WakeLock
+      if ("wakeLock" in navigator) {
+        try { await navigator.wakeLock.request("screen"); } catch (e) {}
+      }
+
+      // Start initial back camera
+      await initCamera(facingMode);
+
+      // GPS Polling
+      if (navigator.geolocation) {
+        navigator.geolocation.watchPosition(
+          (pos) => {
+            const lat = pos.coords.latitude.toFixed(4);
+            const lon = pos.coords.longitude.toFixed(4);
+            const acc = Math.round(pos.coords.accuracy || 0);
+
+            gpsDot.classList.add("active");
+            gpsStatusText.textContent = `GPS LOCK (±${acc}m)`;
+            gpsCoords.textContent = `${lat}°, ${lon}°`;
+
+            const mps = pos.coords.speed || 0;
+            targetSpeed = currentUnit === "MPH" ? (mps * 2.23694) : (mps * 3.6);
+          },
+          (err) => {
+            gpsDot.classList.remove("active");
+            gpsStatusText.textContent = `GPS ERR: ${err.message}`;
+          },
+          { enableHighAccuracy: true, maximumAge: 300, timeout: 5000 }
+        );
+      }
+
+      // Gyro / Accelerometer
+      if (window.DeviceMotionEvent) {
+        if (typeof DeviceMotionEvent.requestPermission === "function") {
+          try { await DeviceMotionEvent.requestPermission(); } catch (e) {}
+        }
+        window.addEventListener("devicemotion", (e) => {
+          const acc = e.accelerationIncludingGravity;
+          if (!acc) return;
+
+          rawAx = acc.x || 0;
+          rawAy = acc.y || 0;
+
+          // Compute delta relative to zeroed mount orientation
+          const deltaX = rawAx - offsetAx;
+          const deltaY = rawAy - offsetAy;
+
+          // In landscape windshield mount:
+          // Accel pulls dot DOWN (+Y); Braking pushes dot UP (-Y)
+          const invertSign = facingMode === "environment" ? 1 : -1;
+          const gX = Math.max(-26, Math.min(26, deltaX * 2.4 * invertSign));
+          const gY = Math.max(-26, Math.min(26, deltaY * 2.4));
+
+          gDot.style.transform = `translate(${gX}px, ${gY}px)`;
+          const totalG = (Math.sqrt(deltaX**2 + deltaY**2) / 9.8).toFixed(1);
+          gText.textContent = `${totalG}G`;
+        });
+      }
     });
   </script>
 </body>
