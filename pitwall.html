@@ -6,12 +6,83 @@
   <title>Pit Wall Command Center</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-    body { background: #0b0f19; color: #f8fafc; padding: 20px; max-width: 580px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px; }
+    body { background: #0b0f19; color: #f8fafc; padding: 20px; max-width: 580px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px; }
     header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #1e293b; padding-bottom: 12px; }
     h1 { font-size: 18px; font-weight: 800; color: #f97316; letter-spacing: 1px; text-transform: uppercase; }
-    .heartbeat { font-size: 12px; color: #94a3b8; display: flex; align-items: center; gap: 6px; }
-    .dot { width: 8px; height: 8px; border-radius: 50%; background: #ef4444; display: inline-block; }
-    .dot.live { background: #22c55e; box-shadow: 0 0 8px #22c55e; }
+
+    /* Telemetry Watchdog Status Banner */
+    .telemetry-banner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 16px;
+      border-radius: 10px;
+      border: 1px solid #334155;
+      background: #1e293b;
+      transition: all 0.3s ease;
+    }
+    .telemetry-banner.live {
+      background: rgba(34, 197, 94, 0.12);
+      border-color: #22c55e;
+    }
+    .telemetry-banner.stale {
+      background: rgba(234, 179, 8, 0.12);
+      border-color: #eab308;
+    }
+    .telemetry-banner.offline {
+      background: rgba(239, 68, 68, 0.15);
+      border-color: #ef4444;
+    }
+
+    .signal-left { display: flex; align-items: center; gap: 12px; }
+    .status-beacon {
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: #64748b;
+      position: relative;
+    }
+    .telemetry-banner.live .status-beacon {
+      background: #22c55e;
+      box-shadow: 0 0 10px #22c55e;
+      animation: pulse 1.5s infinite;
+    }
+    .telemetry-banner.stale .status-beacon {
+      background: #eab308;
+      box-shadow: 0 0 8px #eab308;
+    }
+    .telemetry-banner.offline .status-beacon {
+      background: #ef4444;
+      box-shadow: 0 0 8px #ef4444;
+      animation: blink 1s infinite;
+    }
+
+    @keyframes pulse {
+      0% { transform: scale(0.95); opacity: 0.8; }
+      50% { transform: scale(1.15); opacity: 1; }
+      100% { transform: scale(0.95); opacity: 0.8; }
+    }
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.2; }
+    }
+
+    .signal-meta { display: flex; flex-direction: column; }
+    .signal-title { font-size: 13px; font-weight: 800; letter-spacing: 0.5px; text-transform: uppercase; }
+    .telemetry-banner.live .signal-title { color: #4ade80; }
+    .telemetry-banner.stale .signal-title { color: #facc15; }
+    .telemetry-banner.offline .signal-title { color: #f87171; }
+    .signal-detail { font-size: 11px; color: #94a3b8; font-family: ui-monospace, monospace; }
+
+    .ping-display {
+      font-size: 11px;
+      font-weight: 700;
+      font-family: ui-monospace, monospace;
+      padding: 4px 8px;
+      border-radius: 6px;
+      background: rgba(0,0,0,0.3);
+      color: #cbd5e1;
+    }
 
     .panel { background: #131b2e; border: 1px solid #1e293b; border-radius: 12px; padding: 16px; }
     .panel-title { font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px; color: #64748b; font-weight: 700; margin-bottom: 12px; }
@@ -35,7 +106,7 @@
     .gps-coords { color: #cbd5e1; }
     .gps-acc { color: #64748b; margin-left: auto; }
 
-    /* Controls */
+    /* Form Controls */
     .field { margin-bottom: 14px; }
     label { font-size: 12px; color: #94a3b8; display: block; margin-bottom: 6px; font-weight: 600; }
     input[type="text"] { width: 100%; background: #0a0e1a; border: 1px solid #334155; padding: 12px; border-radius: 8px; color: #fff; font-size: 16px; outline: none; }
@@ -57,11 +128,19 @@
 
   <header>
     <h1>Pit Wall Command</h1>
-    <div class="heartbeat">
-      <span class="dot" id="live-dot"></span>
-      <span id="live-text">Car Offline</span>
-    </div>
   </header>
+
+  <!-- Realtime GPS Broadcast Monitor -->
+  <div class="telemetry-banner offline" id="watchdog-banner">
+    <div class="signal-left">
+      <div class="status-beacon"></div>
+      <div class="signal-meta">
+        <span class="signal-title" id="watchdog-title">GPS OFFLINE</span>
+        <span class="signal-detail" id="watchdog-desc">No telemetry received from cockpit</span>
+      </div>
+    </div>
+    <div class="ping-display" id="watchdog-ping">-- ms</div>
+  </div>
 
   <!-- Live Overlay Preview -->
   <div class="panel">
@@ -80,7 +159,6 @@
           </div>
         </div>
         <div class="gps-preview-bar">
-          <span class="dot" id="prev-gps-dot"></span>
           <span class="gps-coords" id="prev-gps-coords">--.----°, --.----°</span>
           <span class="gps-acc" id="prev-gps-acc">OFFLINE</span>
         </div>
@@ -133,19 +211,25 @@
 
     const driverInput = document.getElementById("driver-input");
     const applyBtn = document.getElementById("apply-btn");
-    const liveDot = document.getElementById("live-dot");
-    const liveText = document.getElementById("live-text");
 
+    // Watchdog Elements
+    const banner = document.getElementById("watchdog-banner");
+    const bannerTitle = document.getElementById("watchdog-title");
+    const bannerDesc = document.getElementById("watchdog-desc");
+    const bannerPing = document.getElementById("watchdog-ping");
+
+    // Preview Elements
     const prevDriver = document.getElementById("prev-driver");
     const prevStatus = document.getElementById("prev-status");
     const prevSpeed = document.getElementById("prev-speed");
-    const prevGpsDot = document.getElementById("prev-gps-dot");
     const prevGpsCoords = document.getElementById("prev-gps-coords");
     const prevGpsAcc = document.getElementById("prev-gps-acc");
 
     let currentStatus = "ON TRACK";
+    let lastKnownTimestamp = 0;
+    let latestAccuracy = 0;
 
-    // Synchronize preview from Firebase
+    // Database listener
     db.on("value", (snap) => {
       const data = snap.val();
       if (!data) return;
@@ -158,23 +242,61 @@
       }
       if (data.status) updateStatusUI(data.status);
 
-      // Heartbeat and GPS status check (last 5 seconds)
-      const isLive = data.lastGpsTimestamp && (Date.now() - data.lastGpsTimestamp < 5000);
-      if (isLive) {
-        liveDot.classList.add("live");
-        prevGpsDot.classList.add("live");
-        liveText.textContent = `Car Active (±${Math.round(data.accuracy || 0)}m)`;
-        if (data.latitude && data.longitude) {
-          prevGpsCoords.textContent = `${Number(data.latitude).toFixed(4)}°, ${Number(data.longitude).toFixed(4)}°`;
-          prevGpsAcc.textContent = `±${Math.round(data.accuracy || 0)}m`;
-        }
-      } else {
-        liveDot.classList.remove("live");
-        prevGpsDot.classList.remove("live");
-        liveText.textContent = "Car Offline";
-        prevGpsAcc.textContent = "OFFLINE";
+      if (data.lastGpsTimestamp) {
+        lastKnownTimestamp = data.lastGpsTimestamp;
+        latestAccuracy = Math.round(data.accuracy || 0);
+      }
+
+      if (data.latitude && data.longitude) {
+        prevGpsCoords.textContent = `${Number(data.latitude).toFixed(4)}°, ${Number(data.longitude).toFixed(4)}°`;
+        prevGpsAcc.textContent = `±${latestAccuracy}m`;
       }
     });
+
+    // 1-Second Watchdog Monitor Loop
+    setInterval(() => {
+      if (!lastKnownTimestamp) {
+        setWatchdogState("offline", "GPS OFFLINE", "Waiting for cockpit transmitter to start", "--");
+        return;
+      }
+
+      const elapsedMs = Date.now() - lastKnownTimestamp;
+      const elapsedSec = (elapsedMs / 1000).toFixed(1);
+
+      if (elapsedMs <= 3000) {
+        // Active & healthy (< 3 seconds)
+        setWatchdogState(
+          "live", 
+          "COCKPIT LIVE", 
+          `Transmitting | Accuracy: ±${latestAccuracy}m`, 
+          `${elapsedMs} ms ago`
+        );
+      } else if (elapsedMs <= 6000) {
+        // Degraded / Weak Signal (3 to 6 seconds)
+        setWatchdogState(
+          "stale", 
+          "SIGNAL LAG", 
+          `Delayed | Last update ${elapsedSec}s ago`, 
+          `${elapsedSec}s`
+        );
+      } else {
+        // Dropped / Offline (> 6 seconds)
+        setWatchdogState(
+          "offline", 
+          "TRANSMITTER HALTED", 
+          `No data for ${Math.round(elapsedSec)}s (Check phone screen / GPS)`, 
+          `${Math.round(elapsedSec)}s`
+        );
+        prevGpsAcc.textContent = "DROPPED";
+      }
+    }, 1000);
+
+    function setWatchdogState(stateClass, title, desc, ping) {
+      banner.className = `telemetry-banner ${stateClass}`;
+      bannerTitle.textContent = title;
+      bannerDesc.textContent = desc;
+      bannerPing.textContent = ping;
+    }
 
     function setDriver(name) {
       driverInput.value = name;
@@ -182,6 +304,7 @@
     }
 
     function setStatus(status) {
+      currentStatus = status;
       updateStatusUI(status);
       pushUpdates();
     }
@@ -203,7 +326,7 @@
       db.update({
         driver: driverInput.value.trim() || "Driver",
         status: currentStatus,
-        unit: "MPH" // Locked permanently to MPH
+        unit: "MPH"
       });
     }
 
