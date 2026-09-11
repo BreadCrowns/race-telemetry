@@ -34,7 +34,6 @@
       gap: 6px;
     }
 
-    /* Top Row: Driver Meta + Large Speed */
     .hud-main-row {
       display: flex;
       align-items: center;
@@ -102,7 +101,6 @@
       text-transform: uppercase;
     }
 
-    /* Bottom Sub-row: GPS Diagnostic Readout */
     .gps-sub-bar {
       display: flex;
       align-items: center;
@@ -207,56 +205,61 @@
       const root = snap.val();
       if (!root) return;
 
-      // Update Pit Wall driver and status attributes
-      driverEl.textContent = root.driver || "Driver";
+      // 1. Driver and Status updates
+      if (root.driver) driverEl.textContent = root.driver;
       const st = root.status || "ON TRACK";
       statusEl.textContent = st;
       statusEl.className = "status-badge";
       if (st === "IN PITS") statusEl.classList.add("in-pits");
       if (st === "DRIVER SWAP") statusEl.classList.add("driver-swap");
 
-      // Extract telemetry (handles direct keys OR OwnTracks nested POST keys)
+      // 2. Resolve payload (direct properties vs nested push keys)
       let telem = root;
-      if (!root.lat && !root.latitude) {
+      if (root.lat === undefined && root.latitude === undefined) {
         const keys = Object.keys(root).filter(k => typeof root[k] === 'object' && root[k] !== null);
         if (keys.length > 0) {
-          keys.sort((a, b) => (root[a].tst || root[a].lastGpsTimestamp || 0) - (root[b].tst || root[b].lastGpsTimestamp || 0));
+          keys.sort((a, b) => {
+            const timeA = Number(root[a].lastGpsTimestamp || (root[a].tst ? root[a].tst * 1000 : 0));
+            const timeB = Number(root[b].lastGpsTimestamp || (root[b].tst ? root[b].tst * 1000 : 0));
+            return timeA - timeB;
+          });
           telem = root[keys[keys.length - 1]];
         }
       }
 
-      // Speed resolution (OwnTracks sends vel in km/h)
+      // 3. Speed calculation
       let calcMph = 0;
-      if (telem.vel !== undefined && telem.vel !== null) {
-        calcMph = Number(telem.vel) * 0.621371;
-      } else if (telem.speedMps !== undefined && telem.speedMps !== null) {
-        calcMph = Number(telem.speedMps) * 2.23694;
-      } else if (telem.speed !== undefined && telem.speed !== null) {
+      if (telem.speed !== undefined && telem.speed !== null) {
         calcMph = Number(telem.speed);
+      } else if (telem.vel !== undefined && telem.vel !== null) {
+        calcMph = Number(telem.vel) * 0.621371;
       }
-
       if (calcMph < SPEED_CUTOFF_MPH || isNaN(calcMph)) {
         calcMph = 0;
       }
       targetSpeed = calcMph;
 
-      // Coordinate and accuracy resolution
-      const lat = telem.lat !== undefined ? telem.lat : telem.latitude;
-      const lon = telem.lon !== undefined ? telem.lon : telem.longitude;
-      const acc = telem.acc !== undefined ? telem.acc : (telem.accuracy || 0);
+      // 4. Coordinates, accuracy, and timestamp resolution
+      const rawLat = telem.latitude !== undefined ? telem.latitude : telem.lat;
+      const rawLon = telem.longitude !== undefined ? telem.longitude : telem.lon;
+      const rawAcc = telem.accuracy !== undefined ? telem.accuracy : (telem.acc || 0);
+      const accNum = Math.round(Number(rawAcc) || 0);
 
-      // Timestamp resolution (OwnTracks tst is in seconds)
-      let ts = telem.tst ? (telem.tst * 1000) : (telem.lastGpsTimestamp || 0);
+      const ts = Number(telem.lastGpsTimestamp || (telem.tst ? telem.tst * 1000 : 0));
       const isLive = ts && (Date.now() - ts < 6000);
 
-      if (isLive && lat && lon) {
+      if (isLive && rawLat !== undefined && rawLon !== undefined && rawLat !== 0 && rawLon !== 0) {
         gpsDot.classList.add("active");
-        gpsCoords.textContent = `${Number(lat).toFixed(4)}°, ${Number(lon).toFixed(4)}°`;
-        gpsAcc.textContent = `±${Math.round(acc)}m`;
+        gpsCoords.textContent = `${Number(rawLat).toFixed(4)}°, ${Number(rawLon).toFixed(4)}°`;
+        gpsAcc.textContent = `±${accNum}m`;
       } else {
         gpsDot.classList.remove("active");
         gpsAcc.textContent = "SEARCHING";
       }
+    }, (error) => {
+      console.error("Overlay Firebase read error:", error);
+      gpsDot.classList.remove("active");
+      gpsAcc.textContent = "AUTH ERR";
     });
   </script>
 </body>
