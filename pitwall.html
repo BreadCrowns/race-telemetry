@@ -3,193 +3,172 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Pit Wall Command Center</title>
+  <title>Pit Wall Command & Autocross Timer</title>
+  
+  <!-- Leaflet CSS for Map -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-    body { background: #0b0f19; color: #f8fafc; padding: 20px; max-width: 580px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px; }
-    header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #1e293b; padding-bottom: 12px; }
-    h1 { font-size: 18px; font-weight: 800; color: #f97316; letter-spacing: 1px; text-transform: uppercase; }
+    body { background: #0b0f19; color: #f8fafc; padding: 16px; max-width: 680px; margin: 0 auto; display: flex; flex-direction: column; gap: 14px; }
+    header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #1e293b; padding-bottom: 10px; }
+    h1 { font-size: 17px; font-weight: 800; color: #f97316; letter-spacing: 1px; text-transform: uppercase; }
 
-    /* Telemetry Watchdog Status Banner */
+    /* Telemetry Watchdog Banner */
     .telemetry-banner {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 12px 16px;
-      border-radius: 10px;
+      padding: 10px 14px;
+      border-radius: 8px;
       border: 1px solid #334155;
       background: #1e293b;
       transition: all 0.3s ease;
     }
-    .telemetry-banner.live {
-      background: rgba(34, 197, 94, 0.12);
-      border-color: #22c55e;
-    }
-    .telemetry-banner.stale {
-      background: rgba(234, 179, 8, 0.12);
-      border-color: #eab308;
-    }
-    .telemetry-banner.offline {
-      background: rgba(239, 68, 68, 0.15);
-      border-color: #ef4444;
-    }
+    .telemetry-banner.live { background: rgba(34, 197, 94, 0.12); border-color: #22c55e; }
+    .telemetry-banner.stale { background: rgba(234, 179, 8, 0.12); border-color: #eab308; }
+    .telemetry-banner.offline { background: rgba(239, 68, 68, 0.15); border-color: #ef4444; }
 
-    .signal-left { display: flex; align-items: center; gap: 12px; }
-    .status-beacon {
-      width: 14px;
-      height: 14px;
-      border-radius: 50%;
-      background: #64748b;
-      position: relative;
-    }
-    .telemetry-banner.live .status-beacon {
-      background: #22c55e;
-      box-shadow: 0 0 10px #22c55e;
-      animation: pulse 1.5s infinite;
-    }
-    .telemetry-banner.stale .status-beacon {
-      background: #eab308;
-      box-shadow: 0 0 8px #eab308;
-    }
-    .telemetry-banner.offline .status-beacon {
-      background: #ef4444;
-      box-shadow: 0 0 8px #ef4444;
-      animation: blink 1s infinite;
-    }
+    .signal-left { display: flex; align-items: center; gap: 10px; }
+    .status-beacon { width: 12px; height: 12px; border-radius: 50%; background: #64748b; }
+    .telemetry-banner.live .status-beacon { background: #22c55e; box-shadow: 0 0 8px #22c55e; }
+    .telemetry-banner.stale .status-beacon { background: #eab308; box-shadow: 0 0 6px #eab308; }
+    .telemetry-banner.offline .status-beacon { background: #ef4444; }
 
-    @keyframes pulse {
-      0% { transform: scale(0.95); opacity: 0.8; }
-      50% { transform: scale(1.15); opacity: 1; }
-      100% { transform: scale(0.95); opacity: 0.8; }
-    }
-    @keyframes blink {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.2; }
-    }
-
-    .signal-meta { display: flex; flex-direction: column; }
-    .signal-title { font-size: 13px; font-weight: 800; letter-spacing: 0.5px; text-transform: uppercase; }
+    .signal-title { font-size: 12px; font-weight: 800; text-transform: uppercase; }
     .telemetry-banner.live .signal-title { color: #4ade80; }
     .telemetry-banner.stale .signal-title { color: #facc15; }
     .telemetry-banner.offline .signal-title { color: #f87171; }
     .signal-detail { font-size: 11px; color: #94a3b8; font-family: ui-monospace, monospace; }
+    .ping-display { font-size: 11px; font-weight: 700; font-family: ui-monospace, monospace; padding: 4px 8px; border-radius: 6px; background: rgba(0,0,0,0.3); color: #cbd5e1; }
 
-    .ping-display {
-      font-size: 11px;
-      font-weight: 700;
-      font-family: ui-monospace, monospace;
-      padding: 4px 8px;
-      border-radius: 6px;
-      background: rgba(0,0,0,0.3);
-      color: #cbd5e1;
-    }
+    /* Panels */
+    .panel { background: #131b2e; border: 1px solid #1e293b; border-radius: 10px; padding: 14px; }
+    .panel-title { font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px; color: #94a3b8; font-weight: 700; margin-bottom: 10px; display: flex; justify-content: space-between; }
 
-    .panel { background: #131b2e; border: 1px solid #1e293b; border-radius: 12px; padding: 16px; }
-    .panel-title { font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px; color: #64748b; font-weight: 700; margin-bottom: 12px; }
+    /* Map Box */
+    #map { height: 260px; width: 100%; border-radius: 8px; border: 1px solid #334155; }
 
-    /* Live HUD Preview */
-    .preview-stage { background: #060913; border: 1px dashed #334155; border-radius: 8px; padding: 24px 16px; display: flex; justify-content: center; align-items: center; }
-    .hud-card { display: inline-flex; flex-direction: column; background: rgba(10, 14, 23, 0.95); border: 1px solid rgba(255, 255, 255, 0.1); border-left: 6px solid #f97316; border-radius: 8px; padding: 10px 18px; color: #fff; box-shadow: 0 10px 30px rgba(0,0,0,0.6); gap: 6px; }
-    .hud-main-row { display: flex; align-items: center; }
-    .driver-col { display: flex; flex-direction: column; margin-right: 20px; padding-right: 18px; border-right: 1px solid rgba(255, 255, 255, 0.15); }
-    .driver-tag { font-size: 9px; font-weight: 800; color: #f97316; letter-spacing: 2px; text-transform: uppercase; }
-    .driver-val { font-size: 20px; font-weight: 700; max-width: 140px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .status-badge { font-size: 9px; font-weight: 800; padding: 2px 6px; border-radius: 4px; background: #334155; color: #cbd5e1; align-self: flex-start; margin-top: 3px; }
-    .status-badge.in-pits { background: #b45309; color: #fef3c7; }
-    .status-badge.driver-swap { background: #6d28d9; color: #ede9fe; }
-    .speed-col { display: flex; align-items: baseline; gap: 5px; }
-    .speed-val { font-size: 46px; font-weight: 900; letter-spacing: -2px; font-variant-numeric: tabular-nums; }
-    .unit-val { font-size: 13px; font-weight: 700; color: #94a3b8; }
+    /* Autocross Timing Box */
+    .timer-display { text-align: center; padding: 12px; background: #060913; border: 1px solid #1e293b; border-radius: 8px; margin-bottom: 10px; }
+    .timer-status { font-size: 10px; font-weight: 800; letter-spacing: 1.5px; color: #f97316; text-transform: uppercase; margin-bottom: 2px; }
+    .timer-clock { font-size: 42px; font-weight: 900; font-family: ui-monospace, monospace; letter-spacing: -1px; color: #ffffff; }
+    .timer-gate-info { display: flex; justify-content: space-around; font-size: 11px; color: #94a3b8; margin-top: 6px; font-family: ui-monospace, monospace; }
 
-    /* GPS Diagnostic Line */
-    .gps-preview-bar { display: flex; align-items: center; gap: 8px; font-family: ui-monospace, monospace; font-size: 10px; color: #94a3b8; border-top: 1px solid rgba(255, 255, 255, 0.08); padding-top: 4px; }
-    .gps-coords { color: #cbd5e1; }
-    .gps-acc { color: #64748b; margin-left: auto; }
+    .gate-controls { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 10px; }
+    .btn-gate { background: #1e293b; color: #cbd5e1; border: 1px solid #334155; padding: 8px; border-radius: 6px; font-size: 11px; font-weight: 700; cursor: pointer; text-align: center; }
+    .btn-gate:active { background: #f97316; color: #fff; }
+    .btn-gate.active { border-color: #22c55e; color: #4ade80; }
+
+    /* Lap Times List */
+    .laps-table { width: 100%; font-size: 12px; border-collapse: collapse; margin-top: 8px; font-family: ui-monospace, monospace; }
+    .laps-table th { text-align: left; color: #64748b; padding: 4px 6px; border-bottom: 1px solid #1e293b; font-size: 10px; }
+    .laps-table td { padding: 5px 6px; border-bottom: 1px solid #0f172a; color: #cbd5e1; }
+    .best-lap { color: #4ade80 !important; font-weight: 800; }
 
     /* Form Controls */
-    .field { margin-bottom: 14px; }
-    label { font-size: 12px; color: #94a3b8; display: block; margin-bottom: 6px; font-weight: 600; }
-    input[type="text"] { width: 100%; background: #0a0e1a; border: 1px solid #334155; padding: 12px; border-radius: 8px; color: #fff; font-size: 16px; outline: none; }
+    .field { margin-bottom: 12px; }
+    label { font-size: 11px; color: #94a3b8; display: block; margin-bottom: 4px; font-weight: 600; }
+    input[type="text"] { width: 100%; background: #0a0e1a; border: 1px solid #334155; padding: 10px; border-radius: 6px; color: #fff; font-size: 15px; outline: none; }
     input[type="text"]:focus { border-color: #f97316; }
 
-    .quick-drivers { display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
-    .chip { background: #1e293b; color: #cbd5e1; border: 1px solid #334155; padding: 6px 12px; border-radius: 20px; font-size: 12px; cursor: pointer; }
+    .quick-drivers { display: flex; gap: 6px; margin-top: 6px; flex-wrap: wrap; }
+    .chip { background: #1e293b; color: #cbd5e1; border: 1px solid #334155; padding: 4px 10px; border-radius: 16px; font-size: 11px; cursor: pointer; }
     .chip:active { background: #f97316; color: white; }
 
-    .status-btn-group { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-top: 6px; }
-    .status-btn { background: #1e293b; color: #cbd5e1; border: 1px solid #334155; padding: 10px; border-radius: 8px; font-weight: 700; font-size: 12px; cursor: pointer; text-align: center; }
+    .status-btn-group { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; }
+    .status-btn { background: #1e293b; color: #cbd5e1; border: 1px solid #334155; padding: 8px; border-radius: 6px; font-weight: 700; font-size: 11px; cursor: pointer; text-align: center; }
     .status-btn.active { background: #f97316; color: white; border-color: #f97316; }
-
-    .btn-apply { background: #ea580c; color: white; border: none; padding: 14px; width: 100%; border-radius: 8px; font-weight: 700; font-size: 15px; cursor: pointer; margin-top: 8px; }
-    .btn-apply:active { background: #c2410c; }
   </style>
 </head>
 <body>
 
   <header>
     <h1>Pit Wall Command</h1>
+    <span style="font-size: 11px; color: #64748b; font-family: ui-monospace, monospace;">AUTOCROSS ED.</span>
   </header>
 
-  <!-- Realtime GPS Broadcast Monitor -->
+  <!-- Realtime GPS Signal Status -->
   <div class="telemetry-banner offline" id="watchdog-banner">
     <div class="signal-left">
       <div class="status-beacon"></div>
       <div class="signal-meta">
         <span class="signal-title" id="watchdog-title">GPS OFFLINE</span>
-        <span class="signal-detail" id="watchdog-desc">Waiting for cockpit transmitter to start</span>
+        <span class="signal-detail" id="watchdog-desc">Waiting for cockpit transmitter</span>
       </div>
     </div>
     <div class="ping-display" id="watchdog-ping">-- ms</div>
   </div>
 
-  <!-- Live Overlay Preview -->
+  <!-- Live Map View -->
   <div class="panel">
-    <div class="panel-title">PRISM Live Preview</div>
-    <div class="preview-stage">
-      <div class="hud-card">
-        <div class="hud-main-row">
-          <div class="driver-col">
-            <span class="driver-tag">Driver</span>
-            <span class="driver-val" id="prev-driver">Driver 1</span>
-            <span class="status-badge" id="prev-status">ON TRACK</span>
-          </div>
-          <div class="speed-col">
-            <span class="speed-val" id="prev-speed">0</span>
-            <span class="unit-val">MPH</span>
-          </div>
-        </div>
-        <div class="gps-preview-bar">
-          <span class="gps-coords" id="prev-gps-coords">--.----°, --.----°</span>
-          <span class="gps-acc" id="prev-gps-acc">OFFLINE</span>
-        </div>
-      </div>
+    <div class="panel-title">
+      <span>Track Map & Telemetry Path</span>
+      <span id="map-speed" style="color: #f97316; font-size: 12px;">0 MPH</span>
     </div>
+    <div id="map"></div>
   </div>
 
-  <!-- Driver Controls -->
+  <!-- Autocross Lap Timer & Gate Setup -->
   <div class="panel">
-    <div class="panel-title">Driver Stint Control</div>
+    <div class="panel-title">Autocross Automated Lap Timer</div>
+    
+    <div class="timer-display">
+      <div class="timer-status" id="timer-status">DISARMED (SET GATES)</div>
+      <div class="timer-clock" id="timer-clock">00:00.00</div>
+      <div class="timer-gate-info">
+        <span id="start-dist-label">Start Gate: Unset</span>
+        <span id="finish-dist-label">Finish Gate: Unset</span>
+      </div>
+    </div>
+
+    <div class="gate-controls">
+      <button type="button" class="btn-gate" id="btn-set-start" onclick="setGateFromCurrentPos('start')">📍 Set Start</button>
+      <button type="button" class="btn-gate" id="btn-set-finish" onclick="setGateFromCurrentPos('finish')">🏁 Set Finish</button>
+      <button type="button" class="btn-gate" onclick="resetTimerState()">🔄 Reset Timer</button>
+    </div>
+
+    <!-- Times Table -->
+    <table class="laps-table">
+      <thead>
+        <tr>
+          <th>RUN #</th>
+          <th>DRIVER</th>
+          <th>TIME</th>
+          <th>STATUS</th>
+        </tr>
+      </thead>
+      <tbody id="laps-body">
+        <tr><td colspan="4" style="color:#64748b; text-align:center;">No timed runs recorded yet</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Driver Stint & Status Control (Instant Sync) -->
+  <div class="panel">
+    <div class="panel-title">Driver Stint Control (Live Sync)</div>
     <div class="field">
       <label for="driver-input">Active Driver</label>
-      <input type="text" id="driver-input" placeholder="Type driver name..." value="Driver 1" />
+      <input type="text" id="driver-input" placeholder="Type driver name..." value="Jeff" />
       <div class="quick-drivers">
-        <button type="button" class="chip" onclick="setDriver('Jeff')">Jeff</button>
-        <button type="button" class="chip" onclick="setDriver('Sylvia')">Sylvia</button>
-        <button type="button" class="chip" onclick="setDriver('Driver 2')">Driver 2</button>
+        <button type="button" class="chip" onclick="quickSetDriver('Jeff')">Jeff</button>
+        <button type="button" class="chip" onclick="quickSetDriver('Sylvia')">Sylvia</button>
+        <button type="button" class="chip" onclick="quickSetDriver('Driver 2')">Driver 2</button>
       </div>
     </div>
 
     <div class="field">
       <label>Car State Banner</label>
       <div class="status-btn-group">
-        <button type="button" class="status-btn active" id="btn-track" onclick="setStatus('ON TRACK')">ON TRACK</button>
-        <button type="button" class="status-btn" id="btn-pit" onclick="setStatus('IN PITS')">IN PITS</button>
-        <button type="button" class="status-btn" id="btn-change" onclick="setStatus('DRIVER SWAP')">DRIVER SWAP</button>
+        <button type="button" class="status-btn active" id="btn-track" onclick="instantSetStatus('ON TRACK')">ON TRACK</button>
+        <button type="button" class="status-btn" id="btn-pit" onclick="instantSetStatus('IN PITS')">IN PITS</button>
+        <button type="button" class="status-btn" id="btn-change" onclick="instantSetStatus('DRIVER SWAP')">DRIVER SWAP</button>
       </div>
     </div>
-
-    <button class="btn-apply" id="apply-btn" type="button">Push Changes to Stream</button>
   </div>
+
+  <!-- Leaflet JS for Map -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
   <!-- Firebase SDKs -->
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
@@ -209,37 +188,218 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database().ref("raceTelemetry");
 
+    // UI Elements
     const driverInput = document.getElementById("driver-input");
-    const applyBtn = document.getElementById("apply-btn");
-
-    // Watchdog Elements
     const banner = document.getElementById("watchdog-banner");
     const bannerTitle = document.getElementById("watchdog-title");
     const bannerDesc = document.getElementById("watchdog-desc");
     const bannerPing = document.getElementById("watchdog-ping");
+    const mapSpeedEl = document.getElementById("map-speed");
 
-    // Preview Elements
-    const prevDriver = document.getElementById("prev-driver");
-    const prevStatus = document.getElementById("prev-status");
-    const prevSpeed = document.getElementById("prev-speed");
-    const prevGpsCoords = document.getElementById("prev-gps-coords");
-    const prevGpsAcc = document.getElementById("prev-gps-acc");
+    // Autocross Timing Elements
+    const timerStatusEl = document.getElementById("timer-status");
+    const timerClockEl = document.getElementById("timer-clock");
+    const startDistLabel = document.getElementById("start-dist-label");
+    const finishDistLabel = document.getElementById("finish-dist-label");
+    const lapsBody = document.getElementById("laps-body");
 
     let currentStatus = "ON TRACK";
     let lastKnownTimestamp = 0;
     let latestAccuracy = 0;
+    let currentCarPos = null;
 
-    // Database listener with error handler & debug logging
+    // --- LEAFLET MAP SETUP ---
+    const map = L.map('map').setView([37.7709, -122.2608], 16);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      attribution: '© OpenStreetMap'
+    }).addTo(map);
+
+    // Custom Car Pulse Icon
+    const carIcon = L.divIcon({
+      className: 'custom-car-marker',
+      html: '<div style="background:#f97316; width:14px; height:14px; border-radius:50%; border:2px solid #fff; box-shadow:0 0 10px #f97316;"></div>',
+      iconSize: [14, 14],
+      iconAnchor: [7, 7]
+    });
+
+    let carMarker = null;
+    const pathLine = L.polyline([], { color: '#f97316', weight: 4, opacity: 0.8 }).addTo(map);
+    let mapCenteredOnce = false;
+
+    // --- AUTOCROSS GATES & TIMING ENGINE ---
+    const GATE_TRIGGER_RADIUS_METERS = 12; // Beam width trigger radius
+    let startGate = null;  // { lat, lon }
+    let finishGate = null; // { lat, lon }
+    let startCircle = null;
+    let finishCircle = null;
+
+    let timingState = "IDLE"; // IDLE, ARMED, RUNNING, FINISHED
+    let runStartTime = 0;
+    let clockInterval = null;
+    let lapCount = 0;
+    let bestLapTimeMs = Infinity;
+    let lastGateCrossTime = 0;
+
+    // Haversine formula (distance in meters between two lat/lon points)
+    function getDistanceMeters(lat1, lon1, lat2, lon2) {
+      const R = 6371000;
+      const dLat = (lat2 - lat1) * Math.PI / 180;
+      const dLon = (lon2 - lon1) * Math.PI / 180;
+      const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                Math.sin(dLon / 2) * Math.sin(dLon / 2);
+      return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    }
+
+    function setGateFromCurrentPos(type) {
+      if (!currentCarPos) {
+        alert("No GPS fix yet! Wait for telemetry signal.");
+        return;
+      }
+      setGateCoord(type, currentCarPos.lat, currentCarPos.lon);
+    }
+
+    function setGateCoord(type, lat, lon) {
+      if (type === 'start') {
+        startGate = { lat, lon };
+        if (startCircle) map.removeLayer(startCircle);
+        startCircle = L.circle([lat, lon], { radius: GATE_TRIGGER_RADIUS_METERS, color: '#22c55e', fillOpacity: 0.35 }).addTo(map);
+        startDistLabel.textContent = `Start: ${lat.toFixed(4)}, ${lon.toFixed(4)}`;
+        document.getElementById('btn-set-start').classList.add('active');
+      } else {
+        finishGate = { lat, lon };
+        if (finishCircle) map.removeLayer(finishCircle);
+        finishCircle = L.circle([lat, lon], { radius: GATE_TRIGGER_RADIUS_METERS, color: '#ef4444', fillOpacity: 0.35 }).addTo(map);
+        finishDistLabel.textContent = `Finish: ${lat.toFixed(4)}, ${lon.toFixed(4)}`;
+        document.getElementById('btn-set-finish').classList.add('active');
+      }
+
+      if (startGate && !finishGate) {
+        // If single-gate sprint/circuit: finish can default to start line
+        timerStatusEl.textContent = "WAITING FOR FINISH GATE (OR SET BOTH)";
+      } else if (startGate && finishGate) {
+        timingState = "ARMED";
+        timerStatusEl.textContent = "ARMED - DRIVE ACROSS START LINE";
+        timerStatusEl.style.color = "#22c55e";
+      }
+    }
+
+    // Process Car Position Against Gates
+    function evaluateTimingGates(lat, lon, speedMph) {
+      if (!startGate || !finishGate) return;
+      const now = Date.now();
+
+      const distToStart = getDistanceMeters(lat, lon, startGate.lat, startGate.lon);
+      const distToFinish = getDistanceMeters(lat, lon, finishGate.lat, finishGate.lon);
+
+      // Trigger Start Line Crossing
+      if (timingState === "ARMED" || timingState === "FINISHED") {
+        if (distToStart <= GATE_TRIGGER_RADIUS_METERS && speedMph > 2.5 && (now - lastGateCrossTime > 5000)) {
+          startTimer();
+          lastGateCrossTime = now;
+        }
+      } 
+      // Trigger Finish Line Crossing
+      else if (timingState === "RUNNING") {
+        if (distToFinish <= GATE_TRIGGER_RADIUS_METERS && (now - runStartTime > 3000)) {
+          finishTimer();
+          lastGateCrossTime = now;
+        }
+      }
+    }
+
+    function startTimer() {
+      timingState = "RUNNING";
+      runStartTime = Date.now();
+      timerStatusEl.textContent = "RUN IN PROGRESS";
+      timerStatusEl.style.color = "#38bdf8";
+
+      clearInterval(clockInterval);
+      clockInterval = setInterval(() => {
+        const delta = Date.now() - runStartTime;
+        timerClockEl.textContent = formatTime(delta);
+      }, 30);
+    }
+
+    function finishTimer() {
+      timingState = "FINISHED";
+      clearInterval(clockInterval);
+      const totalElapsed = Date.now() - runStartTime;
+      timerClockEl.textContent = formatTime(totalElapsed);
+      timerStatusEl.textContent = "RUN COMPLETE - READY TO RE-ARM";
+      timerStatusEl.style.color = "#4ade80";
+
+      recordLap(totalElapsed);
+    }
+
+    function recordLap(timeMs) {
+      lapCount++;
+      const isBest = timeMs < bestLapTimeMs;
+      if (isBest) bestLapTimeMs = timeMs;
+
+      if (lapCount === 1) lapsBody.innerHTML = "";
+
+      const row = document.createElement("tr");
+      row.innerHTML = `
+        <td>#${lapCount}</td>
+        <td>${driverInput.value || 'Driver'}</td>
+        <td class="${isBest ? 'best-lap' : ''}">${formatTime(timeMs)}</td>
+        <td>${isBest ? '⭐ BEST' : 'CLEAN'}</td>
+      `;
+      lapsBody.prepend(row);
+    }
+
+    function formatTime(ms) {
+      const min = Math.floor(ms / 60000);
+      const sec = Math.floor((ms % 60000) / 1000);
+      const hundredths = Math.floor((ms % 1000) / 10);
+      return `${String(min).padStart(2, '0')}:${String(sec).padStart(2, '0')}.${String(hundredths).padStart(2, '0')}`;
+    }
+
+    function resetTimerState() {
+      clearInterval(clockInterval);
+      timingState = (startGate && finishGate) ? "ARMED" : "IDLE";
+      timerStatusEl.textContent = timingState === "ARMED" ? "ARMED - DRIVE ACROSS START LINE" : "DISARMED (SET GATES)";
+      timerStatusEl.style.color = "#f97316";
+      timerClockEl.textContent = "00:00.00";
+    }
+
+    // --- INSTANT FIREBASE SYNC (NO PUSH BUTTON) ---
+    function instantSync(changes) {
+      db.update(changes).catch(err => console.error("Write error:", err));
+    }
+
+    function quickSetDriver(name) {
+      driverInput.value = name;
+      instantSync({ driver: name });
+    }
+
+    driverInput.addEventListener("input", () => {
+      instantSync({ driver: driverInput.value.trim() || "Driver" });
+    });
+
+    function instantSetStatus(status) {
+      currentStatus = status;
+      updateStatusUI(status);
+      instantSync({ status: status });
+    }
+
+    function updateStatusUI(status) {
+      currentStatus = status;
+      document.querySelectorAll(".status-btn").forEach(btn => btn.classList.remove("active"));
+      if (status === "ON TRACK") document.getElementById("btn-track").classList.add("active");
+      if (status === "IN PITS") document.getElementById("btn-pit").classList.add("active");
+      if (status === "DRIVER SWAP") document.getElementById("btn-change").classList.add("active");
+    }
+
+    // --- DATABASE TELEMETRY LISTENER ---
     db.on("value", (snap) => {
       const root = snap.val();
-      console.log("Pitwall received packet:", root);
       if (!root) return;
 
-      if (root.driver) {
-        prevDriver.textContent = root.driver;
-        if (document.activeElement !== driverInput) {
-          driverInput.value = root.driver;
-        }
+      if (root.driver && document.activeElement !== driverInput) {
+        driverInput.value = root.driver;
       }
       if (root.status) updateStatusUI(root.status);
 
@@ -257,36 +417,44 @@
         }
       }
 
-      // Speed calculation (handles MPH from worker or raw km/h)
+      // Speed calculation
       let calcMph = 0;
-      if (telem.speed !== undefined && telem.speed !== null) {
-        calcMph = Number(telem.speed);
-      } else if (telem.vel !== undefined && telem.vel !== null) {
-        calcMph = Number(telem.vel) * 0.621371;
-      }
+      if (telem.speed !== undefined && telem.speed !== null) calcMph = Number(telem.speed);
+      else if (telem.vel !== undefined && telem.vel !== null) calcMph = Number(telem.vel) * 0.621371;
       if (calcMph < 2.5 || isNaN(calcMph)) calcMph = 0;
-      prevSpeed.textContent = Math.round(calcMph);
 
-      // Coordinate and accuracy handling
+      mapSpeedEl.textContent = `${Math.round(calcMph)} MPH`;
+
+      // Coordinates
       const rawLat = telem.latitude !== undefined ? telem.latitude : telem.lat;
       const rawLon = telem.longitude !== undefined ? telem.longitude : telem.lon;
       const rawAcc = telem.accuracy !== undefined ? telem.accuracy : (telem.acc || 0);
       latestAccuracy = Math.round(Number(rawAcc) || 0);
 
-      // Parse timestamp to number
       let ts = telem.lastGpsTimestamp || (telem.tst ? telem.tst * 1000 : 0);
-      if (ts) {
-        lastKnownTimestamp = Number(ts);
-      }
+      if (ts) lastKnownTimestamp = Number(ts);
 
       if (rawLat !== undefined && rawLon !== undefined && rawLat !== 0 && rawLon !== 0) {
-        prevGpsCoords.textContent = `${Number(rawLat).toFixed(4)}°, ${Number(rawLon).toFixed(4)}°`;
+        const lat = Number(rawLat);
+        const lon = Number(rawLon);
+        currentCarPos = { lat, lon };
+
+        // Update Map Marker & Tail
+        if (!carMarker) {
+          carMarker = L.marker([lat, lon], { icon: carIcon }).addTo(map);
+        } else {
+          carMarker.setLatLng([lat, lon]);
+        }
+        pathLine.addLatLng([lat, lon]);
+
+        if (!mapCenteredOnce) {
+          map.setView([lat, lon], 17);
+          mapCenteredOnce = true;
+        }
+
+        // Run gate detection
+        evaluateTimingGates(lat, lon, calcMph);
       }
-    }, (error) => {
-      console.error("Firebase connection/read error:", error);
-      bannerTitle.textContent = "AUTH PERMISSION ERROR";
-      bannerDesc.textContent = "Check Firebase Security Rules (.read must be true)";
-      banner.className = "telemetry-banner offline";
     });
 
     // 1-Second Watchdog Monitor Loop
@@ -300,28 +468,11 @@
       const elapsedSec = (elapsedMs / 1000).toFixed(1);
 
       if (elapsedMs <= 4000) {
-        setWatchdogState(
-          "live", 
-          "COCKPIT LIVE", 
-          `Transmitting | Acc: ±${latestAccuracy}m`, 
-          `${elapsedMs} ms ago`
-        );
-        prevGpsAcc.textContent = `±${latestAccuracy}m`;
+        setWatchdogState("live", "COCKPIT LIVE", `Transmitting | Acc: ±${latestAccuracy}m`, `${elapsedMs} ms ago`);
       } else if (elapsedMs <= 8000) {
-        setWatchdogState(
-          "stale", 
-          "SIGNAL LAG", 
-          `Delayed | Last packet ${elapsedSec}s ago`, 
-          `${elapsedSec}s`
-        );
+        setWatchdogState("stale", "SIGNAL LAG", `Delayed | Last packet ${elapsedSec}s ago`, `${elapsedSec}s`);
       } else {
-        setWatchdogState(
-          "offline", 
-          "SIGNAL LOST", 
-          `No packet for ${Math.round(elapsedSec)}s (Check phone/Traccar)`, 
-          `${Math.round(elapsedSec)}s`
-        );
-        prevGpsAcc.textContent = "DROPPED";
+        setWatchdogState("offline", "SIGNAL LOST", `No packet for ${Math.round(elapsedSec)}s`, `${Math.round(elapsedSec)}s`);
       }
     }, 1000);
 
@@ -331,43 +482,6 @@
       bannerDesc.textContent = desc;
       bannerPing.textContent = ping;
     }
-
-    function setDriver(name) {
-      driverInput.value = name;
-      pushUpdates();
-    }
-
-    function setStatus(status) {
-      currentStatus = status;
-      updateStatusUI(status);
-      pushUpdates();
-    }
-
-    function updateStatusUI(status) {
-      currentStatus = status;
-      prevStatus.textContent = status;
-      prevStatus.className = "status-badge";
-      if (status === "IN PITS") prevStatus.classList.add("in-pits");
-      if (status === "DRIVER SWAP") prevStatus.classList.add("driver-swap");
-
-      document.querySelectorAll(".status-btn").forEach(btn => btn.classList.remove("active"));
-      if (status === "ON TRACK") document.getElementById("btn-track").classList.add("active");
-      if (status === "IN PITS") document.getElementById("btn-pit").classList.add("active");
-      if (status === "DRIVER SWAP") document.getElementById("btn-change").classList.add("active");
-    }
-
-    function pushUpdates() {
-      db.update({
-        driver: driverInput.value.trim() || "Driver",
-        status: currentStatus,
-        unit: "MPH"
-      }).catch(err => {
-        console.error("Firebase write error:", err);
-      });
-    }
-
-    applyBtn.addEventListener("click", pushUpdates);
-    driverInput.addEventListener("change", pushUpdates);
   </script>
 </body>
 </html>
