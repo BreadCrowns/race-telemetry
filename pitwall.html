@@ -44,7 +44,24 @@
 
     /* Panels */
     .panel { background: #131b2e; border: 1px solid #1e293b; border-radius: 10px; padding: 14px; }
-    .panel-title { font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px; color: #94a3b8; font-weight: 700; margin-bottom: 10px; display: flex; justify-content: space-between; }
+    .panel-title { font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px; color: #94a3b8; font-weight: 700; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
+
+    /* Live HUD Preview Stage */
+    .preview-stage { background: #060913; border: 1px dashed #334155; border-radius: 8px; padding: 20px 14px; display: flex; justify-content: center; align-items: center; }
+    .hud-card { display: inline-flex; flex-direction: column; background: rgba(10, 14, 23, 0.95); border: 1px solid rgba(255, 255, 255, 0.1); border-left: 6px solid #f97316; border-radius: 8px; padding: 10px 18px; color: #fff; box-shadow: 0 10px 30px rgba(0,0,0,0.6); gap: 6px; }
+    .hud-main-row { display: flex; align-items: center; }
+    .driver-col { display: flex; flex-direction: column; margin-right: 20px; padding-right: 18px; border-right: 1px solid rgba(255, 255, 255, 0.15); }
+    .driver-tag { font-size: 9px; font-weight: 800; color: #f97316; letter-spacing: 2px; text-transform: uppercase; }
+    .driver-val { font-size: 20px; font-weight: 700; max-width: 140px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .status-badge { font-size: 9px; font-weight: 800; padding: 2px 6px; border-radius: 4px; background: #334155; color: #cbd5e1; align-self: flex-start; margin-top: 3px; }
+    .status-badge.in-pits { background: #b45309; color: #fef3c7; }
+    .status-badge.driver-swap { background: #6d28d9; color: #ede9fe; }
+    .speed-col { display: flex; align-items: baseline; gap: 5px; }
+    .speed-val { font-size: 46px; font-weight: 900; letter-spacing: -2px; font-variant-numeric: tabular-nums; }
+    .unit-val { font-size: 13px; font-weight: 700; color: #94a3b8; }
+    .gps-preview-bar { display: flex; align-items: center; gap: 8px; font-family: ui-monospace, monospace; font-size: 10px; color: #94a3b8; border-top: 1px solid rgba(255, 255, 255, 0.08); padding-top: 4px; }
+    .gps-coords { color: #cbd5e1; }
+    .gps-acc { color: #64748b; margin-left: auto; }
 
     /* Map Box */
     #map { height: 260px; width: 100%; border-radius: 8px; border: 1px solid #334155; }
@@ -85,7 +102,7 @@
 
   <header>
     <h1>Pit Wall Command</h1>
-    <span style="font-size: 11px; color: #64748b; font-family: ui-monospace, monospace;">AUTOCROSS ED.</span>
+    <span style="font-size: 11px; color: #64748b; font-family: ui-monospace, monospace;">LIVE TELEMETRY</span>
   </header>
 
   <!-- Realtime GPS Signal Status -->
@@ -100,10 +117,34 @@
     <div class="ping-display" id="watchdog-ping">-- ms</div>
   </div>
 
+  <!-- PRISM Live Overlay Preview -->
+  <div class="panel">
+    <div class="panel-title">PRISM Live HUD Preview</div>
+    <div class="preview-stage">
+      <div class="hud-card">
+        <div class="hud-main-row">
+          <div class="driver-col">
+            <span class="driver-tag">Driver</span>
+            <span class="driver-val" id="prev-driver">Driver 1</span>
+            <span class="status-badge" id="prev-status">ON TRACK</span>
+          </div>
+          <div class="speed-col">
+            <span class="speed-val" id="prev-speed">0</span>
+            <span class="unit-val">MPH</span>
+          </div>
+        </div>
+        <div class="gps-preview-bar">
+          <span class="gps-coords" id="prev-gps-coords">--.----°, --.----°</span>
+          <span class="gps-acc" id="prev-gps-acc">OFFLINE</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Live Map View -->
   <div class="panel">
     <div class="panel-title">
-      <span>Track Map & Telemetry Path</span>
+      <span>Track Map & Telemetry Trail</span>
       <span id="map-speed" style="color: #f97316; font-size: 12px;">0 MPH</span>
     </div>
     <div id="map"></div>
@@ -146,10 +187,10 @@
 
   <!-- Driver Stint & Status Control (Instant Sync) -->
   <div class="panel">
-    <div class="panel-title">Driver Stint Control (Live Sync)</div>
+    <div class="panel-title">Driver Stint Control (Instant Sync)</div>
     <div class="field">
       <label for="driver-input">Active Driver</label>
-      <input type="text" id="driver-input" placeholder="Type driver name..." value="Jeff" />
+      <input type="text" id="driver-input" placeholder="Type driver name..." value="Driver 1" />
       <div class="quick-drivers">
         <button type="button" class="chip" onclick="quickSetDriver('Jeff')">Jeff</button>
         <button type="button" class="chip" onclick="quickSetDriver('Sylvia')">Sylvia</button>
@@ -194,6 +235,13 @@
     const bannerTitle = document.getElementById("watchdog-title");
     const bannerDesc = document.getElementById("watchdog-desc");
     const bannerPing = document.getElementById("watchdog-ping");
+
+    // HUD Preview Elements
+    const prevDriver = document.getElementById("prev-driver");
+    const prevStatus = document.getElementById("prev-status");
+    const prevSpeed = document.getElementById("prev-speed");
+    const prevGpsCoords = document.getElementById("prev-gps-coords");
+    const prevGpsAcc = document.getElementById("prev-gps-acc");
     const mapSpeedEl = document.getElementById("map-speed");
 
     // Autocross Timing Elements
@@ -215,7 +263,6 @@
       attribution: '© OpenStreetMap'
     }).addTo(map);
 
-    // Custom Car Pulse Icon
     const carIcon = L.divIcon({
       className: 'custom-car-marker',
       html: '<div style="background:#f97316; width:14px; height:14px; border-radius:50%; border:2px solid #fff; box-shadow:0 0 10px #f97316;"></div>',
@@ -228,20 +275,19 @@
     let mapCenteredOnce = false;
 
     // --- AUTOCROSS GATES & TIMING ENGINE ---
-    const GATE_TRIGGER_RADIUS_METERS = 12; // Beam width trigger radius
-    let startGate = null;  // { lat, lon }
-    let finishGate = null; // { lat, lon }
+    const GATE_TRIGGER_RADIUS_METERS = 12;
+    let startGate = null;
+    let finishGate = null;
     let startCircle = null;
     let finishCircle = null;
 
-    let timingState = "IDLE"; // IDLE, ARMED, RUNNING, FINISHED
+    let timingState = "IDLE";
     let runStartTime = 0;
     let clockInterval = null;
     let lapCount = 0;
     let bestLapTimeMs = Infinity;
     let lastGateCrossTime = 0;
 
-    // Haversine formula (distance in meters between two lat/lon points)
     function getDistanceMeters(lat1, lon1, lat2, lon2) {
       const R = 6371000;
       const dLat = (lat2 - lat1) * Math.PI / 180;
@@ -254,7 +300,7 @@
 
     function setGateFromCurrentPos(type) {
       if (!currentCarPos) {
-        alert("No GPS fix yet! Wait for telemetry signal.");
+        alert("No GPS fix yet! Wait for cockpit telemetry signal.");
         return;
       }
       setGateCoord(type, currentCarPos.lat, currentCarPos.lon);
@@ -276,7 +322,6 @@
       }
 
       if (startGate && !finishGate) {
-        // If single-gate sprint/circuit: finish can default to start line
         timerStatusEl.textContent = "WAITING FOR FINISH GATE (OR SET BOTH)";
       } else if (startGate && finishGate) {
         timingState = "ARMED";
@@ -285,7 +330,6 @@
       }
     }
 
-    // Process Car Position Against Gates
     function evaluateTimingGates(lat, lon, speedMph) {
       if (!startGate || !finishGate) return;
       const now = Date.now();
@@ -293,15 +337,12 @@
       const distToStart = getDistanceMeters(lat, lon, startGate.lat, startGate.lon);
       const distToFinish = getDistanceMeters(lat, lon, finishGate.lat, finishGate.lon);
 
-      // Trigger Start Line Crossing
       if (timingState === "ARMED" || timingState === "FINISHED") {
         if (distToStart <= GATE_TRIGGER_RADIUS_METERS && speedMph > 2.5 && (now - lastGateCrossTime > 5000)) {
           startTimer();
           lastGateCrossTime = now;
         }
-      } 
-      // Trigger Finish Line Crossing
-      else if (timingState === "RUNNING") {
+      } else if (timingState === "RUNNING") {
         if (distToFinish <= GATE_TRIGGER_RADIUS_METERS && (now - runStartTime > 3000)) {
           finishTimer();
           lastGateCrossTime = now;
@@ -365,18 +406,21 @@
       timerClockEl.textContent = "00:00.00";
     }
 
-    // --- INSTANT FIREBASE SYNC (NO PUSH BUTTON) ---
+    // --- INSTANT FIREBASE SYNC ---
     function instantSync(changes) {
       db.update(changes).catch(err => console.error("Write error:", err));
     }
 
     function quickSetDriver(name) {
       driverInput.value = name;
+      prevDriver.textContent = name;
       instantSync({ driver: name });
     }
 
     driverInput.addEventListener("input", () => {
-      instantSync({ driver: driverInput.value.trim() || "Driver" });
+      const name = driverInput.value.trim() || "Driver";
+      prevDriver.textContent = name;
+      instantSync({ driver: name });
     });
 
     function instantSetStatus(status) {
@@ -387,6 +431,11 @@
 
     function updateStatusUI(status) {
       currentStatus = status;
+      prevStatus.textContent = status;
+      prevStatus.className = "status-badge";
+      if (status === "IN PITS") prevStatus.classList.add("in-pits");
+      if (status === "DRIVER SWAP") prevStatus.classList.add("driver-swap");
+
       document.querySelectorAll(".status-btn").forEach(btn => btn.classList.remove("active"));
       if (status === "ON TRACK") document.getElementById("btn-track").classList.add("active");
       if (status === "IN PITS") document.getElementById("btn-pit").classList.add("active");
@@ -398,12 +447,14 @@
       const root = snap.val();
       if (!root) return;
 
-      if (root.driver && document.activeElement !== driverInput) {
-        driverInput.value = root.driver;
+      if (root.driver) {
+        prevDriver.textContent = root.driver;
+        if (document.activeElement !== driverInput) {
+          driverInput.value = root.driver;
+        }
       }
       if (root.status) updateStatusUI(root.status);
 
-      // Handle direct properties or nested push objects
       let telem = root;
       if (root.lat === undefined && root.latitude === undefined) {
         const keys = Object.keys(root).filter(k => typeof root[k] === 'object' && root[k] !== null);
@@ -423,9 +474,10 @@
       else if (telem.vel !== undefined && telem.vel !== null) calcMph = Number(telem.vel) * 0.621371;
       if (calcMph < 2.5 || isNaN(calcMph)) calcMph = 0;
 
+      prevSpeed.textContent = Math.round(calcMph);
       mapSpeedEl.textContent = `${Math.round(calcMph)} MPH`;
 
-      // Coordinates
+      // Coordinates & diagnostic readout
       const rawLat = telem.latitude !== undefined ? telem.latitude : telem.lat;
       const rawLon = telem.longitude !== undefined ? telem.longitude : telem.lon;
       const rawAcc = telem.accuracy !== undefined ? telem.accuracy : (telem.acc || 0);
@@ -439,7 +491,10 @@
         const lon = Number(rawLon);
         currentCarPos = { lat, lon };
 
-        // Update Map Marker & Tail
+        prevGpsCoords.textContent = `${lat.toFixed(4)}°, ${lon.toFixed(4)}°`;
+        prevGpsAcc.textContent = `±${latestAccuracy}m`;
+
+        // Update Map
         if (!carMarker) {
           carMarker = L.marker([lat, lon], { icon: carIcon }).addTo(map);
         } else {
@@ -452,9 +507,12 @@
           mapCenteredOnce = true;
         }
 
-        // Run gate detection
         evaluateTimingGates(lat, lon, calcMph);
       }
+    }, (error) => {
+      console.error("Firebase read error:", error);
+      bannerTitle.textContent = "AUTH PERMISSION ERROR";
+      banner.className = "telemetry-banner offline";
     });
 
     // 1-Second Watchdog Monitor Loop
