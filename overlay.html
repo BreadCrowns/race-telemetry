@@ -148,7 +148,7 @@
       </div>
       <div class="speed-container">
         <span class="speed-num" id="speed-val">0</span>
-        <span class="speed-unit" id="unit-val">MPH</span>
+        <span class="speed-unit">MPH</span>
       </div>
     </div>
 
@@ -156,7 +156,7 @@
     <div class="gps-sub-bar">
       <span class="status-dot" id="gps-dot"></span>
       <span class="gps-coords" id="gps-coords">--.----°, --.----°</span>
-      <span class="gps-acc" id="gps-acc">OFFLINE</span>
+      <span class="gps-acc" id="gps-acc">STANDBY</span>
     </div>
   </div>
 
@@ -181,15 +181,15 @@
     const driverEl = document.getElementById("driver-val");
     const statusEl = document.getElementById("status-val");
     const speedEl = document.getElementById("speed-val");
-    const unitEl = document.getElementById("unit-val");
     const gpsDot = document.getElementById("gps-dot");
     const gpsCoords = document.getElementById("gps-coords");
     const gpsAcc = document.getElementById("gps-acc");
 
     let targetSpeed = 0;
     let smoothSpeed = 0;
+    const SPEED_CUTOFF_MPH = 2.5;
 
-    // Speed smoothing with quick snap to zero
+    // Linear speed interpolation with instant stop clamp
     function animate() {
       if (targetSpeed === 0) {
         smoothSpeed += (0 - smoothSpeed) * 0.35;
@@ -202,28 +202,57 @@
     }
     requestAnimationFrame(animate);
 
-    // Synchronize telemetry from Firebase in real time
+    // Synchronize telemetry from Firebase
     db.on("value", (snap) => {
-      const data = snap.val();
-      if (!data) return;
+      const root = snap.val();
+      if (!root) return;
 
-      driverEl.textContent = data.driver || "Driver";
-      unitEl.textContent = data.unit || "MPH";
-
-      const st = data.status || "ON TRACK";
+      // Update Pit Wall driver and status attributes
+      driverEl.textContent = root.driver || "Driver";
+      const st = root.status || "ON TRACK";
       statusEl.textContent = st;
       statusEl.className = "status-badge";
       if (st === "IN PITS") statusEl.classList.add("in-pits");
       if (st === "DRIVER SWAP") statusEl.classList.add("driver-swap");
 
-      targetSpeed = Math.max(0, data.speed || 0);
+      // Extract telemetry (handles direct keys OR OwnTracks nested POST keys)
+      let telem = root;
+      if (!root.lat && !root.latitude) {
+        const keys = Object.keys(root).filter(k => typeof root[k] === 'object' && root[k] !== null);
+        if (keys.length > 0) {
+          keys.sort((a, b) => (root[a].tst || root[a].lastGpsTimestamp || 0) - (root[b].tst || root[b].lastGpsTimestamp || 0));
+          telem = root[keys[keys.length - 1]];
+        }
+      }
 
-      // Check if GPS data is currently active (timestamp within last 5s)
-      const isLive = data.lastGpsTimestamp && (Date.now() - data.lastGpsTimestamp < 5000);
-      if (isLive && data.latitude && data.longitude) {
+      // Speed resolution (OwnTracks sends vel in km/h)
+      let calcMph = 0;
+      if (telem.vel !== undefined && telem.vel !== null) {
+        calcMph = Number(telem.vel) * 0.621371;
+      } else if (telem.speedMps !== undefined && telem.speedMps !== null) {
+        calcMph = Number(telem.speedMps) * 2.23694;
+      } else if (telem.speed !== undefined && telem.speed !== null) {
+        calcMph = Number(telem.speed);
+      }
+
+      if (calcMph < SPEED_CUTOFF_MPH || isNaN(calcMph)) {
+        calcMph = 0;
+      }
+      targetSpeed = calcMph;
+
+      // Coordinate and accuracy resolution
+      const lat = telem.lat !== undefined ? telem.lat : telem.latitude;
+      const lon = telem.lon !== undefined ? telem.lon : telem.longitude;
+      const acc = telem.acc !== undefined ? telem.acc : (telem.accuracy || 0);
+
+      // Timestamp resolution (OwnTracks tst is in seconds)
+      let ts = telem.tst ? (telem.tst * 1000) : (telem.lastGpsTimestamp || 0);
+      const isLive = ts && (Date.now() - ts < 6000);
+
+      if (isLive && lat && lon) {
         gpsDot.classList.add("active");
-        gpsCoords.textContent = `${Number(data.latitude).toFixed(4)}°, ${Number(data.longitude).toFixed(4)}°`;
-        gpsAcc.textContent = `±${Math.round(data.accuracy || 0)}m`;
+        gpsCoords.textContent = `${Number(lat).toFixed(4)}°, ${Number(lon).toFixed(4)}°`;
+        gpsAcc.textContent = `±${Math.round(acc)}m`;
       } else {
         gpsDot.classList.remove("active");
         gpsAcc.textContent = "SEARCHING";
