@@ -248,6 +248,8 @@
       display: flex;
       flex-direction: column;
       gap: 14px;
+      max-height: 85vh;
+      overflow-y: auto;
     }
     .settings-drawer.open {
       transform: translateY(0);
@@ -301,6 +303,11 @@
     select.camera-dropdown:focus {
       border-color: #f97316;
     }
+    .zoom-btn-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 8px;
+    }
     .menu-btn {
       background: #1e293b;
       color: #f8fafc;
@@ -317,8 +324,18 @@
     .menu-btn:active {
       background: #334155;
     }
+    .zoom-btn {
+      justify-content: center;
+      padding: 10px;
+      font-size: 13px;
+    }
+    .zoom-btn.active {
+      border-color: #f97316;
+      color: #f97316;
+      background: #0b1329;
+    }
 
-    /* Initial Gate */
+    /* Initial Fullscreen Gate */
     #start-overlay-btn {
       position: absolute;
       top: 50%;
@@ -384,11 +401,24 @@
       <button class="btn-close" id="btn-close-drawer" type="button">✕</button>
     </div>
 
+    <!-- Camera / Device Selection -->
     <div class="field-group">
-      <label class="field-label" for="camera-select">Select Lens / Camera</label>
+      <label class="field-label" for="camera-select">Camera Device</label>
       <select class="camera-dropdown" id="camera-select">
         <option value="">Detecting cameras...</option>
       </select>
+    </div>
+
+    <!-- Hardware Optical / Sensor Zoom Controls -->
+    <div class="field-group" id="zoom-control-group">
+      <label class="field-label">Focal Length / Zoom</label>
+      <div class="zoom-btn-row">
+        <button type="button" class="menu-btn zoom-btn" id="btn-zoom-ultra">0.5x Ultra</button>
+        <button type="button" class="menu-btn zoom-btn active" id="btn-zoom-main">1.0x Main</button>
+        <button type="button" class="menu-btn zoom-btn" id="btn-zoom-tele">2.0x Tele</button>
+      </div>
+      <input type="range" id="zoom-slider" min="0.5" max="5" step="0.1" value="1" style="width: 100%; margin-top: 8px; accent-color: #f97316;" />
+      <span id="zoom-status-text" style="font-size: 11px; color: #64748b; margin-top: 2px;">Detecting optical zoom limits...</span>
     </div>
 
     <button class="menu-btn" id="btn-zero-g" type="button">
@@ -428,6 +458,13 @@
     const settingsDrawer = document.getElementById("settings-drawer");
     const btnCloseDrawer = document.getElementById("btn-close-drawer");
     const cameraSelect = document.getElementById("camera-select");
+
+    const btnZoomUltra = document.getElementById("btn-zoom-ultra");
+    const btnZoomMain = document.getElementById("btn-zoom-main");
+    const btnZoomTele = document.getElementById("btn-zoom-tele");
+    const zoomSlider = document.getElementById("zoom-slider");
+    const zoomStatusText = document.getElementById("zoom-status-text");
+
     const btnZeroG = document.getElementById("btn-zero-g");
     const btnFullscreen = document.getElementById("btn-fullscreen");
 
@@ -447,6 +484,7 @@
     let targetSpeed = 0;
     let smoothSpeed = 0;
     let currentStream = null;
+    let activeVideoTrack = null;
     let selectedDeviceId = null;
     let isFrontCamera = false;
 
@@ -455,11 +493,11 @@
     let rawAx = 0;
     let rawAy = 0;
 
-    // Stationary noise gate thresholds
+    // Stationary noise cutoff thresholds
     const SPEED_CUTOFF_MPH = 2.5; 
     const SPEED_CUTOFF_KMH = 4.0;
 
-    // Sync state with Firebase from Pit Wall
+    // Sync from Pit Wall
     db.on("value", (snap) => {
       const val = snap.val();
       if (!val) return;
@@ -474,7 +512,7 @@
       if (st === "DRIVER SWAP") statusVal.classList.add("driver-swap");
     });
 
-    // Speed interpolation with fast decay and hard zero clamp
+    // Speed smoothing with quick snap to zero
     function animate() {
       if (targetSpeed === 0) {
         smoothSpeed += (0 - smoothSpeed) * 0.35;
@@ -488,14 +526,71 @@
     }
     requestAnimationFrame(animate);
 
-    // Camera scanning
+    // Hardware Zoom Control
+    async function setCameraZoom(val) {
+      if (!activeVideoTrack) return;
+      const capabilities = activeVideoTrack.getCapabilities ? activeVideoTrack.getCapabilities() : {};
+      
+      if (capabilities.zoom) {
+        const clampedZoom = Math.max(capabilities.zoom.min, Math.min(capabilities.zoom.max, val));
+        try {
+          await activeVideoTrack.applyConstraints({
+            advanced: [{ zoom: clampedZoom }]
+          });
+          zoomSlider.value = clampedZoom;
+          zoomStatusText.textContent = `Active Zoom: ${clampedZoom.toFixed(1)}x`;
+
+          // Update active pill
+          [btnZoomUltra, btnZoomMain, btnZoomTele].forEach(btn => btn.classList.remove("active"));
+          if (clampedZoom <= 0.7) btnZoomUltra.classList.add("active");
+          else if (clampedZoom >= 1.8) btnZoomTele.classList.add("active");
+          else btnZoomMain.classList.add("active");
+        } catch (err) {
+          console.warn("Zoom constraint failed:", err);
+        }
+      } else {
+        zoomStatusText.textContent = "Hardware zoom not supported by this browser/lens.";
+      }
+    }
+
+    function setupZoomControls(track) {
+      activeVideoTrack = track;
+      if (!track.getCapabilities) {
+        zoomStatusText.textContent = "Zoom capabilities not exposed by browser.";
+        return;
+      }
+
+      const caps = track.getCapabilities();
+      if (caps.zoom) {
+        zoomSlider.min = caps.zoom.min;
+        zoomSlider.max = caps.zoom.max;
+        zoomSlider.step = caps.zoom.step || 0.1;
+        const currentZoom = track.getSettings().zoom || 1.0;
+        zoomSlider.value = currentZoom;
+        zoomStatusText.textContent = `Hardware zoom supported (${caps.zoom.min}x - ${caps.zoom.max}x)`;
+
+        if (caps.zoom.min <= 0.6) {
+          btnZoomUltra.textContent = `${caps.zoom.min}x Ultra`;
+        }
+      } else {
+        zoomStatusText.textContent = "Fixed focal length lens (no zoom API).";
+      }
+    }
+
+    zoomSlider.addEventListener("input", (e) => setCameraZoom(parseFloat(e.target.value)));
+    btnZoomUltra.addEventListener("click", () => {
+      const min = (activeVideoTrack && activeVideoTrack.getCapabilities) ? activeVideoTrack.getCapabilities().zoom?.min : 0.5;
+      setCameraZoom(min || 0.5);
+    });
+    btnZoomMain.addEventListener("click", () => setCameraZoom(1.0));
+    btnZoomTele.addEventListener("click", () => setCameraZoom(2.0));
+
+    // Device Enumeration
     async function populateCameras() {
       try {
         const devices = await navigator.mediaDevices.enumerateDevices();
         const videoDevices = devices.filter(d => d.kind === "videoinput");
         cameraSelect.innerHTML = "";
-
-        let preferredId = null;
 
         videoDevices.forEach((dev, index) => {
           const opt = document.createElement("option");
@@ -504,8 +599,7 @@
           
           let cleanName = dev.label || `Camera ${index + 1}`;
           if (label.includes("ultra") || label.includes("wide") || label.includes("0.5x")) {
-            cleanName = `🏎️ Ultra-Wide Lens (${dev.label})`;
-            if (!preferredId) preferredId = dev.deviceId;
+            cleanName = `🏎️ Ultra-Wide (${dev.label})`;
           } else if (label.includes("back") || label.includes("environment")) {
             cleanName = `📷 Rear Standard (${dev.label})`;
           } else if (label.includes("front") || label.includes("user")) {
@@ -516,17 +610,12 @@
           if (dev.deviceId === selectedDeviceId) opt.selected = true;
           cameraSelect.appendChild(opt);
         });
-
-        if (!selectedDeviceId && preferredId) {
-          selectedDeviceId = preferredId;
-          cameraSelect.value = preferredId;
-        }
       } catch (err) {
-        console.warn("Could not enumerate devices:", err);
+        console.warn("Could not list cameras:", err);
       }
     }
 
-    // Camera initiation
+    // Camera Launcher
     async function startCamera(deviceId = null) {
       if (currentStream) {
         currentStream.getTracks().forEach(t => t.stop());
@@ -557,6 +646,7 @@
         selectedDeviceId = settings.deviceId;
         isFrontCamera = settings.facingMode === "user";
 
+        setupZoomControls(track);
         await populateCameras();
         if (selectedDeviceId) cameraSelect.value = selectedDeviceId;
 
@@ -566,6 +656,8 @@
           video: deviceId ? { deviceId: { exact: deviceId } } : { facingMode: "environment" }
         });
         video.srcObject = currentStream;
+        const track = currentStream.getVideoTracks()[0];
+        setupZoomControls(track);
       }
     }
 
@@ -617,7 +709,7 @@
 
       await startCamera();
 
-      // GPS Watcher with Noise Gate
+      // GPS Watcher with Low-Speed Cutoff Filter
       if (navigator.geolocation) {
         navigator.geolocation.watchPosition(
           (pos) => {
@@ -637,7 +729,6 @@
             let calcSpeed = currentUnit === "MPH" ? (rawMps * 2.23694) : (rawMps * 3.6);
             const cutoff = currentUnit === "MPH" ? SPEED_CUTOFF_MPH : SPEED_CUTOFF_KMH;
 
-            // Deadband: eliminate idle satellite jitter under 2.5 MPH
             if (calcSpeed < cutoff) {
               calcSpeed = 0;
             }
