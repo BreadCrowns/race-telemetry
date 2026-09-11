@@ -18,20 +18,28 @@
 
     /* Live HUD Preview */
     .preview-stage { background: #060913; border: 1px dashed #334155; border-radius: 8px; padding: 24px 16px; display: flex; justify-content: center; align-items: center; }
-    .hud-box { display: inline-flex; align-items: center; background: rgba(10, 14, 23, 0.95); border: 1px solid rgba(255, 255, 255, 0.1); border-left: 6px solid #f97316; border-radius: 8px; padding: 10px 20px; color: #fff; box-shadow: 0 10px 30px rgba(0,0,0,0.6); }
+    .hud-card { display: inline-flex; flex-direction: column; background: rgba(10, 14, 23, 0.95); border: 1px solid rgba(255, 255, 255, 0.1); border-left: 6px solid #f97316; border-radius: 8px; padding: 10px 18px; color: #fff; box-shadow: 0 10px 30px rgba(0,0,0,0.6); gap: 6px; }
+    .hud-main-row { display: flex; align-items: center; }
     .driver-col { display: flex; flex-direction: column; margin-right: 20px; padding-right: 18px; border-right: 1px solid rgba(255, 255, 255, 0.15); }
     .driver-tag { font-size: 9px; font-weight: 800; color: #f97316; letter-spacing: 2px; text-transform: uppercase; }
     .driver-val { font-size: 20px; font-weight: 700; max-width: 140px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .status-badge { font-size: 9px; font-weight: 800; padding: 2px 6px; border-radius: 4px; background: #334155; color: #cbd5e1; align-self: flex-start; margin-top: 3px; }
+    .status-badge.in-pits { background: #b45309; color: #fef3c7; }
+    .status-badge.driver-swap { background: #6d28d9; color: #ede9fe; }
     .speed-col { display: flex; align-items: baseline; gap: 5px; }
     .speed-val { font-size: 46px; font-weight: 900; letter-spacing: -2px; font-variant-numeric: tabular-nums; }
     .unit-val { font-size: 13px; font-weight: 700; color: #94a3b8; }
 
+    /* GPS Diagnostic Line */
+    .gps-preview-bar { display: flex; align-items: center; gap: 8px; font-family: ui-monospace, monospace; font-size: 10px; color: #94a3b8; border-top: 1px solid rgba(255, 255, 255, 0.08); padding-top: 4px; }
+    .gps-coords { color: #cbd5e1; }
+    .gps-acc { color: #64748b; margin-left: auto; }
+
     /* Controls */
     .field { margin-bottom: 14px; }
     label { font-size: 12px; color: #94a3b8; display: block; margin-bottom: 6px; font-weight: 600; }
-    input[type="text"], select { width: 100%; background: #0a0e1a; border: 1px solid #334155; padding: 12px; border-radius: 8px; color: #fff; font-size: 16px; outline: none; }
-    input[type="text"]:focus, select:focus { border-color: #f97316; }
+    input[type="text"] { width: 100%; background: #0a0e1a; border: 1px solid #334155; padding: 12px; border-radius: 8px; color: #fff; font-size: 16px; outline: none; }
+    input[type="text"]:focus { border-color: #f97316; }
 
     .quick-drivers { display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
     .chip { background: #1e293b; color: #cbd5e1; border: 1px solid #334155; padding: 6px 12px; border-radius: 20px; font-size: 12px; cursor: pointer; }
@@ -57,17 +65,24 @@
 
   <!-- Live Overlay Preview -->
   <div class="panel">
-    <div class="panel-title">PRISM Live Overlay Preview</div>
+    <div class="panel-title">PRISM Live Preview</div>
     <div class="preview-stage">
-      <div class="hud-box">
-        <div class="driver-col">
-          <span class="driver-tag">Driver</span>
-          <span class="driver-val" id="prev-driver">Driver 1</span>
-          <span class="status-badge" id="prev-status">ON TRACK</span>
+      <div class="hud-card">
+        <div class="hud-main-row">
+          <div class="driver-col">
+            <span class="driver-tag">Driver</span>
+            <span class="driver-val" id="prev-driver">Driver 1</span>
+            <span class="status-badge" id="prev-status">ON TRACK</span>
+          </div>
+          <div class="speed-col">
+            <span class="speed-val" id="prev-speed">0</span>
+            <span class="unit-val">MPH</span>
+          </div>
         </div>
-        <div class="speed-col">
-          <span class="speed-val" id="prev-speed">0</span>
-          <span class="unit-val" id="prev-unit">MPH</span>
+        <div class="gps-preview-bar">
+          <span class="dot" id="prev-gps-dot"></span>
+          <span class="gps-coords" id="prev-gps-coords">--.----°, --.----°</span>
+          <span class="gps-acc" id="prev-gps-acc">OFFLINE</span>
         </div>
       </div>
     </div>
@@ -78,7 +93,7 @@
     <div class="panel-title">Driver Stint Control</div>
     <div class="field">
       <label for="driver-input">Active Driver</label>
-      <input type="text" id="driver-input" placeholder="Type driver name..." />
+      <input type="text" id="driver-input" placeholder="Type driver name..." value="Driver 1" />
       <div class="quick-drivers">
         <button type="button" class="chip" onclick="setDriver('Jeff')">Jeff</button>
         <button type="button" class="chip" onclick="setDriver('Sylvia')">Sylvia</button>
@@ -95,14 +110,6 @@
       </div>
     </div>
 
-    <div class="field">
-      <label for="unit-select">Speed Metric</label>
-      <select id="unit-select">
-        <option value="MPH">MPH (Miles per hour)</option>
-        <option value="KMH">KM/H (Kilometers per hour)</option>
-      </select>
-    </div>
-
     <button class="btn-apply" id="apply-btn" type="button">Push Changes to Stream</button>
   </div>
 
@@ -112,20 +119,19 @@
 
   <script>
     const firebaseConfig = {
-		apiKey: "AIzaSyCC4JUzjr5lk9zaT78wwZ1RcjUguP5Q70s",
-		authDomain: "fiero-telemetry.firebaseapp.com",
-		databaseURL: "https://fiero-telemetry-default-rtdb.firebaseio.com",
-		projectId: "fiero-telemetry",
-		storageBucket: "fiero-telemetry.firebasestorage.app",
-		messagingSenderId: "183922450878",
-		appId: "1:183922450878:web:5faabfd6d163f1c6c119ef"
-	};
+      apiKey: "AIzaSyCC4JUzjr5lk9zaT78wwZ1RcjUguP5Q70s",
+      authDomain: "fiero-telemetry.firebaseapp.com",
+      databaseURL: "https://fiero-telemetry-default-rtdb.firebaseio.com",
+      projectId: "fiero-telemetry",
+      storageBucket: "fiero-telemetry.firebasestorage.app",
+      messagingSenderId: "183922450878",
+      appId: "1:183922450878:web:5faabfd6d163f1c6c119ef"
+    };
 
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database().ref("raceTelemetry");
 
     const driverInput = document.getElementById("driver-input");
-    const unitSelect = document.getElementById("unit-select");
     const applyBtn = document.getElementById("apply-btn");
     const liveDot = document.getElementById("live-dot");
     const liveText = document.getElementById("live-text");
@@ -133,35 +139,40 @@
     const prevDriver = document.getElementById("prev-driver");
     const prevStatus = document.getElementById("prev-status");
     const prevSpeed = document.getElementById("prev-speed");
-    const prevUnit = document.getElementById("prev-unit");
+    const prevGpsDot = document.getElementById("prev-gps-dot");
+    const prevGpsCoords = document.getElementById("prev-gps-coords");
+    const prevGpsAcc = document.getElementById("prev-gps-acc");
 
     let currentStatus = "ON TRACK";
 
-    // Keep preview in sync with database
+    // Synchronize preview from Firebase
     db.on("value", (snap) => {
       const data = snap.val();
       if (!data) return;
 
       prevDriver.textContent = data.driver || "Driver";
-      prevStatus.textContent = data.status || "ON TRACK";
       prevSpeed.textContent = Math.round(data.speed || 0);
-      prevUnit.textContent = data.unit || "MPH";
 
-      // If we haven't typed yet, populate the inputs
-      if (document.activeElement !== driverInput) {
-        driverInput.value = data.driver || "";
+      if (document.activeElement !== driverInput && data.driver) {
+        driverInput.value = data.driver;
       }
-      unitSelect.value = data.unit || "MPH";
-      updateStatusUI(data.status || "ON TRACK");
+      if (data.status) updateStatusUI(data.status);
 
-      // Check car heartbeat (last telemetry update within 5 seconds)
+      // Heartbeat and GPS status check (last 5 seconds)
       const isLive = data.lastGpsTimestamp && (Date.now() - data.lastGpsTimestamp < 5000);
       if (isLive) {
         liveDot.classList.add("live");
-        liveText.textContent = `Car Active (±${data.accuracy || 0}m)`;
+        prevGpsDot.classList.add("live");
+        liveText.textContent = `Car Active (±${Math.round(data.accuracy || 0)}m)`;
+        if (data.latitude && data.longitude) {
+          prevGpsCoords.textContent = `${Number(data.latitude).toFixed(4)}°, ${Number(data.longitude).toFixed(4)}°`;
+          prevGpsAcc.textContent = `±${Math.round(data.accuracy || 0)}m`;
+        }
       } else {
         liveDot.classList.remove("live");
+        prevGpsDot.classList.remove("live");
         liveText.textContent = "Car Offline";
+        prevGpsAcc.textContent = "OFFLINE";
       }
     });
 
@@ -171,7 +182,6 @@
     }
 
     function setStatus(status) {
-      currentStatus = status;
       updateStatusUI(status);
       pushUpdates();
     }
@@ -179,6 +189,10 @@
     function updateStatusUI(status) {
       currentStatus = status;
       prevStatus.textContent = status;
+      prevStatus.className = "status-badge";
+      if (status === "IN PITS") prevStatus.classList.add("in-pits");
+      if (status === "DRIVER SWAP") prevStatus.classList.add("driver-swap");
+
       document.querySelectorAll(".status-btn").forEach(btn => btn.classList.remove("active"));
       if (status === "ON TRACK") document.getElementById("btn-track").classList.add("active");
       if (status === "IN PITS") document.getElementById("btn-pit").classList.add("active");
@@ -189,12 +203,11 @@
       db.update({
         driver: driverInput.value.trim() || "Driver",
         status: currentStatus,
-        unit: unitSelect.value
+        unit: "MPH" // Locked permanently to MPH
       });
     }
 
     applyBtn.addEventListener("click", pushUpdates);
-    unitSelect.addEventListener("change", pushUpdates);
     driverInput.addEventListener("change", pushUpdates);
   </script>
 </body>
