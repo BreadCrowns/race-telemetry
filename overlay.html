@@ -2,23 +2,44 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>PRISM Stream HUD</title>
   <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-    body { background: transparent; overflow: hidden; padding: 14px; }
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+    body {
+      background-color: transparent;
+      overflow: hidden;
+      padding: 16px;
+      display: flex;
+      align-items: flex-start;
+    }
+
     .hud-card {
       display: inline-flex;
-      align-items: center;
+      flex-direction: column;
       background: rgba(10, 14, 23, 0.88);
-      backdrop-filter: blur(6px);
-      -webkit-backdrop-filter: blur(6px);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
       border: 1px solid rgba(255, 255, 255, 0.12);
       border-left: 6px solid #f97316;
       border-radius: 8px;
-      padding: 10px 20px;
-      color: #fff;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.65);
+      padding: 10px 18px;
+      color: #ffffff;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.65);
+      gap: 6px;
     }
+
+    /* Top Row: Driver Meta + Large Speed */
+    .hud-main-row {
+      display: flex;
+      align-items: center;
+    }
+
     .driver-meta {
       display: flex;
       flex-direction: column;
@@ -26,8 +47,24 @@
       padding-right: 18px;
       border-right: 1px solid rgba(255, 255, 255, 0.15);
     }
-    .driver-tag { font-size: 9px; font-weight: 800; color: #f97316; letter-spacing: 2px; text-transform: uppercase; }
-    .driver-name { font-size: 20px; font-weight: 700; max-width: 150px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+    .driver-tag {
+      font-size: 9px;
+      font-weight: 800;
+      color: #f97316;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+    }
+
+    .driver-name {
+      font-size: 22px;
+      font-weight: 700;
+      max-width: 150px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
     .status-badge {
       font-size: 9px;
       font-weight: 800;
@@ -41,38 +78,102 @@
     }
     .status-badge.in-pits { background: #b45309; color: #fef3c7; }
     .status-badge.driver-swap { background: #6d28d9; color: #ede9fe; }
-    .speed-container { display: flex; align-items: baseline; gap: 6px; }
-    .speed-num { font-size: 50px; font-weight: 900; letter-spacing: -2px; font-variant-numeric: tabular-nums; min-width: 70px; text-align: right; }
-    .speed-unit { font-size: 13px; font-weight: 700; color: #94a3b8; }
+
+    .speed-container {
+      display: flex;
+      align-items: baseline;
+      gap: 5px;
+    }
+
+    .speed-num {
+      font-size: 52px;
+      font-weight: 900;
+      letter-spacing: -2px;
+      font-variant-numeric: tabular-nums;
+      min-width: 70px;
+      text-align: right;
+      color: #ffffff;
+    }
+
+    .speed-unit {
+      font-size: 13px;
+      font-weight: 700;
+      color: #94a3b8;
+      text-transform: uppercase;
+    }
+
+    /* Bottom Sub-row: GPS Diagnostic Readout */
+    .gps-sub-bar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 10px;
+      color: #94a3b8;
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+      padding-top: 4px;
+    }
+
+    .status-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #ef4444;
+      flex-shrink: 0;
+    }
+    .status-dot.active {
+      background: #22c55e;
+      box-shadow: 0 0 6px #22c55e;
+    }
+
+    .gps-coords {
+      color: #cbd5e1;
+      letter-spacing: 0.5px;
+    }
+
+    .gps-acc {
+      color: #64748b;
+      margin-left: auto;
+    }
   </style>
 </head>
 <body>
 
   <div class="hud-card">
-    <div class="driver-meta">
-      <span class="driver-tag">Driver</span>
-      <span class="driver-name" id="driver-val">--</span>
-      <span class="status-badge" id="status-val">ON TRACK</span>
+    <div class="hud-main-row">
+      <div class="driver-meta">
+        <span class="driver-tag">Driver</span>
+        <span class="driver-name" id="driver-val">--</span>
+        <span class="status-badge" id="status-val">ON TRACK</span>
+      </div>
+      <div class="speed-container">
+        <span class="speed-num" id="speed-val">0</span>
+        <span class="speed-unit" id="unit-val">MPH</span>
+      </div>
     </div>
-    <div class="speed-container">
-      <span class="speed-num" id="speed-val">0</span>
-      <span class="speed-unit" id="unit-val">MPH</span>
+
+    <!-- Live GPS Coordinates Bar -->
+    <div class="gps-sub-bar">
+      <span class="status-dot" id="gps-dot"></span>
+      <span class="gps-coords" id="gps-coords">--.----°, --.----°</span>
+      <span class="gps-acc" id="gps-acc">OFFLINE</span>
     </div>
   </div>
 
+  <!-- Firebase SDKs -->
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 
   <script>
     const firebaseConfig = {
-		apiKey: "AIzaSyCC4JUzjr5lk9zaT78wwZ1RcjUguP5Q70s",
-		authDomain: "fiero-telemetry.firebaseapp.com",
-		databaseURL: "https://fiero-telemetry-default-rtdb.firebaseio.com",
-		projectId: "fiero-telemetry",
-		storageBucket: "fiero-telemetry.firebasestorage.app",
-		messagingSenderId: "183922450878",
-		appId: "1:183922450878:web:5faabfd6d163f1c6c119ef"
-	};
+      apiKey: "AIzaSyCC4JUzjr5lk9zaT78wwZ1RcjUguP5Q70s",
+      authDomain: "fiero-telemetry.firebaseapp.com",
+      databaseURL: "https://fiero-telemetry-default-rtdb.firebaseio.com",
+      projectId: "fiero-telemetry",
+      storageBucket: "fiero-telemetry.firebasestorage.app",
+      messagingSenderId: "183922450878",
+      appId: "1:183922450878:web:5faabfd6d163f1c6c119ef"
+    };
 
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database().ref("raceTelemetry");
@@ -81,30 +182,52 @@
     const statusEl = document.getElementById("status-val");
     const speedEl = document.getElementById("speed-val");
     const unitEl = document.getElementById("unit-val");
+    const gpsDot = document.getElementById("gps-dot");
+    const gpsCoords = document.getElementById("gps-coords");
+    const gpsAcc = document.getElementById("gps-acc");
 
     let targetSpeed = 0;
     let smoothSpeed = 0;
 
-    // Linear interpolation loop to keep speed changes smooth
+    // Speed smoothing with quick snap to zero
     function animate() {
-      smoothSpeed += (targetSpeed - smoothSpeed) * 0.15;
+      if (targetSpeed === 0) {
+        smoothSpeed += (0 - smoothSpeed) * 0.35;
+        if (smoothSpeed < 0.4) smoothSpeed = 0;
+      } else {
+        smoothSpeed += (targetSpeed - smoothSpeed) * 0.18;
+      }
       speedEl.textContent = Math.round(smoothSpeed);
       requestAnimationFrame(animate);
     }
     requestAnimationFrame(animate);
 
+    // Synchronize telemetry from Firebase in real time
     db.on("value", (snap) => {
-      const d = snap.val();
-      if (!d) return;
-      driverEl.textContent = d.driver || "Driver";
-      unitEl.textContent = d.unit || "MPH";
-      targetSpeed = Math.max(0, d.speed || 0);
+      const data = snap.val();
+      if (!data) return;
 
-      const st = d.status || "ON TRACK";
+      driverEl.textContent = data.driver || "Driver";
+      unitEl.textContent = data.unit || "MPH";
+
+      const st = data.status || "ON TRACK";
       statusEl.textContent = st;
       statusEl.className = "status-badge";
       if (st === "IN PITS") statusEl.classList.add("in-pits");
       if (st === "DRIVER SWAP") statusEl.classList.add("driver-swap");
+
+      targetSpeed = Math.max(0, data.speed || 0);
+
+      // Check if GPS data is currently active (timestamp within last 5s)
+      const isLive = data.lastGpsTimestamp && (Date.now() - data.lastGpsTimestamp < 5000);
+      if (isLive && data.latitude && data.longitude) {
+        gpsDot.classList.add("active");
+        gpsCoords.textContent = `${Number(data.latitude).toFixed(4)}°, ${Number(data.longitude).toFixed(4)}°`;
+        gpsAcc.textContent = `±${Math.round(data.accuracy || 0)}m`;
+      } else {
+        gpsDot.classList.remove("active");
+        gpsAcc.textContent = "SEARCHING";
+      }
     });
   </script>
 </body>
