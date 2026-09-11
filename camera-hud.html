@@ -20,7 +20,6 @@
       position: fixed;
     }
 
-    /* Native Camera Viewport - Full view, highest aspect match */
     video#camera-feed {
       position: absolute;
       top: 0;
@@ -109,7 +108,7 @@
       padding: 8px 18px;
       color: #fff;
       box-shadow: 0 8px 24px rgba(0,0,0,0.5);
-      transition: transform 0.1s ease, border-color 0.2s ease;
+      transition: transform 0.1s ease;
     }
     .hud-card:active {
       transform: scale(0.97);
@@ -175,7 +174,7 @@
       color: #94a3b8;
     }
 
-    /* G-Force Circle Indicator */
+    /* G-Force Indicator */
     .g-meter {
       width: 76px;
       height: 76px;
@@ -236,8 +235,8 @@
       bottom: 0;
       left: 0;
       width: 100%;
-      max-width: 420px;
-      background: rgba(15, 23, 42, 0.95);
+      max-width: 440px;
+      background: rgba(15, 23, 42, 0.96);
       backdrop-filter: blur(16px);
       -webkit-backdrop-filter: blur(16px);
       border-top: 2px solid #f97316;
@@ -277,6 +276,31 @@
       font-weight: bold;
       cursor: pointer;
     }
+    .field-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .field-label {
+      font-size: 12px;
+      color: #94a3b8;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    select.camera-dropdown {
+      background: #0b1329;
+      color: #f8fafc;
+      border: 1px solid #334155;
+      padding: 12px 14px;
+      border-radius: 8px;
+      font-size: 14px;
+      outline: none;
+      width: 100%;
+    }
+    select.camera-dropdown:focus {
+      border-color: #f97316;
+    }
     .menu-btn {
       background: #1e293b;
       color: #f8fafc;
@@ -292,10 +316,6 @@
     }
     .menu-btn:active {
       background: #334155;
-    }
-    .menu-btn.active {
-      border-color: #f97316;
-      color: #f97316;
     }
 
     /* Initial Fullscreen Gate */
@@ -360,13 +380,18 @@
   <div class="drawer-overlay" id="drawer-overlay"></div>
   <div class="settings-drawer" id="settings-drawer">
     <div class="drawer-header">
-      <span class="drawer-title">Cockpit Controls</span>
+      <span class="drawer-title">Cockpit Settings</span>
       <button class="btn-close" id="btn-close-drawer" type="button">✕</button>
     </div>
-    <button class="menu-btn" id="btn-toggle-cam" type="button">
-      <span>Switch Camera</span>
-      <span id="cam-mode-label" style="color: #94a3b8; font-size: 13px;">Back (Landscape)</span>
-    </button>
+
+    <!-- Lens Selection -->
+    <div class="field-group">
+      <label class="field-label" for="camera-select">Select Lens / Camera</label>
+      <select class="camera-dropdown" id="camera-select">
+        <option value="">Detecting cameras...</option>
+      </select>
+    </div>
+
     <button class="menu-btn" id="btn-zero-g" type="button">
       <span>Zero G-Force / Gyro</span>
       <span style="color: #f97316; font-size: 13px;">🎯 Calibrate</span>
@@ -403,9 +428,7 @@
     const drawerOverlay = document.getElementById("drawer-overlay");
     const settingsDrawer = document.getElementById("settings-drawer");
     const btnCloseDrawer = document.getElementById("btn-close-drawer");
-
-    const btnToggleCam = document.getElementById("btn-toggle-cam");
-    const camModeLabel = document.getElementById("cam-mode-label");
+    const cameraSelect = document.getElementById("camera-select");
     const btnZeroG = document.getElementById("btn-zero-g");
     const btnFullscreen = document.getElementById("btn-fullscreen");
 
@@ -425,11 +448,13 @@
     let targetSpeed = 0;
     let smoothSpeed = 0;
     let currentStream = null;
-    let facingMode = "environment"; // default to rear camera
+    let selectedDeviceId = null;
+    let isFrontCamera = false;
 
-    // Gyro baseline calibration offsets
     let offsetAx = 0;
     let offsetAy = 0;
+    let rawAx = 0;
+    let rawAy = 0;
 
     // Listen to Firebase for pit wall updates
     db.on("value", (snap) => {
@@ -446,7 +471,7 @@
       if (st === "DRIVER SWAP") statusVal.classList.add("driver-swap");
     });
 
-    // Speed smoothing
+    // Speed interpolation
     function animate() {
       smoothSpeed += (targetSpeed - smoothSpeed) * 0.15;
       speedVal.textContent = Math.round(smoothSpeed);
@@ -454,41 +479,99 @@
     }
     requestAnimationFrame(animate);
 
-    // Camera initializer requesting highest resolution without forced digital zoom
-    async function initCamera(mode) {
-      if (currentStream) {
-        currentStream.getTracks().forEach(track => track.stop());
-      }
-
-      const constraints = {
-        audio: false,
-        video: {
-          facingMode: { ideal: mode },
-          width: { ideal: 3840, min: 1920 },
-          height: { ideal: 2160, min: 1080 }
-        }
-      };
-
+    // Enumerate all cameras on the device
+    async function populateCameras() {
       try {
-        currentStream = await navigator.mediaDevices.getUserMedia(constraints);
-        video.srcObject = currentStream;
-        camModeLabel.textContent = mode === "environment" ? "Back (Landscape)" : "Front (Cockpit)";
-      } catch (err) {
-        // Fallback to standard HD if 4k/high-bitrate constraints fail on specific browsers
-        try {
-          currentStream = await navigator.mediaDevices.getUserMedia({
-            audio: false,
-            video: { facingMode: { ideal: mode } }
-          });
-          video.srcObject = currentStream;
-          camModeLabel.textContent = mode === "environment" ? "Back (Fallback)" : "Front (Fallback)";
-        } catch (e) {
-          alert("Camera access error: " + e.message);
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        const videoDevices = devices.filter(d => d.kind === "videoinput");
+        cameraSelect.innerHTML = "";
+
+        let preferredId = null;
+
+        videoDevices.forEach((dev, index) => {
+          const opt = document.createElement("option");
+          opt.value = dev.deviceId;
+          const label = dev.label.toLowerCase();
+          
+          // Friendly name formatting
+          let cleanName = dev.label || `Camera ${index + 1}`;
+          if (label.includes("ultra") || label.includes("wide") || label.includes("0.5x")) {
+            cleanName = `🏎️ Ultra-Wide Lens (${dev.label})`;
+            if (!preferredId) preferredId = dev.deviceId; // Auto-select ultra-wide if found
+          } else if (label.includes("back") || label.includes("environment")) {
+            cleanName = `📷 Rear Standard (${dev.label})`;
+          } else if (label.includes("front") || label.includes("user")) {
+            cleanName = `👤 Cockpit / Front (${dev.label})`;
+          }
+
+          opt.textContent = cleanName;
+          if (dev.deviceId === selectedDeviceId) opt.selected = true;
+          cameraSelect.appendChild(opt);
+        });
+
+        // Default to ultra-wide or first back camera
+        if (!selectedDeviceId && preferredId) {
+          selectedDeviceId = preferredId;
+          cameraSelect.value = preferredId;
         }
+      } catch (err) {
+        console.warn("Could not enumerate devices:", err);
       }
     }
 
-    // Toggle Settings Drawer
+    // Launch camera with Stabilization & High-Res constraints
+    async function startCamera(deviceId = null) {
+      if (currentStream) {
+        currentStream.getTracks().forEach(t => t.stop());
+      }
+
+      const videoConstraints = {
+        width: { ideal: 3840, min: 1920 },
+        height: { ideal: 2160, min: 1080 },
+        frameRate: { ideal: 60, min: 30 },
+        // Native browser stabilization request
+        imageStabilization: true
+      };
+
+      if (deviceId) {
+        videoConstraints.deviceId = { exact: deviceId };
+      } else {
+        videoConstraints.facingMode = { ideal: "environment" };
+      }
+
+      try {
+        currentStream = await navigator.mediaDevices.getUserMedia({
+          audio: false,
+          video: videoConstraints
+        });
+        video.srcObject = currentStream;
+
+        const track = currentStream.getVideoTracks()[0];
+        const settings = track.getSettings();
+        selectedDeviceId = settings.deviceId;
+        isFrontCamera = settings.facingMode === "user";
+
+        // Refresh dropdown labels once camera permissions are granted
+        await populateCameras();
+        if (selectedDeviceId) cameraSelect.value = selectedDeviceId;
+
+      } catch (err) {
+        // Fallback for devices that reject ultra-high res constraints
+        currentStream = await navigator.mediaDevices.getUserMedia({
+          audio: false,
+          video: deviceId ? { deviceId: { exact: deviceId } } : { facingMode: "environment" }
+        });
+        video.srcObject = currentStream;
+      }
+    }
+
+    // Camera Switch from Dropdown
+    cameraSelect.addEventListener("change", async (e) => {
+      selectedDeviceId = e.target.value;
+      await startCamera(selectedDeviceId);
+    });
+
+    // Drawer Management
     function openDrawer() {
       drawerOverlay.classList.add("open");
       settingsDrawer.classList.add("open");
@@ -502,18 +585,12 @@
     btnCloseDrawer.addEventListener("click", closeDrawer);
     drawerOverlay.addEventListener("click", closeDrawer);
 
-    // Camera Switcher
-    btnToggleCam.addEventListener("click", async () => {
-      facingMode = facingMode === "environment" ? "user" : "environment";
-      await initCamera(facingMode);
-    });
-
-    // Gyro Calibration (Zero out current mount angle)
+    // Zero Gyro / Mount angle
     btnZeroG.addEventListener("click", () => {
       offsetAx = rawAx;
       offsetAy = rawAy;
-      btnZeroG.classList.add("active");
-      setTimeout(() => btnZeroG.classList.remove("active"), 400);
+      btnZeroG.style.borderColor = "#22c55e";
+      setTimeout(() => btnZeroG.style.borderColor = "#334155", 500);
     });
 
     // Fullscreen Toggle
@@ -525,28 +602,23 @@
       }
     });
 
-    let rawAx = 0;
-    let rawAy = 0;
-
+    // Launch Button
     startBtn.addEventListener("click", async () => {
       startBtn.style.display = "none";
       hudUi.style.display = "flex";
       gpsDiag.style.display = "flex";
 
-      // Enter fullscreen automatically on launch
       if (document.documentElement.requestFullscreen) {
         document.documentElement.requestFullscreen().catch(() => {});
       }
 
-      // WakeLock
       if ("wakeLock" in navigator) {
         try { await navigator.wakeLock.request("screen"); } catch (e) {}
       }
 
-      // Start initial back camera
-      await initCamera(facingMode);
+      await startCamera();
 
-      // GPS Polling
+      // Start GPS
       if (navigator.geolocation) {
         navigator.geolocation.watchPosition(
           (pos) => {
@@ -569,7 +641,7 @@
         );
       }
 
-      // Gyro / Accelerometer
+      // Start Gyro / G-Force
       if (window.DeviceMotionEvent) {
         if (typeof DeviceMotionEvent.requestPermission === "function") {
           try { await DeviceMotionEvent.requestPermission(); } catch (e) {}
@@ -581,14 +653,12 @@
           rawAx = acc.x || 0;
           rawAy = acc.y || 0;
 
-          // Compute delta relative to zeroed mount orientation
           const deltaX = rawAx - offsetAx;
           const deltaY = rawAy - offsetAy;
 
-          // In landscape windshield mount:
-          // Accel pulls dot DOWN (+Y); Braking pushes dot UP (-Y)
-          const invertSign = facingMode === "environment" ? 1 : -1;
-          const gX = Math.max(-26, Math.min(26, deltaX * 2.4 * invertSign));
+          // Invert horizontal axis if front camera is active
+          const sign = isFrontCamera ? -1 : 1;
+          const gX = Math.max(-26, Math.min(26, deltaX * 2.4 * sign));
           const gY = Math.max(-26, Math.min(26, deltaY * 2.4));
 
           gDot.style.transform = `translate(${gX}px, ${gY}px)`;
