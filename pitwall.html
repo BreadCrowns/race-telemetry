@@ -183,16 +183,19 @@
       border-radius: 8px;
       overflow: hidden;
       position: relative;
-      padding: 6px;
-      min-height: 180px;
+      padding: 20px 8px 10px 8px;
+      min-height: 100px;
       display: flex;
       align-items: center;
       justify-content: center;
       box-shadow: inset 0 2px 8px rgba(0,0,0,0.6);
+      width: 100%;
+      box-sizing: border-box;
+      transition: height 0.2s ease;
     }
     .stream-viewport-tag {
       position: absolute;
-      top: 6px;
+      top: 5px;
       right: 8px;
       font-size: 8px;
       font-weight: 800;
@@ -200,14 +203,30 @@
       letter-spacing: 1px;
       font-family: ui-monospace, monospace;
       pointer-events: none;
+      z-index: 2;
+    }
+    .stream-preview-stage {
+      position: relative;
+      overflow: hidden;
+      margin: 0 auto;
+      display: flex;
+      justify-content: flex-start;
+      align-items: flex-start;
+      flex-shrink: 0;
+    }
+    .stream-scaler-container {
+      position: absolute;
+      top: 0;
+      left: 0;
+      transform-origin: top left;
+      will-change: transform;
     }
     .stream-preview-iframe {
-      width: 100%;
-      height: 165px;
       border: none;
       pointer-events: none;
       background: transparent;
       overflow: hidden;
+      display: block;
     }
 
     /* Navigation Tabs: Stopwatch vs Leaderboard */
@@ -824,7 +843,11 @@
 
       <div class="stream-viewport-wrap" id="stream-viewport-wrap">
         <div class="stream-viewport-tag">BROADCAST OUTPUT PREVIEW</div>
-        <iframe src="overlay.html" id="preview-iframe" class="stream-preview-iframe" scrolling="no"></iframe>
+        <div class="stream-preview-stage" id="stream-preview-stage">
+          <div class="stream-scaler-container" id="stream-scaler-container">
+            <iframe src="overlay.html" id="preview-iframe" class="stream-preview-iframe" scrolling="no"></iframe>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -1694,12 +1717,61 @@
     // it visibly transitions GREEN -> YELLOW -> RED in real time!
     setInterval(evaluateWatchdog, 500);
 
+    function fitOverlayPreview() {
+      const wrap = document.getElementById("stream-viewport-wrap");
+      const stage = document.getElementById("stream-preview-stage");
+      const scaler = document.getElementById("stream-scaler-container");
+      const iframe = document.getElementById("preview-iframe");
+      if (!wrap || !stage || !scaler || !iframe) return;
+      if (wrap.style.display === "none") return;
+
+      const currentSrc = iframe.getAttribute("src") || iframe.src || "";
+      const isLeaderboard = currentSrc.includes("leaderboard.html");
+
+      const baseWidth = isLeaderboard ? 320 : 490;
+      let baseHeight = isLeaderboard ? 245 : 180;
+
+      try {
+        if (iframe.contentDocument && iframe.contentDocument.body) {
+          const card = iframe.contentDocument.querySelector(".hud-card, .leaderboard-card");
+          if (card) {
+            const cardRect = card.getBoundingClientRect();
+            if (cardRect.height > 60 && cardRect.height < 400) {
+              baseHeight = Math.ceil(cardRect.height + 20);
+            }
+          }
+        }
+      } catch (e) {
+        // Safe cross-origin fallback
+      }
+
+      const wrapWidth = wrap.clientWidth;
+      if (wrapWidth <= 0) return;
+
+      const availableWidth = Math.max(80, wrapWidth - 16);
+      const scale = Math.min(1, availableWidth / baseWidth);
+
+      const scaledWidth = Math.round(baseWidth * scale);
+      const scaledHeight = Math.round(baseHeight * scale);
+
+      stage.style.width = scaledWidth + "px";
+      stage.style.height = scaledHeight + "px";
+
+      scaler.style.width = baseWidth + "px";
+      scaler.style.height = baseHeight + "px";
+      scaler.style.transform = "scale(" + scale + ")";
+
+      iframe.style.width = baseWidth + "px";
+      iframe.style.height = baseHeight + "px";
+    }
+
     function toggleOverlayPreview() {
       const wrap = document.getElementById("stream-viewport-wrap");
       const btn = document.getElementById("btn-toggle-overlay-preview");
       if (wrap.style.display === "none") {
         wrap.style.display = "flex";
         btn.textContent = "Hide";
+        setTimeout(fitOverlayPreview, 30);
       } else {
         wrap.style.display = "none";
         btn.textContent = "Show Preview";
@@ -1724,12 +1796,33 @@
         linkPop.href = src;
         linkPop.title = "Open " + (src === 'overlay.html' ? 'HUD' : 'Leaderboard') + " in dedicated window";
       }
+      setTimeout(fitOverlayPreview, 30);
+    }
+
+    window.addEventListener("resize", fitOverlayPreview);
+    window.addEventListener("orientationchange", fitOverlayPreview);
+
+    const prevIframe = document.getElementById("preview-iframe");
+    if (prevIframe) {
+      prevIframe.addEventListener("load", () => {
+        setTimeout(fitOverlayPreview, 60);
+      });
+    }
+
+    if (window.ResizeObserver) {
+      const wrapEl = document.getElementById("stream-viewport-wrap");
+      if (wrapEl) {
+        new ResizeObserver(() => {
+          fitOverlayPreview();
+        }).observe(wrapEl);
+      }
     }
 
     // Init
     bindEventSync(currentEventName);
     selectDriver(activeDriver);
     renderLeaderboard();
+    setTimeout(fitOverlayPreview, 100);
   </script>
 </body>
 </html>
