@@ -266,10 +266,19 @@
       border-radius: 50%;
       background: #ef4444;
       flex-shrink: 0;
+      transition: all 0.3s ease;
     }
-    .status-dot.active {
+    .status-dot.live, .status-dot.green {
       background: #22c55e;
-      box-shadow: 0 0 6px #22c55e;
+      box-shadow: 0 0 8px #22c55e;
+    }
+    .status-dot.yellow, .status-dot.warn {
+      background: #eab308;
+      box-shadow: 0 0 8px #eab308;
+    }
+    .status-dot.red, .status-dot.offline {
+      background: #ef4444;
+      box-shadow: 0 0 8px #ef4444;
     }
     .gps-coords {
       color: #cbd5e1;
@@ -499,28 +508,72 @@
       }
       targetSpeed = calcMph;
 
-      // GPS Coordinates & Status Dot
+      // GPS Coordinates & Status Dot Ingestion
       const rawLat = telem.latitude !== undefined ? telem.latitude : telem.lat;
       const rawLon = telem.longitude !== undefined ? telem.longitude : telem.lon;
       const rawAcc = telem.accuracy !== undefined ? telem.accuracy : (telem.acc || 0);
       const accNum = Math.round(Number(rawAcc) || 0);
+      const ts = Number(telem.lastGpsTimestamp || telem.deviceTimestamp || (telem.tst ? telem.tst * 1000 : 0));
 
-      const ts = Number(telem.lastGpsTimestamp || (telem.tst ? telem.tst * 1000 : 0));
-      const isLive = ts && (Date.now() - ts < 8000);
-
-      if (isLive && rawLat !== undefined && rawLon !== undefined && rawLat !== 0 && rawLon !== 0) {
-        gpsDot.classList.add("active");
-        gpsCoords.textContent = `${Number(rawLat).toFixed(4)}°, ${Number(rawLon).toFixed(4)}°`;
-        gpsAcc.textContent = `±${accNum}m`;
-      } else {
-        gpsDot.classList.remove("active");
-        gpsAcc.textContent = "SEARCHING";
+      if (ts && ts > 0 && rawLat !== undefined && rawLon !== undefined && rawLat !== 0 && rawLon !== 0) {
+        lastGpsFixTimestamp = ts;
+        lastGpsPacketWallTime = Date.now();
+        latestGpsLat = rawLat;
+        latestGpsLon = rawLon;
+        latestGpsAcc = accNum;
       }
+
+      checkOverlayGpsWatchdog();
     }, (error) => {
       console.error("Overlay Firebase read error:", error);
-      gpsDot.classList.remove("active");
+      gpsDot.className = "status-dot red";
       gpsAcc.textContent = "AUTH ERR";
     });
+
+    // --- CONTINUOUS GPS WATCHDOG (GREEN -> YELLOW -> RED) ---
+    let lastGpsFixTimestamp = 0;
+    let lastGpsPacketWallTime = 0;
+    let latestGpsLat = 0;
+    let latestGpsLon = 0;
+    let latestGpsAcc = 0;
+
+    function checkOverlayGpsWatchdog() {
+      const now = Date.now();
+      if (!lastGpsFixTimestamp && !lastGpsPacketWallTime) {
+        gpsDot.className = "status-dot red";
+        gpsAcc.textContent = "SEARCHING";
+        gpsAcc.style.color = "#64748b";
+        targetSpeed = 0;
+        return;
+      }
+
+      const ageSincePacket = now - lastGpsPacketWallTime;
+      const ageSinceFix = now - lastGpsFixTimestamp;
+      const effectiveAge = Math.min(ageSincePacket, ageSinceFix);
+
+      if (effectiveAge < 3500) {
+        // GREEN: Active GPS (< 3.5s)
+        gpsDot.className = "status-dot green";
+        gpsCoords.textContent = `${Number(latestGpsLat).toFixed(4)}°, ${Number(latestGpsLon).toFixed(4)}°`;
+        gpsAcc.textContent = `±${latestGpsAcc}m`;
+        gpsAcc.style.color = "#4ade80";
+      } else if (effectiveAge < 7500) {
+        // YELLOW: Lag / Delayed (3.5s - 7.5s)
+        const lagSec = Math.round(effectiveAge / 1000);
+        gpsDot.className = "status-dot yellow";
+        gpsAcc.textContent = `DELAY (${lagSec}s)`;
+        gpsAcc.style.color = "#facc15";
+      } else {
+        // RED: Offline (> 7.5s)
+        gpsDot.className = "status-dot red";
+        gpsAcc.textContent = "OFFLINE";
+        gpsAcc.style.color = "#f87171";
+        targetSpeed = 0;
+      }
+    }
+
+    // Check GPS freshness every 500ms so transition from green -> yellow -> red happens live
+    setInterval(checkOverlayGpsWatchdog, 500);
   </script>
 </body>
 </html>

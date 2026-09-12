@@ -91,11 +91,123 @@
       width: 8px;
       height: 8px;
       border-radius: 50%;
-      background: #64748b;
+      background: #ef4444;
+      transition: all 0.3s ease;
+      flex-shrink: 0;
     }
-    .status-dot.live {
+    .status-dot.live, .status-dot.green {
       background: var(--green);
-      box-shadow: 0 0 8px var(--green);
+      box-shadow: 0 0 10px var(--green);
+    }
+    .status-dot.yellow, .status-dot.warn {
+      background: var(--yellow);
+      box-shadow: 0 0 10px var(--yellow);
+    }
+    .status-dot.red, .status-dot.offline {
+      background: var(--red);
+      box-shadow: 0 0 10px var(--red);
+    }
+    #watchdog-status {
+      transition: color 0.3s ease;
+    }
+
+    /* Stream Overlay Preview Card */
+    .stream-preview-card {
+      background: #020617;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-top: 4px;
+    }
+    .stream-preview-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .preview-title-wrap {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .preview-title {
+      font-size: 11px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--accent);
+    }
+    .preview-status-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      background: rgba(34, 197, 94, 0.15);
+      border: 1px solid rgba(34, 197, 94, 0.4);
+      color: #4ade80;
+      font-size: 9px;
+      font-weight: 800;
+      padding: 2px 6px;
+      border-radius: 12px;
+      font-family: ui-monospace, monospace;
+    }
+    .preview-actions {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .preview-btn {
+      background: #1e293b;
+      border: 1px solid #334155;
+      color: #cbd5e1;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 4px 10px;
+      border-radius: 5px;
+      cursor: pointer;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      transition: all 0.15s ease;
+    }
+    .preview-btn:hover {
+      border-color: var(--accent);
+      color: #fff;
+    }
+    .stream-viewport-wrap {
+      background: radial-gradient(circle at center, #0f172a 0%, #020617 100%);
+      border: 1px solid #1e293b;
+      border-radius: 8px;
+      overflow: hidden;
+      position: relative;
+      padding: 6px;
+      min-height: 180px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: inset 0 2px 8px rgba(0,0,0,0.6);
+    }
+    .stream-viewport-tag {
+      position: absolute;
+      top: 6px;
+      right: 8px;
+      font-size: 8px;
+      font-weight: 800;
+      color: #475569;
+      letter-spacing: 1px;
+      font-family: ui-monospace, monospace;
+      pointer-events: none;
+    }
+    .stream-preview-iframe {
+      width: 100%;
+      height: 165px;
+      border: none;
+      pointer-events: none;
+      background: transparent;
+      overflow: hidden;
     }
 
     /* Navigation Tabs: Stopwatch vs Leaderboard */
@@ -679,6 +791,32 @@
         <button type="button" class="btn-discard-run" onclick="discardRun()">
           Discard
         </button>
+      </div>
+    </div>
+
+    <!-- ================= PRISM STREAM OVERLAY LIVE MONITOR ================= -->
+    <div class="stream-preview-card">
+      <div class="stream-preview-header">
+        <div class="preview-title-wrap">
+          <span class="preview-title">📺 Live Stream Overlay Monitor (PRISM / OBS)</span>
+          <span class="preview-status-chip">
+            <span class="status-dot live" style="width:6px; height:6px;"></span>
+            LIVE SYNC
+          </span>
+        </div>
+        <div class="preview-actions">
+          <a href="overlay.html" target="_blank" class="preview-btn" title="Open overlay in dedicated window">
+            ↗ Pop Out HUD
+          </a>
+          <button type="button" class="preview-btn" id="btn-toggle-overlay-preview" onclick="toggleOverlayPreview()">
+            Hide Preview
+          </button>
+        </div>
+      </div>
+
+      <div class="stream-viewport-wrap" id="stream-viewport-wrap">
+        <div class="stream-viewport-tag">BROADCAST OUTPUT PREVIEW</div>
+        <iframe src="overlay.html" id="preview-iframe" class="stream-preview-iframe" scrolling="no"></iframe>
       </div>
     </div>
 
@@ -1278,36 +1416,109 @@
       }
     }
 
-    // --- FIREBASE LIVE TELEMETRY WATCHDOG ---
+    // --- FIREBASE LIVE TELEMETRY WATCHDOG ENGINE ---
+    let lastGpsTimestamp = 0;
+    let lastPacketWallTime = 0;
+    let latestSpeed = 0;
+
     db.on("value", (snap) => {
       const root = snap.val();
       if (!root) return;
 
+      // Filter out non-telemetry keys (autox, laps, etc.)
       let telem = root;
       if (root.lat === undefined && root.latitude === undefined) {
-        const keys = Object.keys(root).filter(k => typeof root[k] === 'object' && root[k] !== null);
+        const keys = Object.keys(root).filter(k => 
+          typeof root[k] === 'object' && 
+          root[k] !== null && 
+          k !== 'autox' && 
+          k !== 'laps'
+        );
         if (keys.length > 0) {
+          keys.sort((a, b) => {
+            const timeA = Number(root[a].lastGpsTimestamp || root[a].deviceTimestamp || (root[a].tst ? root[a].tst * 1000 : 0));
+            const timeB = Number(root[b].lastGpsTimestamp || root[b].deviceTimestamp || (root[b].tst ? root[b].tst * 1000 : 0));
+            return timeA - timeB;
+          });
           telem = root[keys[keys.length - 1]];
         }
       }
 
-      // Live speed
-      let calcMph = 0;
-      if (telem.speed !== undefined && telem.speed !== null) calcMph = Number(telem.speed);
-      else if (telem.vel !== undefined && telem.vel !== null) calcMph = Number(telem.vel) * 0.621371;
-      if (calcMph < 2.5 || isNaN(calcMph)) calcMph = 0;
-      liveSpeed.textContent = `${Math.round(calcMph)} MPH`;
+      // Check for GPS timestamp & coordinates/speed
+      const rawLat = telem.latitude !== undefined ? telem.latitude : telem.lat;
+      const rawLon = telem.longitude !== undefined ? telem.longitude : telem.lon;
+      const rawSpeed = telem.speed !== undefined ? telem.speed : telem.vel;
+      const ts = Number(telem.lastGpsTimestamp || telem.deviceTimestamp || (telem.tst ? telem.tst * 1000 : 0));
 
-      // Live status dot
-      const ts = telem.lastGpsTimestamp || (telem.tst ? telem.tst * 1000 : 0);
-      if (ts && (Date.now() - ts < 8000)) {
+      if (ts && ts > 0 && (rawLat !== undefined || rawSpeed !== undefined)) {
+        lastGpsTimestamp = ts;
+        lastPacketWallTime = Date.now();
+
+        // Speed conversion
+        let calcMph = 0;
+        if (telem.speed !== undefined && telem.speed !== null) calcMph = Number(telem.speed);
+        else if (telem.vel !== undefined && telem.vel !== null) calcMph = Number(telem.vel) * 0.621371;
+        if (calcMph < 2.0 || isNaN(calcMph)) calcMph = 0;
+        latestSpeed = calcMph;
+      }
+
+      evaluateWatchdog();
+    });
+
+    function evaluateWatchdog() {
+      const now = Date.now();
+
+      // If no GPS fix has ever been received
+      if (!lastGpsTimestamp && !lastPacketWallTime) {
+        watchdogDot.className = "status-dot red";
+        watchdogStatus.textContent = "COCKPIT OFFLINE";
+        watchdogStatus.style.color = "#f87171";
+        liveSpeed.textContent = "0 MPH";
+        return;
+      }
+
+      // Elapsed time since last GPS point
+      const ageSincePacket = now - lastPacketWallTime;
+      const ageSinceFix = now - lastGpsTimestamp;
+      const effectiveAge = Math.min(ageSincePacket, ageSinceFix);
+
+      if (effectiveAge < 3500) {
+        // GREEN: Active GPS (< 3.5s)
         watchdogDot.className = "status-dot live";
         watchdogStatus.textContent = "COCKPIT LIVE";
+        watchdogStatus.style.color = "#4ade80";
+        liveSpeed.textContent = `${Math.round(latestSpeed)} MPH`;
+      } else if (effectiveAge < 7500) {
+        // YELLOW: Delayed / Interrupted (3.5s - 7.5s)
+        const lagSec = Math.round(effectiveAge / 1000);
+        watchdogDot.className = "status-dot yellow";
+        watchdogStatus.textContent = `SIGNAL DELAY (${lagSec}s)`;
+        watchdogStatus.style.color = "#facc15";
+        liveSpeed.textContent = `${Math.round(latestSpeed)} MPH`;
       } else {
-        watchdogDot.className = "status-dot";
+        // RED: Offline (> 7.5s)
+        watchdogDot.className = "status-dot red";
         watchdogStatus.textContent = "COCKPIT OFFLINE";
+        watchdogStatus.style.color = "#f87171";
+        liveSpeed.textContent = "0 MPH";
       }
-    });
+    }
+
+    // Run watchdog heartbeat every 500ms so that when GPS is turned off,
+    // it visibly transitions GREEN -> YELLOW -> RED in real time!
+    setInterval(evaluateWatchdog, 500);
+
+    function toggleOverlayPreview() {
+      const wrap = document.getElementById("stream-viewport-wrap");
+      const btn = document.getElementById("btn-toggle-overlay-preview");
+      if (wrap.style.display === "none") {
+        wrap.style.display = "flex";
+        btn.textContent = "Hide Preview";
+      } else {
+        wrap.style.display = "none";
+        btn.textContent = "Show Preview";
+      }
+    }
 
     // Init
     selectDriver(activeDriver);
