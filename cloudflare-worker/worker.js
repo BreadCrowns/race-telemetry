@@ -15,6 +15,7 @@ const corsHeaders = {
 
 // In-memory cache for recent telemetry to power the /debug endpoint
 let lastReceivedPacket = null;
+let lastD1Error = null;
 
 export default {
   async fetch(request, env, ctx) {
@@ -129,11 +130,11 @@ async function handleTraccarIngestion(request, env) {
   // Extract core parameters
   const deviceId = params.id || params.deviceid || "car-phone";
   const rawLat = parseFloat(params.lat || params.latitude);
-  const rawLon = parseFloat(params.lon || params.longitude);
+  const rawLon = parseFloat(params.lon || params.lng || params.longitude || params.long);
 
   if (isNaN(rawLat) || isNaN(rawLon)) {
-    // Return 200 OK so Traccar doesn't treat probe or setup pings as failures
-    return new Response("OK (Traccar probe - awaiting coordinates)", {
+    // Return 200 OK so Traccar doesn't loop fail on probe requests
+    return new Response(`OK (No coordinates received. Parameters: ${JSON.stringify(params)})`, {
       status: 200,
       headers: { ...corsHeaders, "Content-Type": "text/plain" }
     });
@@ -200,7 +201,11 @@ async function handleTraccarIngestion(request, env) {
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).bind(eventId, deviceId, rawTs, isoTime, rawLat, rawLon, speedMph, heading, altitude, accuracy, battery)
       .run()
-      .catch(e => console.error("D1 Insert Error:", e));
+      .then(() => { lastD1Error = null; })
+      .catch(e => {
+        console.error("D1 Insert Error:", e);
+        lastD1Error = e.message || String(e);
+      });
   }
 
   await Promise.all([firebasePromise, d1Promise]);
@@ -236,7 +241,8 @@ async function handleDebug(env) {
     d1Database: {
       bindingPresent: !!d1,
       status: dbStatus,
-      totalTelemetryRows: rowCount
+      totalTelemetryRows: rowCount,
+      lastD1InsertError: lastD1Error || "None"
     },
     firebaseUrl: env.FIREBASE_URL || DEFAULT_FIREBASE_URL,
     lastReceivedPacket: lastReceivedPacket || "No packets received yet"
