@@ -629,6 +629,7 @@
       <div class="clock-meta">
         <span class="active-badge" id="hero-driver-badge">JEFF - RUN #1</span>
         <span id="hero-state-label">READY AT START LINE</span>
+        <button type="button" class="btn-step" onclick="cueReadyForOverlay()" title="Reset stream overlay timer to READY" style="font-size:11px; width:auto; padding:2px 8px; height:24px; border-radius:4px; margin-left:6px; cursor:pointer;">Set Ready 🏁</button>
       </div>
 
       <div class="stopwatch-clock" id="stopwatch-clock">00:00.00</div>
@@ -846,6 +847,34 @@
       } catch (e) {}
     }
 
+    // --- FIREBASE BROADCAST FOR STREAM OVERLAY ---
+    function broadcastAutoxState(state, extra = {}) {
+      const currentRun = parseInt(runInput.value || 1, 10);
+      const autoxData = {
+        state: state, // "READY", "RUNNING", "STOPPED", "SAVED"
+        driver: activeDriver,
+        runNum: currentRun,
+        updatedAt: Date.now(),
+        ...extra
+      };
+
+      const payload = {
+        driver: activeDriver,
+        runNum: currentRun,
+        status: state === "RUNNING" ? "ON TRACK" : (state === "STOPPED" ? "FINISHED" : (state === "SAVED" ? "SAVED" : "READY")),
+        autox: autoxData
+      };
+
+      db.update(payload).catch(err => console.warn("Firebase broadcast err:", err));
+    }
+
+    function cueReadyForOverlay() {
+      broadcastAutoxState("READY");
+      stopwatchClock.textContent = "00:00.00";
+      heroStateLabel.textContent = "READY AT START LINE";
+      heroStateLabel.style.color = "#94a3b8";
+    }
+
     // --- SETUP: DRIVER & RUN CONTROLS ---
     function selectDriver(name) {
       activeDriver = name;
@@ -859,8 +888,8 @@
       runInput.value = driverNextRuns[name] || 1;
       updateHeroBadge();
 
-      // Sync active driver to Firebase so stream overlay updates
-      db.update({ driver: name });
+      // Sync active driver & ready state to Firebase for stream overlay
+      broadcastAutoxState("READY");
     }
 
     function changeRunNum(delta) {
@@ -868,9 +897,13 @@
       if (val < 1) val = 1;
       runInput.value = val;
       updateHeroBadge();
+      broadcastAutoxState("READY");
     }
 
-    runInput.addEventListener("input", updateHeroBadge);
+    runInput.addEventListener("input", () => {
+      updateHeroBadge();
+      broadcastAutoxState("READY");
+    });
 
     eventInput.addEventListener("input", (e) => {
       currentEventName = e.target.value.trim() || "Sunday Autocross";
@@ -926,8 +959,8 @@
 
       playChime(659.25, 0.2); // E5 start chime
 
-      // Broadcast on-track status to stream overlay
-      db.update({ status: "ON TRACK" });
+      // Broadcast running timer & start time to stream overlay
+      broadcastAutoxState("RUNNING", { startTime: runStartTime });
 
       clearInterval(timerInterval);
       timerInterval = setInterval(() => {
@@ -949,8 +982,11 @@
 
       playChime(1046.5, 0.25); // C6 finish chime
 
-      // Broadcast finished status to stream
-      db.update({ status: "FINISHED" });
+      // Broadcast stopped status and raw time to stream
+      broadcastAutoxState("STOPPED", {
+        rawTimeMs: lastElapsedMs,
+        rawFormatted: formatTimeMs(lastElapsedMs)
+      });
 
       // Open Post-Run Review Card
       openReview(lastElapsedMs);
@@ -1023,6 +1059,17 @@
       // Sync to Firebase RTDB & Cloudflare
       db.child("laps").push(runRecord).catch(() => {});
 
+      // Broadcast saved penalties and notes to stream overlay
+      broadcastAutoxState("SAVED", {
+        rawTimeMs: pendingRawMs,
+        rawFormatted: formatTimeMs(pendingRawMs),
+        cones: pendingCones,
+        isDnf: pendingDnf,
+        finalTimeMs: adjustedMs,
+        finalFormatted: pendingDnf ? "DNF" : formatTimeMs(adjustedMs),
+        notes: reviewNotes.value.trim()
+      });
+
       // Increment run number for this driver
       driverNextRuns[activeDriver] = runNum + 1;
       runInput.value = driverNextRuns[activeDriver];
@@ -1040,6 +1087,7 @@
         stopwatchClock.textContent = "00:00.00";
         heroStateLabel.textContent = "READY AT START LINE";
         heroStateLabel.style.color = "#94a3b8";
+        broadcastAutoxState("READY");
       }
     }
 
@@ -1183,6 +1231,21 @@
       closeEditModal();
       renderLeaderboard();
       playChime(880, 0.1);
+
+      // If editing the latest run, sync updated penalties/notes to stream overlay!
+      if (runsDatabase.length > 0 && runsDatabase[0].id === editingRunId) {
+        broadcastAutoxState("SAVED", {
+          driver: run.driver,
+          runNum: run.runNum,
+          rawTimeMs: run.rawTimeMs,
+          rawFormatted: run.rawFormatted,
+          cones: run.cones,
+          isDnf: run.isDnf,
+          finalTimeMs: run.finalTimeMs,
+          finalFormatted: run.finalFormatted,
+          notes: run.notes
+        });
+      }
     }
 
     function closeEditModal() {
@@ -1211,6 +1274,7 @@
         localStorage.removeItem("autox_runs_db");
         calculateNextRuns();
         renderLeaderboard();
+        broadcastAutoxState("READY");
       }
     }
 
