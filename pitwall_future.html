@@ -1,0 +1,1927 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Pit Wall Command Center & Race Strategy</title>
+  
+  <!-- Leaflet CSS for Track Map -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+    }
+    
+    :root {
+      --bg-dark: #070a13;
+      --panel-bg: #0f172a;
+      --panel-border: #1e293b;
+      --accent: #f97316;
+      --accent-glow: rgba(249, 115, 22, 0.25);
+      --green: #22c55e;
+      --yellow: #eab308;
+      --red: #ef4444;
+      --blue: #38bdf8;
+      --purple: #a855f7;
+    }
+
+    body {
+      background: var(--bg-dark);
+      color: #f8fafc;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      padding: 10px;
+    }
+
+    /* Top Command Header */
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: var(--panel-bg);
+      border: 1px solid var(--panel-border);
+      border-radius: 8px;
+      padding: 10px 16px;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    .brand-section {
+      display: flex;
+      align-items: baseline;
+      gap: 10px;
+    }
+    .brand-title {
+      font-size: 17px;
+      font-weight: 900;
+      letter-spacing: 1.5px;
+      color: var(--accent);
+      text-transform: uppercase;
+    }
+    .brand-sub {
+      font-size: 11px;
+      color: #64748b;
+      font-family: ui-monospace, monospace;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    /* Race Format & Track Selectors */
+    .header-controls {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .format-toggle {
+      display: inline-flex;
+      background: #020617;
+      border: 1px solid #334155;
+      border-radius: 6px;
+      padding: 2px;
+    }
+    .format-btn {
+      background: transparent;
+      border: none;
+      color: #94a3b8;
+      padding: 5px 12px;
+      font-size: 11px;
+      font-weight: 800;
+      border-radius: 4px;
+      cursor: pointer;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+    }
+    .format-btn.active {
+      background: var(--accent);
+      color: #fff;
+    }
+
+    .select-dropdown {
+      background: #020617;
+      border: 1px solid #334155;
+      color: #e2e8f0;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 6px 10px;
+      border-radius: 6px;
+      outline: none;
+      cursor: pointer;
+    }
+
+    /* Flag Status Selector */
+    .flag-group {
+      display: inline-flex;
+      gap: 3px;
+    }
+    .flag-btn {
+      padding: 5px 8px;
+      font-size: 10px;
+      font-weight: 800;
+      border-radius: 4px;
+      border: 1px solid transparent;
+      cursor: pointer;
+      text-transform: uppercase;
+      color: #cbd5e1;
+      background: #1e293b;
+    }
+    .flag-btn.green.active { background: #16a34a; color: white; border-color: #4ade80; box-shadow: 0 0 8px rgba(34,197,94,0.4); }
+    .flag-btn.yellow.active { background: #ca8a04; color: white; border-color: #fde047; box-shadow: 0 0 8px rgba(234,179,8,0.4); }
+    .flag-btn.red.active { background: #dc2626; color: white; border-color: #f87171; box-shadow: 0 0 8px rgba(239,68,68,0.4); }
+    .flag-btn.checkered.active { background: #334155; color: white; border-color: #94a3b8; }
+
+    /* Telemetry Watchdog Banner */
+    .telemetry-banner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 6px 14px;
+      border-radius: 6px;
+      border: 1px solid #334155;
+      background: #1e293b;
+      transition: all 0.3s ease;
+      font-size: 11px;
+    }
+    .telemetry-banner.live { background: rgba(34, 197, 94, 0.12); border-color: #22c55e; }
+    .telemetry-banner.stale { background: rgba(234, 179, 8, 0.12); border-color: #eab308; }
+    .telemetry-banner.offline { background: rgba(239, 68, 68, 0.15); border-color: #ef4444; }
+
+    .signal-left { display: flex; align-items: center; gap: 8px; }
+    .status-beacon { width: 9px; height: 9px; border-radius: 50%; background: #64748b; }
+    .telemetry-banner.live .status-beacon { background: #22c55e; box-shadow: 0 0 8px #22c55e; }
+    .telemetry-banner.stale .status-beacon { background: #eab308; }
+    .telemetry-banner.offline .status-beacon { background: #ef4444; }
+
+    .signal-title { font-weight: 800; text-transform: uppercase; }
+    .telemetry-banner.live .signal-title { color: #4ade80; }
+    .telemetry-banner.stale .signal-title { color: #facc15; }
+    .telemetry-banner.offline .signal-title { color: #f87171; }
+    .signal-detail { color: #94a3b8; font-family: ui-monospace, monospace; margin-left: 6px; }
+    .ping-display { font-weight: 700; font-family: ui-monospace, monospace; padding: 2px 6px; border-radius: 4px; background: rgba(0,0,0,0.3); color: #cbd5e1; }
+
+    /* Dashboard Main Grid Layout */
+    .dashboard-grid {
+      display: grid;
+      grid-template-columns: 340px 1fr 340px;
+      gap: 10px;
+      flex: 1;
+      min-height: 0;
+    }
+
+    @media (max-width: 1200px) {
+      .dashboard-grid {
+        grid-template-columns: 340px 1fr;
+      }
+      .col-extra {
+        grid-column: 1 / -1;
+      }
+    }
+    @media (max-width: 860px) {
+      .dashboard-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .col-panel-stack {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      min-height: 0;
+    }
+
+    /* Cards & Panels */
+    .panel {
+      background: var(--panel-bg);
+      border: 1px solid var(--panel-border);
+      border-radius: 8px;
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      min-height: 0;
+    }
+    .panel-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+      padding-bottom: 6px;
+      margin-bottom: 2px;
+    }
+    .panel-title {
+      font-size: 11px;
+      font-weight: 800;
+      color: #94a3b8;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .panel-badge {
+      font-size: 9px;
+      font-weight: 700;
+      padding: 2px 6px;
+      border-radius: 4px;
+      background: #1e293b;
+      color: #cbd5e1;
+      font-family: ui-monospace, monospace;
+    }
+
+    /* HUD Preview Box */
+    .hud-box {
+      background: #050811;
+      border: 1px solid #1e293b;
+      border-left: 5px solid var(--accent);
+      border-radius: 6px;
+      padding: 10px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .hud-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .driver-meta {
+      display: flex;
+      flex-direction: column;
+    }
+    .driver-tag {
+      font-size: 8px;
+      font-weight: 800;
+      color: var(--accent);
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+    }
+    .driver-name-display {
+      font-size: 18px;
+      font-weight: 800;
+      color: #fff;
+    }
+    .status-badge {
+      font-size: 9px;
+      font-weight: 800;
+      padding: 2px 6px;
+      border-radius: 4px;
+      background: #1e293b;
+      color: #cbd5e1;
+      margin-top: 3px;
+      align-self: flex-start;
+    }
+    .status-badge.in-pits { background: #b45309; color: #fef3c7; }
+    .status-badge.driver-swap { background: #6d28d9; color: #ede9fe; }
+
+    .speed-readout {
+      display: flex;
+      align-items: baseline;
+      gap: 4px;
+    }
+    .speed-num {
+      font-size: 44px;
+      font-weight: 900;
+      letter-spacing: -2px;
+      font-variant-numeric: tabular-nums;
+      color: #ffffff;
+      line-height: 1;
+    }
+    .speed-unit {
+      font-size: 12px;
+      font-weight: 700;
+      color: #94a3b8;
+    }
+
+    .hud-sub-bar {
+      display: flex;
+      justify-content: space-between;
+      font-family: ui-monospace, monospace;
+      font-size: 10px;
+      color: #94a3b8;
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+      padding-top: 4px;
+    }
+
+    /* Driver Stint & Car State Controls */
+    .field { display: flex; flex-direction: column; gap: 4px; }
+    .field-label { font-size: 10px; font-weight: 700; color: #94a3b8; text-transform: uppercase; }
+    input[type="text"], input[type="number"] {
+      background: #020617;
+      border: 1px solid #334155;
+      padding: 8px 10px;
+      border-radius: 6px;
+      color: #fff;
+      font-size: 13px;
+      outline: none;
+    }
+    input:focus { border-color: var(--accent); }
+
+    .quick-chips {
+      display: flex;
+      gap: 4px;
+      flex-wrap: wrap;
+      margin-top: 4px;
+    }
+    .chip {
+      background: #1e293b;
+      border: 1px solid #334155;
+      color: #cbd5e1;
+      padding: 3px 8px;
+      border-radius: 12px;
+      font-size: 10px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .chip:hover { border-color: var(--accent); color: #fff; }
+
+    .state-btn-group {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 6px;
+    }
+    .state-btn {
+      background: #1e293b;
+      border: 1px solid #334155;
+      color: #cbd5e1;
+      padding: 8px 4px;
+      border-radius: 6px;
+      font-size: 10px;
+      font-weight: 800;
+      cursor: pointer;
+      text-align: center;
+      text-transform: uppercase;
+    }
+    .state-btn.active {
+      background: var(--accent);
+      color: white;
+      border-color: var(--accent);
+      box-shadow: 0 0 10px var(--accent-glow);
+    }
+
+    /* Stint Clock & Lemons Alert */
+    .stint-box {
+      background: #050811;
+      border: 1px solid #1e293b;
+      border-radius: 6px;
+      padding: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      text-align: center;
+    }
+    .stint-title { font-size: 9px; font-weight: 800; color: #64748b; text-transform: uppercase; letter-spacing: 1px; }
+    .stint-timer { font-size: 28px; font-weight: 900; font-family: ui-monospace, monospace; color: #38bdf8; }
+    .stint-meta { font-size: 10px; color: #94a3b8; font-family: ui-monospace, monospace; }
+    .stint-warning { color: #f87171 !important; font-weight: 800; animation: blink 1s infinite; }
+
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.3; }
+    }
+
+    /* Center Column: Map & Lap Timing Database */
+    .center-stack {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      min-height: 0;
+    }
+
+    #map {
+      height: 280px;
+      width: 100%;
+      border-radius: 6px;
+      border: 1px solid #1e293b;
+      background: #020617;
+    }
+
+    /* Timing Header & Action Bar */
+    .timer-readout-card {
+      background: #050811;
+      border: 1px solid #1e293b;
+      border-radius: 6px;
+      padding: 10px 14px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .timer-clock-col { display: flex; flex-direction: column; }
+    .timer-status-badge { font-size: 9px; font-weight: 800; color: var(--accent); letter-spacing: 1px; text-transform: uppercase; }
+    .timer-large-clock { font-size: 42px; font-weight: 900; font-family: ui-monospace, monospace; color: #ffffff; line-height: 1; }
+
+    .timer-action-buttons {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+    .btn-timer-action {
+      background: #1e293b;
+      border: 1px solid #334155;
+      color: #e2e8f0;
+      padding: 8px 12px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .btn-timer-action:hover { background: #334155; border-color: var(--accent); }
+    .btn-timer-action.active { border-color: #22c55e; color: #4ade80; background: rgba(34, 197, 94, 0.1); }
+
+    /* Lap Database Table */
+    .table-container {
+      flex: 1;
+      overflow-y: auto;
+      min-height: 220px;
+      max-height: 380px;
+      border: 1px solid var(--panel-border);
+      border-radius: 6px;
+      background: #020617;
+    }
+    table.lap-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 11px;
+      font-family: ui-monospace, SFMono-Regular, monospace;
+      text-align: left;
+    }
+    table.lap-table th {
+      position: sticky;
+      top: 0;
+      background: #0f172a;
+      color: #64748b;
+      padding: 6px 8px;
+      border-bottom: 1px solid #1e293b;
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    table.lap-table td {
+      padding: 6px 8px;
+      border-bottom: 1px solid #0f172a;
+      color: #cbd5e1;
+    }
+    table.lap-table tr:hover { background: rgba(255,255,255,0.03); }
+    .best-lap { color: #4ade80 !important; font-weight: 800; }
+    .delta-plus { color: #f87171; font-size: 9px; margin-left: 4px; }
+    .delta-best { color: #4ade80; font-size: 9px; margin-left: 4px; }
+
+    /* Right Column: Mileage, Fuel Strategy, Pit Checklist */
+    .stats-card-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+    .stat-pill-box {
+      background: #050811;
+      border: 1px solid #1e293b;
+      border-radius: 6px;
+      padding: 8px 10px;
+      display: flex;
+      flex-direction: column;
+    }
+    .stat-label { font-size: 9px; color: #64748b; font-weight: 700; text-transform: uppercase; }
+    .stat-val { font-size: 20px; font-weight: 900; font-family: ui-monospace, monospace; color: #f8fafc; }
+    .stat-sub { font-size: 9px; color: #94a3b8; }
+
+    /* Fuel Gauge & Strategy */
+    .fuel-gauge-container {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      background: #050811;
+      border: 1px solid #1e293b;
+      border-radius: 6px;
+      padding: 10px;
+    }
+    .fuel-bar-wrap {
+      width: 100%;
+      height: 14px;
+      background: #1e293b;
+      border-radius: 7px;
+      overflow: hidden;
+      border: 1px solid #334155;
+    }
+    .fuel-bar-fill {
+      height: 100%;
+      width: 85%;
+      background: linear-gradient(90deg, #22c55e, #eab308);
+      border-radius: 7px;
+      transition: width 0.4s ease;
+    }
+    .fuel-bar-fill.warning { background: #eab308; }
+    .fuel-bar-fill.critical { background: #ef4444; }
+
+    .fuel-projections {
+      display: flex;
+      justify-content: space-between;
+      font-size: 11px;
+      font-family: ui-monospace, monospace;
+      color: #cbd5e1;
+    }
+    .fuel-action-bar {
+      display: flex;
+      gap: 4px;
+      margin-top: 4px;
+    }
+    .btn-fuel {
+      flex: 1;
+      background: #1e293b;
+      border: 1px solid #334155;
+      color: #e2e8f0;
+      padding: 4px;
+      border-radius: 4px;
+      font-size: 10px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .btn-fuel:hover { border-color: var(--accent); color: #fff; }
+
+    /* Pit Stop Checklist */
+    .checklist-wrap {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      max-height: 150px;
+      overflow-y: auto;
+    }
+    .check-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 11px;
+      color: #cbd5e1;
+      background: #020617;
+      padding: 4px 8px;
+      border-radius: 4px;
+    }
+    .check-item input[type="checkbox"] {
+      cursor: pointer;
+      accent-color: var(--accent);
+    }
+    .check-item.done {
+      color: #64748b;
+      text-decoration: line-through;
+    }
+
+    /* Race Logbook */
+    .logbook-entries {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      max-height: 130px;
+      overflow-y: auto;
+      font-family: ui-monospace, monospace;
+      font-size: 10px;
+      background: #020617;
+      padding: 6px;
+      border-radius: 4px;
+      border: 1px solid var(--panel-border);
+    }
+    .log-row {
+      display: flex;
+      gap: 6px;
+      border-bottom: 1px solid #0f172a;
+      padding-bottom: 2px;
+    }
+    .log-time { color: #64748b; flex-shrink: 0; }
+    .log-msg { color: #cbd5e1; word-break: break-word; }
+
+    .log-input-row {
+      display: flex;
+      gap: 4px;
+    }
+    .btn-add-note {
+      background: #1e293b;
+      color: #fff;
+      border: 1px solid #334155;
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 10px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    /* Modals & Dialogs */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0,0,0,0.75);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      z-index: 9999;
+    }
+    .modal-card {
+      background: #0f172a;
+      border: 1px solid #334155;
+      border-radius: 8px;
+      padding: 16px;
+      width: 100%;
+      max-width: 420px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- 1. Top Command Header -->
+  <header>
+    <div class="brand-section">
+      <div class="brand-title">🏁 Pit Wall Command</div>
+      <div class="brand-sub">Lemons & Autocross Telemetry Suite</div>
+    </div>
+
+    <div class="header-controls">
+      <!-- Race Format Toggle -->
+      <div class="format-toggle">
+        <button type="button" class="format-btn" id="btn-mode-ax" onclick="switchMode('autocross')">⚡ Autocross</button>
+        <button type="button" class="format-btn active" id="btn-mode-endurance" onclick="switchMode('endurance')">🏁 Lemons 24H</button>
+      </div>
+
+      <!-- Track Preset -->
+      <select class="select-dropdown" id="track-preset-select" onchange="loadTrackPreset(this.value)">
+        <option value="sonoma">Sonoma Raceway (Lemons)</option>
+        <option value="laguna">Laguna Seca</option>
+        <option value="custom">Custom / Autocross Grid</option>
+      </select>
+
+      <!-- Race Flag Buttons -->
+      <div class="flag-group">
+        <button type="button" class="flag-btn green active" onclick="setFlag('GREEN')">GREEN</button>
+        <button type="button" class="flag-btn yellow" onclick="setFlag('YELLOW')">YELLOW</button>
+        <button type="button" class="flag-btn red" onclick="setFlag('RED')">RED</button>
+        <button type="button" class="flag-btn checkered" onclick="setFlag('CHECKERED')">CHEQ</button>
+      </div>
+    </div>
+  </header>
+
+  <!-- 2. Realtime Watchdog Telemetry Banner -->
+  <div class="telemetry-banner offline" id="watchdog-banner">
+    <div class="signal-left">
+      <div class="status-beacon"></div>
+      <div>
+        <span class="signal-title" id="watchdog-title">GPS OFFLINE</span>
+        <span class="signal-detail" id="watchdog-desc">Waiting for cockpit phone transmitter</span>
+      </div>
+    </div>
+    <div class="ping-display" id="watchdog-ping">-- ms</div>
+  </div>
+
+  <!-- 3. Dashboard Tri-Column Grid -->
+  <div class="dashboard-grid">
+
+    <!-- LEFT COLUMN: Cockpit State, Drivers, Stint Timer -->
+    <div class="col-panel-stack">
+      
+      <!-- Live HUD Preview -->
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title">📡 Cockpit Stream HUD</span>
+          <span class="panel-badge" id="flag-badge">GREEN FLAG</span>
+        </div>
+        <div class="hud-box">
+          <div class="hud-row">
+            <div class="driver-meta">
+              <span class="driver-tag">Active Driver</span>
+              <span class="driver-name-display" id="prev-driver">Driver 1</span>
+              <span class="status-badge" id="prev-status">ON TRACK</span>
+            </div>
+            <div class="speed-readout">
+              <span class="speed-num" id="prev-speed">0</span>
+              <span class="speed-unit">MPH</span>
+            </div>
+          </div>
+          <div class="hud-sub-bar">
+            <span id="prev-coords">--.----°, --.----°</span>
+            <span id="prev-acc">±0m</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Driver Roster & Stint Manager -->
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title">🏎️ Active Driver & Car State</span>
+        </div>
+        <div class="field">
+          <span class="field-label">Active Driver</span>
+          <input type="text" id="driver-input" value="Driver 1" placeholder="Type driver name..." />
+          <div class="quick-chips" id="driver-quick-chips">
+            <button type="button" class="chip" onclick="quickSetDriver('Jeff')">Jeff</button>
+            <button type="button" class="chip" onclick="quickSetDriver('Sylvia')">Sylvia</button>
+            <button type="button" class="chip" onclick="quickSetDriver('Driver 3')">Driver 3</button>
+            <button type="button" class="chip" onclick="quickSetDriver('Driver 4')">Driver 4</button>
+          </div>
+        </div>
+
+        <div class="field">
+          <span class="field-label">Car Session State</span>
+          <div class="state-btn-group">
+            <button type="button" class="state-btn active" id="btn-state-track" onclick="setStatus('ON TRACK')">ON TRACK</button>
+            <button type="button" class="state-btn" id="btn-state-pit" onclick="setStatus('IN PITS')">IN PITS</button>
+            <button type="button" class="state-btn" id="btn-state-swap" onclick="setStatus('DRIVER SWAP')">SWAP</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Lemons Stint Countdown & Max Stint Rule -->
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title">⏱️ Stint Clock & Rule Watch</span>
+          <button type="button" class="chip" onclick="resetDriverStint()">Reset Stint</button>
+        </div>
+        <div class="stint-box">
+          <span class="stint-title">Current Stint Time (Max 2H Lemons Rule)</span>
+          <div class="stint-timer" id="stint-clock">00:00:00</div>
+          <div class="stint-meta" id="stint-meta">Target: 60 min swap | Safe: 2h max</div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- CENTER COLUMN: Map, Timing Controls, Lap Database -->
+    <div class="center-stack">
+      
+      <!-- Leaflet Map Panel -->
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title">🗺️ Track Map & Telemetry Breadcrumbs</span>
+          <span id="map-track-name" class="panel-badge">Sonoma Raceway</span>
+        </div>
+        <div id="map"></div>
+      </div>
+
+      <!-- Lap Timing Control Bar -->
+      <div class="panel">
+        <div class="timer-readout-card">
+          <div class="timer-clock-col">
+            <span class="timer-status-badge" id="timing-status">ARMED - LOOP DETECTION ACTIVE</span>
+            <div class="timer-large-clock" id="timer-clock">00:00.00</div>
+          </div>
+          <div class="timer-action-buttons">
+            <button type="button" class="btn-timer-action" id="btn-set-start" onclick="setGateCoordFromCurrent('start')">📍 Set S/F Line</button>
+            <button type="button" class="btn-timer-action" id="btn-set-finish" onclick="setGateCoordFromCurrent('finish')" style="display:none;">🏁 Set Finish Gate</button>
+            <button type="button" class="btn-timer-action" onclick="manualLapTrigger()">⚡ Manual Lap</button>
+          </div>
+        </div>
+
+        <!-- Database View Mode Tabs & Export Actions -->
+        <div style="display: flex; justify-content: space-between; align-items: center; margin: 4px 0; flex-wrap: wrap; gap: 6px;">
+          <div class="format-toggle" style="margin-bottom: 0;">
+            <button type="button" class="format-btn active" id="tab-btn-laps" onclick="switchTableTab('laps')">🏁 Laps (<span id="count-laps">0</span>)</button>
+            <button type="button" class="format-btn" id="tab-btn-stints" onclick="switchTableTab('stints')">🏎️ Stints (<span id="count-stints">0</span>)</button>
+            <button type="button" class="format-btn" id="tab-btn-pitstops" onclick="switchTableTab('pitstops')">🔧 Pit Stops (<span id="count-pitstops">0</span>)</button>
+          </div>
+          <div style="display: flex; gap: 6px;">
+            <button type="button" class="btn-timer-action" onclick="exportActiveTableCsv()">💾 Export CSV</button>
+            <button type="button" class="btn-timer-action" onclick="exportFullAnalysisJson()" style="color: #38bdf8; border-color: #0284c7;">📊 Analysis JSON</button>
+            <button type="button" class="btn-timer-action" onclick="clearActiveDatabase()">🗑️ Clear</button>
+          </div>
+        </div>
+
+        <!-- Dynamic Race Database Table -->
+        <div class="table-container">
+          <table class="lap-table">
+            <thead>
+              <tr id="lap-table-headers">
+                <th>LAP #</th>
+                <th>DRIVER</th>
+                <th>TIME</th>
+                <th>DELTA</th>
+                <th>TOP MPH</th>
+                <th>AVG MPH</th>
+                <th>EST FUEL</th>
+                <th>STATUS</th>
+              </tr>
+            </thead>
+            <tbody id="lap-table-body">
+              <tr><td colspan="8" style="text-align:center; color:#64748b; padding:16px;">Waiting for first completed lap...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- RIGHT COLUMN: Car Odometer, Fuel Strategy, Pit Checklist, Logbook -->
+    <div class="col-panel-stack col-extra">
+      
+      <!-- Vehicle Mileage / Odometer Card -->
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title">🛣️ Vehicle Mileage (Odometer)</span>
+        </div>
+        <div class="stats-card-grid">
+          <div class="stat-pill-box">
+            <span class="stat-label">Event Miles</span>
+            <span class="stat-val" id="stat-total-miles">0.00</span>
+            <span class="stat-sub">Car Total This Weekend</span>
+          </div>
+          <div class="stat-pill-box">
+            <span class="stat-label">Current Stint</span>
+            <span class="stat-val" id="stat-stint-miles">0.00</span>
+            <span class="stat-sub">Tire & Brake Wear</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Fuel Strategy & Pit Window Projections -->
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title">⛽ Fuel Strategy & Pit Window</span>
+          <span class="panel-badge" id="fuel-rate-badge">5.2 GPH</span>
+        </div>
+        <div class="fuel-gauge-container">
+          <div class="fuel-bar-wrap">
+            <div class="fuel-bar-fill" id="fuel-bar" style="width: 85%;"></div>
+          </div>
+          <div class="fuel-projections">
+            <span id="fuel-remaining-text">11.9 / 14.0 Gal (85%)</span>
+            <span id="fuel-laps-remaining">~24 Laps Remaining</span>
+          </div>
+          <div class="fuel-projections" style="color: #94a3b8; font-size: 10px;">
+            <span id="fuel-time-remaining">Pit Window: ~48 mins</span>
+            <span id="fuel-per-lap">~0.48 gal/lap</span>
+          </div>
+          <div class="fuel-action-bar">
+            <button type="button" class="btn-fuel" onclick="addFuel(5)">+5 Gal</button>
+            <button type="button" class="btn-fuel" onclick="addFuel(10)">+10 Gal</button>
+            <button type="button" class="btn-fuel" onclick="resetFullTank()">Full Tank</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Lemons Pit Stop Checklist -->
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title">🔧 Pit Stop & Safety Checklist</span>
+          <button type="button" class="chip" onclick="resetChecklist()">Reset</button>
+        </div>
+        <div class="checklist-wrap">
+          <label class="check-item"><input type="checkbox" onchange="toggleCheck(this)"> Driver Swapped & Harness Torqued</label>
+          <label class="check-item"><input type="checkbox" onchange="toggleCheck(this)"> Cool Shirt & Radio Connected</label>
+          <label class="check-item"><input type="checkbox" onchange="toggleCheck(this)"> Fuel Ground Wire Attached & Fueling Done</label>
+          <label class="check-item"><input type="checkbox" onchange="toggleCheck(this)"> Gas Cap Reinstalled & Tested</label>
+          <label class="check-item"><input type="checkbox" onchange="toggleCheck(this)"> Tire Pressures & Lug Nuts Checked</label>
+          <label class="check-item"><input type="checkbox" onchange="toggleCheck(this)"> Windshield & Mirrors Wiped Clean</label>
+        </div>
+      </div>
+
+      <!-- Team Race Logbook -->
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title">📋 Team Race Logbook</span>
+        </div>
+        <div class="logbook-entries" id="logbook-list">
+          <div class="log-row">
+            <span class="log-time">[SETUP]</span>
+            <span class="log-msg">Session initialized. All systems armed.</span>
+          </div>
+        </div>
+        <div class="log-input-row">
+          <input type="text" id="log-input" placeholder="Quick race note or penalty..." style="flex:1;" onkeydown="if(event.key==='Enter') addLogEntry()" />
+          <button type="button" class="btn-add-note" onclick="addLogEntry()">Add</button>
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+
+  <!-- Leaflet JS for Map -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <!-- Firebase SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+
+  <script>
+    // --- FIREBASE CONFIG ---
+    const firebaseConfig = {
+      apiKey: "AIzaSyCC4JUzjr5lk9zaT78wwZ1RcjUguP5Q70s",
+      authDomain: "fiero-telemetry.firebaseapp.com",
+      databaseURL: "https://fiero-telemetry-default-rtdb.firebaseio.com",
+      projectId: "fiero-telemetry",
+      storageBucket: "fiero-telemetry.firebasestorage.app",
+      messagingSenderId: "183922450878",
+      appId: "1:183922450878:web:5faabfd6d163f1c6c119ef"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database().ref("raceTelemetry");
+
+    // UI Dom References
+    const watchdogBanner = document.getElementById("watchdog-banner");
+    const watchdogTitle = document.getElementById("watchdog-title");
+    const watchdogDesc = document.getElementById("watchdog-desc");
+    const watchdogPing = document.getElementById("watchdog-ping");
+
+    const prevDriver = document.getElementById("prev-driver");
+    const prevStatus = document.getElementById("prev-status");
+    const prevSpeed = document.getElementById("prev-speed");
+    const prevCoords = document.getElementById("prev-coords");
+    const prevAcc = document.getElementById("prev-acc");
+    const driverInput = document.getElementById("driver-input");
+
+    const timerStatus = document.getElementById("timing-status");
+    const timerClock = document.getElementById("timer-clock");
+    const lapTableBody = document.getElementById("lap-table-body");
+    const lapTableHeaders = document.getElementById("lap-table-headers");
+
+    const stintClock = document.getElementById("stint-clock");
+    const stintMeta = document.getElementById("stint-meta");
+    const flagBadge = document.getElementById("flag-badge");
+
+    const statTotalMiles = document.getElementById("stat-total-miles");
+    const statStintMiles = document.getElementById("stat-stint-miles");
+
+    const fuelBar = document.getElementById("fuel-bar");
+    const fuelRemainingText = document.getElementById("fuel-remaining-text");
+    const fuelLapsRemaining = document.getElementById("fuel-laps-remaining");
+    const fuelTimeRemaining = document.getElementById("fuel-time-remaining");
+    const fuelPerLap = document.getElementById("fuel-per-lap");
+    const fuelRateBadge = document.getElementById("fuel-rate-badge");
+    const logbookList = document.getElementById("logbook-list");
+    const logInput = document.getElementById("log-input");
+
+    // State Variables
+    let raceMode = "endurance"; // 'endurance' or 'autocross'
+    let currentFlag = "GREEN";
+    let activeDriver = "Driver 1";
+    let currentCarPos = null;
+    let lastKnownTimestamp = 0;
+    let latestAccuracy = 0;
+    let lastEvaluatedGpsTimestamp = 0;
+    let lastOdoPos = null;
+
+    // Mileage
+    let totalMiles = parseFloat(localStorage.getItem("pitwall_total_miles") || "0");
+    let stintStartMiles = totalMiles;
+    let stintStartTime = Date.now();
+
+    // Fuel State
+    const TANK_CAPACITY = 14.0; // Gallons
+    let currentFuelGal = parseFloat(localStorage.getItem("pitwall_current_fuel") || "14.0");
+    let estBurnRateGph = 5.2; // Lemons race pace burn rate ~5.2 gal/hr
+    let lastFuelUpdateTime = Date.now();
+
+    // Race Team Relational Database State
+    let lapDatabase = JSON.parse(localStorage.getItem("race_team_laps") || "[]");
+    let stintDatabase = JSON.parse(localStorage.getItem("race_team_stints") || "[]");
+    let pitStopDatabase = JSON.parse(localStorage.getItem("race_team_pitstops") || "[]");
+    let activeTableTab = "laps"; // 'laps', 'stints', or 'pitstops'
+    let bestLapTimeMs = Infinity;
+
+    // Pit Stop & Stint Lifecycle Tracking
+    let pitInTimestamp = 0;
+    let pitDriverOut = "";
+    let stintStartFuel = currentFuelGal;
+    let sessionFuelAdded = 0;
+
+    // Track Presets
+    const TRACK_PRESETS = {
+      sonoma: {
+        name: "Sonoma Raceway (Lemons)",
+        center: [38.1607, -122.4547],
+        zoom: 16,
+        startFinish: { lat: 38.16071, lon: -122.45472 }
+      },
+      laguna: {
+        name: "WeatherTech Raceway Laguna Seca",
+        center: [36.5843, -121.7535],
+        zoom: 16,
+        startFinish: { lat: 36.58431, lon: -121.75352 }
+      },
+      custom: {
+        name: "Custom Track / Autocross Lot",
+        center: [37.7709, -122.2608],
+        zoom: 17,
+        startFinish: null
+      }
+    };
+
+    let startGate = TRACK_PRESETS.sonoma.startFinish;
+    let finishGate = null;
+    let startCircle = null;
+    let finishCircle = null;
+    const GATE_TRIGGER_RADIUS_METERS = 18;
+    const MIN_LAP_TIME_MS = 25000; // 25s debounce to prevent double counts
+
+    // Timing Engine
+    let timingRunning = false;
+    let currentLapStartTime = 0;
+    let lapInterval = null;
+    let lastLapFinishTime = 0;
+    let lapMaxSpeed = 0;
+    let lapSpeedSum = 0;
+    let lapSpeedCount = 0;
+
+    // Web Audio Synthesizer Beeps for Pit Wall Alerts
+    const audioCtx = (typeof AudioContext !== 'undefined' || typeof webkitAudioContext !== 'undefined')
+      ? new (window.AudioContext || window.webkitAudioContext)()
+      : null;
+
+    function playBeep(freq = 880, duration = 0.15) {
+      if (!audioCtx) return;
+      try {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.frequency.value = freq;
+        gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + duration);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(audioCtx.currentTime + duration);
+      } catch (e) {}
+    }
+
+    // --- LEAFLET MAP SETUP ---
+    const map = L.map('map', { zoomControl: true }).setView(TRACK_PRESETS.sonoma.center, TRACK_PRESETS.sonoma.zoom);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      attribution: '© OpenStreetMap'
+    }).addTo(map);
+
+    const carIcon = L.divIcon({
+      className: 'custom-car-marker',
+      html: '<div style="background:#f97316; width:14px; height:14px; border-radius:50%; border:2px solid #fff; box-shadow:0 0 10px #f97316;"></div>',
+      iconSize: [14, 14],
+      iconAnchor: [7, 7]
+    });
+
+    let carMarker = null;
+    const pathLine = L.polyline([], { color: '#f97316', weight: 4, opacity: 0.8 }).addTo(map);
+
+    function updateStartFinishCircles() {
+      if (startCircle) map.removeLayer(startCircle);
+      if (finishCircle) map.removeLayer(finishCircle);
+
+      if (startGate) {
+        startCircle = L.circle([startGate.lat, startGate.lon], {
+          radius: GATE_TRIGGER_RADIUS_METERS,
+          color: '#22c55e',
+          fillColor: '#22c55e',
+          fillOpacity: 0.35,
+          weight: 2
+        }).addTo(map);
+        startCircle.bindPopup("Start / Finish Line");
+      }
+      if (finishGate) {
+        finishCircle = L.circle([finishGate.lat, finishGate.lon], {
+          radius: GATE_TRIGGER_RADIUS_METERS,
+          color: '#ef4444',
+          fillColor: '#ef4444',
+          fillOpacity: 0.35,
+          weight: 2
+        }).addTo(map);
+        finishCircle.bindPopup("Finish Gate");
+      }
+    }
+    updateStartFinishCircles();
+
+    function loadTrackPreset(presetKey) {
+      const preset = TRACK_PRESETS[presetKey];
+      if (!preset) return;
+      document.getElementById("map-track-name").textContent = preset.name;
+      map.setView(preset.center, preset.zoom);
+      if (preset.startFinish) {
+        startGate = { ...preset.startFinish };
+        finishGate = null;
+      }
+      updateStartFinishCircles();
+      addLogEntry(`Track preset loaded: ${preset.name}`);
+    }
+
+    // --- RACE FORMAT SWITCHER ---
+    function switchMode(mode) {
+      raceMode = mode;
+      document.getElementById("btn-mode-ax").classList.toggle("active", mode === "autocross");
+      document.getElementById("btn-mode-endurance").classList.toggle("active", mode === "endurance");
+      
+      const btnFinish = document.getElementById("btn-set-finish");
+      if (mode === "autocross") {
+        btnFinish.style.display = "inline-flex";
+        timerStatus.textContent = "AUTOCROSS MODE - SET START & FINISH BEAMS";
+        lapTableHeaders.innerHTML = `
+          <th>RUN #</th>
+          <th>DRIVER</th>
+          <th>RAW TIME</th>
+          <th>CONES (+2s)</th>
+          <th>FINAL TIME</th>
+          <th>TOP MPH</th>
+          <th>STATUS</th>
+        `;
+      } else {
+        btnFinish.style.display = "none";
+        timerStatus.textContent = "LEMONS 24H - CONTINUOUS TIMING LOOP ARMED";
+        lapTableHeaders.innerHTML = `
+          <th>LAP #</th>
+          <th>DRIVER</th>
+          <th>TIME</th>
+          <th>DELTA</th>
+          <th>TOP MPH</th>
+          <th>AVG MPH</th>
+          <th>EST FUEL</th>
+          <th>STATUS</th>
+        `;
+      }
+      renderLapTable();
+      addLogEntry(`Switched race format to ${mode.toUpperCase()}`);
+    }
+
+    // --- GATE DISTANCE CALCULATIONS (HAVERSINE) ---
+    function getDistanceMeters(lat1, lon1, lat2, lon2) {
+      const R = 6371000;
+      const dLat = (lat2 - lat1) * Math.PI / 180;
+      const dLon = (lon2 - lon1) * Math.PI / 180;
+      const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                Math.sin(dLon / 2) * Math.sin(dLon / 2);
+      return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    }
+
+    function setGateCoordFromCurrent(type) {
+      if (!currentCarPos) {
+        alert("No GPS fix yet! Waiting for telemetry packet.");
+        return;
+      }
+      if (type === 'start') {
+        startGate = { lat: currentCarPos.lat, lon: currentCarPos.lon };
+        document.getElementById('btn-set-start').classList.add('active');
+        addLogEntry(`Start/Finish line set at ${currentCarPos.lat.toFixed(5)}, ${currentCarPos.lon.toFixed(5)}`);
+      } else {
+        finishGate = { lat: currentCarPos.lat, lon: currentCarPos.lon };
+        document.getElementById('btn-set-finish').classList.add('active');
+        addLogEntry(`Finish Gate set at ${currentCarPos.lat.toFixed(5)}, ${currentCarPos.lon.toFixed(5)}`);
+      }
+      updateStartFinishCircles();
+    }
+
+    // --- TIMING ENGINE (AUTOMATED CONTINUOUS & AUTOCROSS) ---
+    function evaluateTimingGates(lat, lon, speedMph, pointTime) {
+      const now = pointTime || Date.now();
+
+      // Track lap speeds for stats
+      if (speedMph > 2) {
+        if (speedMph > lapMaxSpeed) lapMaxSpeed = speedMph;
+        lapSpeedSum += speedMph;
+        lapSpeedCount++;
+      }
+
+      if (raceMode === "endurance") {
+        // Continuous Loop: Single Start/Finish Gate
+        if (!startGate) return;
+        const dist = getDistanceMeters(lat, lon, startGate.lat, startGate.lon);
+
+        if (dist <= GATE_TRIGGER_RADIUS_METERS) {
+          if (!timingRunning) {
+            // First time crossing line: start timer
+            startTimingLoop(now);
+          } else if (now - currentLapStartTime > MIN_LAP_TIME_MS) {
+            // Completed a lap!
+            const lapTimeMs = now - currentLapStartTime;
+            finishLap(lapTimeMs, now);
+            startTimingLoop(now);
+          }
+        }
+      } else {
+        // Autocross Mode: Staged -> Launch -> Finish Gate
+        if (!startGate || !finishGate) return;
+        const distStart = getDistanceMeters(lat, lon, startGate.lat, startGate.lon);
+        const distFinish = getDistanceMeters(lat, lon, finishGate.lat, finishGate.lon);
+
+        if (!timingRunning && distStart <= GATE_TRIGGER_RADIUS_METERS && speedMph >= 5) {
+          startTimingLoop(now);
+          timerStatus.textContent = "⚡ RUN IN PROGRESS (AUTOCROSS)";
+          timerStatus.style.color = "#38bdf8";
+        } else if (timingRunning && distFinish <= GATE_TRIGGER_RADIUS_METERS && (now - currentLapStartTime > 6000)) {
+          const runTimeMs = now - currentLapStartTime;
+          finishLap(runTimeMs, now);
+          stopTimingLoop();
+          timerStatus.textContent = "🏁 RUN FINISHED - READY TO RE-ARM";
+          timerStatus.style.color = "#4ade80";
+        }
+      }
+    }
+
+    function startTimingLoop(now) {
+      timingRunning = true;
+      currentLapStartTime = now;
+      lapMaxSpeed = 0;
+      lapSpeedSum = 0;
+      lapSpeedCount = 0;
+
+      clearInterval(lapInterval);
+      lapInterval = setInterval(() => {
+        const elapsed = Date.now() - currentLapStartTime;
+        timerClock.textContent = formatTimeMs(elapsed);
+      }, 30);
+    }
+
+    function stopTimingLoop() {
+      timingRunning = false;
+      clearInterval(lapInterval);
+    }
+
+    function manualLapTrigger() {
+      const now = Date.now();
+      if (!timingRunning) {
+        startTimingLoop(now);
+        timerStatus.textContent = "MANUAL LAP STARTED";
+      } else {
+        const lapTimeMs = now - currentLapStartTime;
+        finishLap(lapTimeMs, now);
+        startTimingLoop(now);
+      }
+    }
+
+    function finishLap(lapTimeMs, now) {
+      playBeep(1046.5, 0.2); // C6 notification chime
+
+      const avgMph = lapSpeedCount > 0 ? Math.round(lapSpeedSum / lapSpeedCount) : 0;
+      const topMph = Math.round(lapMaxSpeed);
+      const estFuelLap = ((lapTimeMs / 3600000) * estBurnRateGph).toFixed(2);
+
+      // Decrement fuel
+      currentFuelGal = Math.max(0, currentFuelGal - parseFloat(estFuelLap));
+      localStorage.setItem("pitwall_current_fuel", currentFuelGal.toString());
+      updateFuelUI();
+
+      const isBest = lapTimeMs < bestLapTimeMs;
+      if (isBest) bestLapTimeMs = lapTimeMs;
+
+      const lapRecord = {
+        lapNum: lapDatabase.length + 1,
+        driver: activeDriver,
+        timeMs: lapTimeMs,
+        timeFormatted: formatTimeMs(lapTimeMs),
+        topSpeed: topMph,
+        avgSpeed: avgMph,
+        fuelUsed: estFuelLap,
+        isBest: isBest,
+        timestamp: now,
+        mode: raceMode,
+        cones: 0,
+        adjustedTimeMs: lapTimeMs
+      };
+
+      lapDatabase.unshift(lapRecord);
+      localStorage.setItem("race_team_laps", JSON.stringify(lapDatabase));
+
+      // Push to Firebase RTDB
+      db.child("laps").push(lapRecord).catch(err => console.warn("Lap push error:", err));
+
+      renderLapTable();
+      updateCounts();
+      addLogEntry(`Lap #${lapRecord.lapNum} logged by ${activeDriver}: ${lapRecord.timeFormatted} (Top: ${topMph} MPH)`);
+    }
+
+    function formatTimeMs(ms) {
+      const min = Math.floor(ms / 60000);
+      const sec = Math.floor((ms % 60000) / 1000);
+      const hundredths = Math.floor((ms % 1000) / 10);
+      return `${String(min).padStart(2, '0')}:${String(sec).padStart(2, '0')}.${String(hundredths).padStart(2, '0')}`;
+    }
+
+    // --- MULTI-TABLE DATABASE VIEWER ---
+    function switchTableTab(tab) {
+      activeTableTab = tab;
+      document.getElementById("tab-btn-laps").classList.toggle("active", tab === "laps");
+      document.getElementById("tab-btn-stints").classList.toggle("active", tab === "stints");
+      document.getElementById("tab-btn-pitstops").classList.toggle("active", tab === "pitstops");
+
+      if (tab === "laps") renderLapTable();
+      else if (tab === "stints") renderStintTable();
+      else if (tab === "pitstops") renderPitStopTable();
+    }
+
+    function updateCounts() {
+      const elLaps = document.getElementById("count-laps");
+      const elStints = document.getElementById("count-stints");
+      const elPits = document.getElementById("count-pitstops");
+      if (elLaps) elLaps.textContent = lapDatabase.length;
+      if (elStints) elStints.textContent = stintDatabase.length;
+      if (elPits) elPits.textContent = pitStopDatabase.length;
+    }
+
+    function renderLapTable() {
+      updateCounts();
+      if (raceMode === "autocross") {
+        lapTableHeaders.innerHTML = `
+          <th>RUN #</th>
+          <th>DRIVER</th>
+          <th>RAW TIME</th>
+          <th>CONES (+2s)</th>
+          <th>FINAL TIME</th>
+          <th>TOP MPH</th>
+          <th>STATUS</th>
+        `;
+      } else {
+        lapTableHeaders.innerHTML = `
+          <th>LAP #</th>
+          <th>DRIVER</th>
+          <th>TIME</th>
+          <th>DELTA</th>
+          <th>TOP MPH</th>
+          <th>AVG MPH</th>
+          <th>EST FUEL</th>
+          <th>STATUS</th>
+        `;
+      }
+
+      if (lapDatabase.length === 0) {
+        lapTableBody.innerHTML = `<tr><td colspan="8" style="text-align:center; color:#64748b; padding:16px;">No laps recorded yet.</td></tr>`;
+        return;
+      }
+
+      bestLapTimeMs = Math.min(...lapDatabase.map(l => l.adjustedTimeMs || l.timeMs));
+      lapTableBody.innerHTML = "";
+
+      lapDatabase.forEach(lap => {
+        const tr = document.createElement("tr");
+        const isBest = (lap.adjustedTimeMs || lap.timeMs) === bestLapTimeMs;
+        const deltaMs = (lap.adjustedTimeMs || lap.timeMs) - bestLapTimeMs;
+        const deltaStr = isBest ? `<span class="delta-best">⭐ BEST</span>` : `<span class="delta-plus">+${(deltaMs / 1000).toFixed(2)}s</span>`;
+
+        if (raceMode === "autocross") {
+          tr.innerHTML = `
+            <td>#${lap.lapNum}</td>
+            <td><strong>${lap.driver}</strong></td>
+            <td>${lap.timeFormatted}</td>
+            <td>
+              <button class="chip" onclick="adjustCones(${lap.lapNum}, 1)">+1 Cone</button>
+              ${lap.cones ? `${lap.cones} (+${lap.cones*2}s)` : 'Clean'}
+            </td>
+            <td class="${isBest ? 'best-lap' : ''}"><strong>${formatTimeMs(lap.adjustedTimeMs || lap.timeMs)}</strong></td>
+            <td>${lap.topSpeed || '--'} MPH</td>
+            <td>${isBest ? '⭐ BEST RUN' : 'CLEAN'}</td>
+          `;
+        } else {
+          tr.innerHTML = `
+            <td>#${lap.lapNum}</td>
+            <td><strong>${lap.driver}</strong></td>
+            <td class="${isBest ? 'best-lap' : ''}">${lap.timeFormatted}</td>
+            <td>${deltaStr}</td>
+            <td>${lap.topSpeed || '--'} MPH</td>
+            <td>${lap.avgSpeed || '--'} MPH</td>
+            <td>${lap.fuelUsed || '0.45'} gal</td>
+            <td>${isBest ? '⭐ PURPLE' : 'COMPLETE'}</td>
+          `;
+        }
+        lapTableBody.appendChild(tr);
+      });
+    }
+
+    function renderStintTable() {
+      updateCounts();
+      lapTableHeaders.innerHTML = `
+        <th>STINT #</th>
+        <th>DRIVER</th>
+        <th>DURATION</th>
+        <th>LAPS</th>
+        <th>MILES</th>
+        <th>FUEL (START &rarr; END)</th>
+        <th>START TIME</th>
+        <th>NOTES</th>
+      `;
+      if (stintDatabase.length === 0) {
+        lapTableBody.innerHTML = `<tr><td colspan="8" style="text-align:center; color:#64748b; padding:16px;">No driver stints archived yet. Stints automatically log upon driver swap or reset.</td></tr>`;
+        return;
+      }
+      lapTableBody.innerHTML = "";
+      stintDatabase.forEach(st => {
+        const tr = document.createElement("tr");
+        const startIso = new Date(st.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        tr.innerHTML = `
+          <td>#${st.stintNum}</td>
+          <td><strong>${st.driver}</strong></td>
+          <td>${st.durationMins} mins</td>
+          <td><strong>${st.lapCount} laps</strong></td>
+          <td>${st.milesDriven} mi</td>
+          <td>${st.startFuel}G &rarr; ${st.endFuel}G</td>
+          <td>${startIso}</td>
+          <td style="color:#94a3b8;">${st.notes || '--'}</td>
+        `;
+        lapTableBody.appendChild(tr);
+      });
+    }
+
+    function renderPitStopTable() {
+      updateCounts();
+      lapTableHeaders.innerHTML = `
+        <th>STOP #</th>
+        <th>DURATION</th>
+        <th>DRIVER OUT</th>
+        <th>DRIVER IN</th>
+        <th>FUEL ADDED</th>
+        <th>IN TIME</th>
+        <th>OUT TIME</th>
+        <th>STATUS</th>
+      `;
+      if (pitStopDatabase.length === 0) {
+        lapTableBody.innerHTML = `<tr><td colspan="8" style="text-align:center; color:#64748b; padding:16px;">No pit stops recorded yet. Pit stops automatically log when toggling IN PITS &rarr; ON TRACK.</td></tr>`;
+        return;
+      }
+      lapTableBody.innerHTML = "";
+      pitStopDatabase.forEach(p => {
+        const tr = document.createElement("tr");
+        const inTimeStr = new Date(p.inTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        const outTimeStr = new Date(p.outTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        tr.innerHTML = `
+          <td>#${p.pitNum}</td>
+          <td><strong style="color:#38bdf8; font-size:12px;">${p.durationSec}s</strong></td>
+          <td>${p.driverOut || '--'}</td>
+          <td><strong>${p.driverIn || '--'}</strong></td>
+          <td>${p.fuelAdded ? `+${p.fuelAdded} Gal` : '0 Gal'}</td>
+          <td>${inTimeStr}</td>
+          <td>${outTimeStr}</td>
+          <td><span style="color:#4ade80;">COMPLETE</span></td>
+        `;
+        lapTableBody.appendChild(tr);
+      });
+    }
+
+    function adjustCones(lapNum, count) {
+      const target = lapDatabase.find(l => l.lapNum === lapNum);
+      if (!target) return;
+      target.cones = (target.cones || 0) + count;
+      target.adjustedTimeMs = target.timeMs + (target.cones * 2000);
+      localStorage.setItem("race_team_laps", JSON.stringify(lapDatabase));
+      renderLapTable();
+    }
+
+    function exportActiveTableCsv() {
+      if (activeTableTab === "laps") exportLapsCsv();
+      else if (activeTableTab === "stints") exportStintsCsv();
+      else if (activeTableTab === "pitstops") exportPitStopsCsv();
+    }
+
+    function exportLapsCsv() {
+      if (lapDatabase.length === 0) { alert("No laps to export."); return; }
+      let csv = "Lap_Number,Driver,Time_Formatted,Time_MS,Top_Speed_MPH,Avg_Speed_MPH,Est_Fuel_Gal,Timestamp_ISO\n";
+      lapDatabase.forEach(l => {
+        const iso = new Date(l.timestamp).toISOString();
+        csv += `${l.lapNum},"${l.driver}",${l.timeFormatted},${l.timeMs},${l.topSpeed},${l.avgSpeed},${l.fuelUsed},${iso}\n`;
+      });
+      triggerDownload(csv, `race_laps_${Date.now()}.csv`, "text/csv");
+    }
+
+    function exportStintsCsv() {
+      if (stintDatabase.length === 0) { alert("No stints to export."); return; }
+      let csv = "Stint_Number,Driver,Duration_Mins,Lap_Count,Miles_Driven,Start_Fuel_Gal,End_Fuel_Gal,Start_Time_ISO,End_Time_ISO\n";
+      stintDatabase.forEach(s => {
+        csv += `${s.stintNum},"${s.driver}",${s.durationMins},${s.lapCount},${s.milesDriven},${s.startFuel},${s.endFuel},${new Date(s.startTime).toISOString()},${new Date(s.endTime).toISOString()}\n`;
+      });
+      triggerDownload(csv, `race_stints_${Date.now()}.csv`, "text/csv");
+    }
+
+    function exportPitStopsCsv() {
+      if (pitStopDatabase.length === 0) { alert("No pit stops to export."); return; }
+      let csv = "Pit_Stop_Number,Duration_Sec,Driver_Out,Driver_In,Fuel_Added_Gal,In_Time_ISO,Out_Time_ISO,Notes\n";
+      pitStopDatabase.forEach(p => {
+        csv += `${p.pitNum},${p.durationSec},"${p.driverOut}","${p.driverIn}",${p.fuelAdded},${new Date(p.inTime).toISOString()},${new Date(p.outTime).toISOString()},"${p.notes || ''}"\n`;
+      });
+      triggerDownload(csv, `race_pitstops_${Date.now()}.csv`, "text/csv");
+    }
+
+    function exportFullAnalysisJson() {
+      const fullArchive = {
+        event: {
+          name: "24 Hours of Lemons - Sonoma Raceway",
+          track: "Sonoma Raceway",
+          exportedAt: new Date().toISOString(),
+          format: raceMode
+        },
+        summary: {
+          totalLaps: lapDatabase.length,
+          totalStints: stintDatabase.length,
+          totalPitStops: pitStopDatabase.length,
+          eventMiles: parseFloat(totalMiles.toFixed(2)),
+          bestLapMs: bestLapTimeMs === Infinity ? null : bestLapTimeMs,
+          bestLapFormatted: bestLapTimeMs === Infinity ? null : formatTimeMs(bestLapTimeMs)
+        },
+        drivers: [
+          ...new Set([...lapDatabase.map(l => l.driver), ...stintDatabase.map(s => s.driver)])
+        ].map(d => ({
+          name: d,
+          lapsCount: lapDatabase.filter(l => l.driver === d).length,
+          bestLapMs: Math.min(...lapDatabase.filter(l => l.driver === d).map(l => l.timeMs), Infinity)
+        })),
+        stints: stintDatabase,
+        pitstops: pitStopDatabase,
+        laps: lapDatabase
+      };
+
+      triggerDownload(JSON.stringify(fullArchive, null, 2), `race_analysis_archive_${Date.now()}.json`, "application/json");
+      addLogEntry("Full race analysis relational JSON exported for Jupyter/analysis tools.");
+    }
+
+    function triggerDownload(content, filename, mimeType) {
+      const blob = new Blob([content], { type: mimeType });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function clearActiveDatabase() {
+      if (activeTableTab === "laps") {
+        if (confirm("Clear all recorded laps?")) {
+          lapDatabase = [];
+          bestLapTimeMs = Infinity;
+          localStorage.removeItem("race_team_laps");
+          renderLapTable();
+          addLogEntry("Lap records cleared.");
+        }
+      } else if (activeTableTab === "stints") {
+        if (confirm("Clear all driver stint records?")) {
+          stintDatabase = [];
+          localStorage.removeItem("race_team_stints");
+          renderStintTable();
+          addLogEntry("Stint history cleared.");
+        }
+      } else if (activeTableTab === "pitstops") {
+        if (confirm("Clear all pit stop records?")) {
+          pitStopDatabase = [];
+          localStorage.removeItem("race_team_pitstops");
+          renderPitStopTable();
+          addLogEntry("Pit stop history cleared.");
+        }
+      }
+    }
+
+    // --- DRIVER STINT & VEHICLE MILEAGE ---
+    function quickSetDriver(name) {
+      if (name !== activeDriver) {
+        finalizeAndResetStint(name);
+      } else {
+        driverInput.value = name;
+      }
+    }
+
+    driverInput.addEventListener("input", (e) => {
+      const name = e.target.value.trim() || "Driver 1";
+      activeDriver = name;
+      prevDriver.textContent = name;
+      db.update({ driver: name });
+    });
+
+    function setStatus(status) {
+      const prev = prevStatus.textContent;
+      prevStatus.textContent = status;
+      prevStatus.className = "status-badge";
+      if (status === "IN PITS") prevStatus.classList.add("in-pits");
+      if (status === "DRIVER SWAP") prevStatus.classList.add("driver-swap");
+
+      document.getElementById("btn-state-track").classList.toggle("active", status === "ON TRACK");
+      document.getElementById("btn-state-pit").classList.toggle("active", status === "IN PITS");
+      document.getElementById("btn-state-swap").classList.toggle("active", status === "DRIVER SWAP");
+
+      // Pit stop tracking lifecycle
+      if ((status === "IN PITS" || status === "DRIVER SWAP") && !pitInTimestamp) {
+        pitInTimestamp = Date.now();
+        pitDriverOut = activeDriver;
+        sessionFuelAdded = 0;
+        addLogEntry(`🛑 Car entered pits. Pit clock started.`);
+        playBeep(659.25, 0.3);
+      } else if (status === "ON TRACK" && pitInTimestamp) {
+        // Exited pits: log completed pit stop!
+        const durationSec = Math.max(1, Math.round((Date.now() - pitInTimestamp) / 1000));
+        const pitRecord = {
+          pitNum: pitStopDatabase.length + 1,
+          inTime: pitInTimestamp,
+          outTime: Date.now(),
+          durationSec: durationSec,
+          driverOut: pitDriverOut,
+          driverIn: activeDriver,
+          fuelAdded: sessionFuelAdded,
+          notes: `${durationSec}s pit stop (${pitDriverOut} -> ${activeDriver})`
+        };
+        pitStopDatabase.unshift(pitRecord);
+        localStorage.setItem("race_team_pitstops", JSON.stringify(pitStopDatabase));
+        db.child("pitstops").push(pitRecord).catch(() => {});
+        addLogEntry(`🏁 Pit Stop #${pitRecord.pitNum} completed: ${durationSec}s duration (+${sessionFuelAdded}G fuel)`);
+        pitInTimestamp = 0;
+        sessionFuelAdded = 0;
+        updateCounts();
+        if (activeTableTab === "pitstops") renderPitStopTable();
+      }
+
+      db.update({ status: status });
+      addLogEntry(`Car status changed to: ${status}`);
+    }
+
+    function setFlag(flag) {
+      currentFlag = flag;
+      flagBadge.textContent = `${flag} FLAG`;
+      document.querySelectorAll(".flag-btn").forEach(btn => btn.classList.remove("active"));
+      if (flag === "GREEN") document.querySelector(".flag-btn.green").classList.add("active");
+      if (flag === "YELLOW") document.querySelector(".flag-btn.yellow").classList.add("active");
+      if (flag === "RED") document.querySelector(".flag-btn.red").classList.add("active");
+      if (flag === "CHECKERED") document.querySelector(".flag-btn.checkered").classList.add("active");
+
+      db.update({ flag: flag });
+      addLogEntry(`🚩 Race Flag changed to: ${flag}`);
+    }
+
+    function resetDriverStint() {
+      finalizeAndResetStint();
+    }
+
+    function finalizeAndResetStint(newDriver) {
+      const now = Date.now();
+      const stintDurationMs = now - stintStartTime;
+      const stintMiles = Math.max(0, totalMiles - stintStartMiles);
+      const stintLaps = lapDatabase.filter(l => l.timestamp >= stintStartTime && l.driver === activeDriver).length;
+
+      // Only archive if meaningful stint took place
+      if (stintLaps > 0 || stintMiles > 0.3 || stintDurationMs > 60000) {
+        const stintRecord = {
+          stintNum: stintDatabase.length + 1,
+          driver: activeDriver,
+          startTime: stintStartTime,
+          endTime: now,
+          durationMs: stintDurationMs,
+          durationMins: (stintDurationMs / 60000).toFixed(1),
+          lapCount: stintLaps,
+          milesDriven: parseFloat(stintMiles.toFixed(2)),
+          startFuel: parseFloat(stintStartFuel.toFixed(1)),
+          endFuel: parseFloat(currentFuelGal.toFixed(1)),
+          notes: `${stintLaps} laps completed`
+        };
+        stintDatabase.unshift(stintRecord);
+        localStorage.setItem("race_team_stints", JSON.stringify(stintDatabase));
+        db.child("stints").push(stintRecord).catch(() => {});
+        addLogEntry(`🏎️ Stint #${stintRecord.stintNum} archived for ${activeDriver}: ${stintLaps} laps, ${stintMiles.toFixed(1)} miles`);
+      }
+
+      stintStartTime = now;
+      stintStartMiles = totalMiles;
+      stintStartFuel = currentFuelGal;
+
+      if (newDriver) {
+        activeDriver = newDriver;
+        driverInput.value = newDriver;
+        prevDriver.textContent = newDriver;
+        db.update({ driver: newDriver });
+        addLogEntry(`Active driver swapped to: ${newDriver}`);
+      } else {
+        addLogEntry(`Stint timer reset for ${activeDriver}`);
+      }
+
+      updateCounts();
+      if (activeTableTab === "stints") renderStintTable();
+    }
+
+    // --- FUEL STRATEGY & PIT WINDOW ---
+    function updateFuelUI() {
+      const pct = Math.max(0, Math.min(100, Math.round((currentFuelGal / TANK_CAPACITY) * 100)));
+      fuelBar.style.width = `${pct}%`;
+      fuelBar.className = "fuel-bar-fill";
+      if (pct <= 20) fuelBar.classList.add("critical");
+      else if (pct <= 40) fuelBar.classList.add("warning");
+
+      fuelRemainingText.textContent = `${currentFuelGal.toFixed(1)} / ${TANK_CAPACITY.toFixed(1)} Gal (${pct}%)`;
+
+      // Laps and minutes remaining projections
+      const hrsRemaining = currentFuelGal / estBurnRateGph;
+      const minsRemaining = Math.round(hrsRemaining * 60);
+      const estGalPerLap = 0.45; // ~Sonoma 2.52-mile lap consumption
+      const lapsRemaining = Math.floor(currentFuelGal / estGalPerLap);
+
+      fuelLapsRemaining.textContent = `~${lapsRemaining} Laps Remaining`;
+      fuelTimeRemaining.textContent = `Pit Window: ~${minsRemaining} mins`;
+      fuelPerLap.textContent = `~${estGalPerLap.toFixed(2)} gal/lap`;
+
+      if (currentFuelGal < 2.0) {
+        fuelLapsRemaining.style.color = "#ef4444";
+        fuelLapsRemaining.textContent = `⚠️ LOW FUEL (${currentFuelGal.toFixed(1)}G)`;
+      } else {
+        fuelLapsRemaining.style.color = "#cbd5e1";
+      }
+    }
+
+    function addFuel(gal) {
+      currentFuelGal = Math.min(TANK_CAPACITY, currentFuelGal + gal);
+      sessionFuelAdded += gal;
+      localStorage.setItem("pitwall_current_fuel", currentFuelGal.toString());
+      updateFuelUI();
+      addLogEntry(`⛽ Pit Refuel: Added +${gal} Gallons (${currentFuelGal.toFixed(1)}G in tank)`);
+    }
+
+    function resetFullTank() {
+      const added = Math.max(0, TANK_CAPACITY - currentFuelGal);
+      sessionFuelAdded += parseFloat(added.toFixed(1));
+      currentFuelGal = TANK_CAPACITY;
+      localStorage.setItem("pitwall_current_fuel", currentFuelGal.toString());
+      updateFuelUI();
+      addLogEntry(`⛽ Pit Refuel: Full Tank (+${added.toFixed(1)}G added, total ${TANK_CAPACITY} Gallons)`);
+    }
+
+    // --- PIT CHECKLIST ---
+    function toggleCheck(el) {
+      el.parentElement.classList.toggle("done", el.checked);
+    }
+    function resetChecklist() {
+      document.querySelectorAll(".check-item input").forEach(cb => {
+        cb.checked = false;
+        cb.parentElement.classList.remove("done");
+      });
+      addLogEntry("Pit checklist reset for next stop.");
+    }
+
+    // --- RACE LOGBOOK ---
+    function addLogEntry(text) {
+      const msg = text || logInput.value.trim();
+      if (!msg) return;
+      const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      const row = document.createElement("div");
+      row.className = "log-row";
+      row.innerHTML = `<span class="log-time">[${timeStr}]</span> <span class="log-msg">${msg}</span>`;
+      logbookList.prepend(row);
+      if (!text) logInput.value = "";
+    }
+
+    // --- FIREBASE TELEMETRY CONSUMER ---
+    db.on("value", (snap) => {
+      const root = snap.val();
+      if (!root) return;
+
+      if (root.driver && document.activeElement !== driverInput) {
+        activeDriver = root.driver;
+        driverInput.value = root.driver;
+        prevDriver.textContent = root.driver;
+      }
+      if (root.status) {
+        prevStatus.textContent = root.status;
+      }
+      if (root.flag && root.flag !== currentFlag) {
+        setFlag(root.flag);
+      }
+
+      // Collect points to evaluate (single live point vs buffered array/keys)
+      let pointsToProcess = [];
+      if (root.lat !== undefined || root.latitude !== undefined) {
+        pointsToProcess.push(root);
+      } else {
+        const keys = Object.keys(root).filter(k => typeof root[k] === 'object' && root[k] !== null && k !== 'buffer' && k !== 'laps');
+        if (keys.length > 0) {
+          keys.sort((a, b) => {
+            const timeA = Number(root[a].lastGpsTimestamp || (root[a].tst ? root[a].tst * 1000 : 0));
+            const timeB = Number(root[b].lastGpsTimestamp || (root[b].tst ? root[b].tst * 1000 : 0));
+            return timeA - timeB;
+          });
+          pointsToProcess = keys.map(k => root[k]);
+        }
+      }
+
+      // Also ingest root.buffer if populated by outbox flushes
+      if (root.buffer && typeof root.buffer === 'object') {
+        const bufKeys = Object.keys(root.buffer).filter(k => typeof root.buffer[k] === 'object' && root.buffer[k] !== null);
+        bufKeys.sort((a, b) => {
+          const timeA = Number(root.buffer[a].lastGpsTimestamp || (root.buffer[a].tst ? root.buffer[a].tst * 1000 : 0));
+          const timeB = Number(root.buffer[b].lastGpsTimestamp || (root.buffer[b].tst ? root.buffer[b].tst * 1000 : 0));
+          return timeA - timeB;
+        });
+        bufKeys.forEach(bk => pointsToProcess.push(root.buffer[bk]));
+      }
+
+      // Replay points chronologically through the timing and distance engine
+      for (const telem of pointsToProcess) {
+        const rawLat = telem.latitude !== undefined ? telem.latitude : telem.lat;
+        const rawLon = telem.longitude !== undefined ? telem.longitude : telem.lon;
+        const rawAcc = telem.accuracy !== undefined ? telem.accuracy : (telem.acc || 0);
+        const ts = Number(telem.lastGpsTimestamp || (telem.tst ? telem.tst * 1000 : 0));
+
+        if (!rawLat || !rawLon || !ts || ts <= lastEvaluatedGpsTimestamp) continue;
+        lastEvaluatedGpsTimestamp = ts;
+        lastKnownTimestamp = ts;
+        latestAccuracy = Math.round(Number(rawAcc) || 0);
+
+        let calcMph = 0;
+        if (telem.speed !== undefined && telem.speed !== null) calcMph = Number(telem.speed);
+        else if (telem.vel !== undefined && telem.vel !== null) calcMph = Number(telem.vel) * 0.621371;
+        if (calcMph < 2.5 || isNaN(calcMph)) calcMph = 0;
+
+        const lat = Number(rawLat);
+        const lon = Number(rawLon);
+        currentCarPos = { lat, lon };
+
+        // Distance / Odometer calculation
+        if (telem.odometer !== undefined && telem.odometer !== null) {
+          totalMiles = parseFloat(telem.odometer);
+        } else if (lastOdoPos && calcMph > 2.5) {
+          const deltaMeters = getDistanceMeters(lastOdoPos.lat, lastOdoPos.lon, lat, lon);
+          const deltaMiles = deltaMeters * 0.000621371;
+          if (deltaMiles > 0.0005 && deltaMiles < 0.05) {
+            totalMiles += deltaMiles;
+          }
+        }
+        lastOdoPos = { lat, lon };
+
+        // Record breadcrumb path
+        pathLine.addLatLng([lat, lon]);
+
+        // Evaluate timing gates with true timestamp from the phone
+        evaluateTimingGates(lat, lon, calcMph, ts);
+      }
+
+      // Update UI displays from the latest point
+      if (pointsToProcess.length > 0) {
+        const latest = pointsToProcess[pointsToProcess.length - 1];
+        let latestMph = 0;
+        if (latest.speed !== undefined && latest.speed !== null) latestMph = Number(latest.speed);
+        else if (latest.vel !== undefined && latest.vel !== null) latestMph = Number(latest.vel) * 0.621371;
+        if (latestMph < 2.5 || isNaN(latestMph)) latestMph = 0;
+
+        prevSpeed.textContent = Math.round(latestMph);
+        if (currentCarPos) {
+          prevCoords.textContent = `${currentCarPos.lat.toFixed(4)}°, ${currentCarPos.lon.toFixed(4)}°`;
+          prevAcc.textContent = `±${latestAccuracy}m`;
+          if (!carMarker) {
+            carMarker = L.marker([currentCarPos.lat, currentCarPos.lon], { icon: carIcon }).addTo(map);
+          } else {
+            carMarker.setLatLng([currentCarPos.lat, currentCarPos.lon]);
+          }
+        }
+        localStorage.setItem("pitwall_total_miles", totalMiles.toString());
+        statTotalMiles.textContent = totalMiles.toFixed(2);
+        const stintMiles = Math.max(0, totalMiles - stintStartMiles);
+        statStintMiles.textContent = stintMiles.toFixed(2);
+      }
+    });
+
+    // 1-Second Watchdog & Stint Loop
+    setInterval(() => {
+      // 1. Stint Clock
+      const elapsedStintMs = Date.now() - stintStartTime;
+      const stintHours = Math.floor(elapsedStintMs / 3600000);
+      const stintMins = Math.floor((elapsedStintMs % 3600000) / 60000);
+      const stintSecs = Math.floor((elapsedStintMs % 60000) / 1000);
+      stintClock.textContent = `${String(stintHours).padStart(2, '0')}:${String(stintMins).padStart(2, '0')}:${String(stintSecs).padStart(2, '0')}`;
+
+      // Lemons 2-hour stint rule warning
+      if (stintHours >= 1 && stintMins >= 45) {
+        stintClock.className = "stint-timer stint-warning";
+        stintMeta.textContent = "🚨 MANDATORY LEMONS DRIVER SWAP IMMINENT (<15m)";
+      } else if (stintHours >= 1 && stintMins >= 55) {
+        stintClock.className = "stint-timer stint-warning";
+        stintMeta.textContent = "⛔ BLACK FLAG WARNING: 2H MAX DRIVER LIMIT";
+        playBeep(440, 0.4);
+      } else {
+        stintClock.className = "stint-timer";
+        stintMeta.textContent = "Target: 60-90 min swap | Safe: 2h max";
+      }
+
+      // 2. Watchdog Banner
+      if (!lastKnownTimestamp) {
+        watchdogBanner.className = "telemetry-banner offline";
+        watchdogTitle.textContent = "GPS OFFLINE";
+        watchdogDesc.textContent = "Waiting for cockpit phone transmitter";
+        watchdogPing.textContent = "--";
+        return;
+      }
+
+      const lagMs = Date.now() - lastKnownTimestamp;
+      const lagSec = (lagMs / 1000).toFixed(1);
+
+      if (lagMs <= 4000) {
+        watchdogBanner.className = "telemetry-banner live";
+        watchdogTitle.textContent = "COCKPIT LIVE";
+        watchdogDesc.textContent = `Streaming | Acc: ±${latestAccuracy}m | Driver: ${activeDriver}`;
+        watchdogPing.textContent = `${lagMs} ms`;
+      } else if (lagMs <= 9000) {
+        watchdogBanner.className = "telemetry-banner stale";
+        watchdogTitle.textContent = "SIGNAL LAG (BUFFERING)";
+        watchdogDesc.textContent = `Delayed packet ${lagSec}s ago | Car in dead zone`;
+        watchdogPing.textContent = `${lagSec}s`;
+      } else {
+        watchdogBanner.className = "telemetry-banner offline";
+        watchdogTitle.textContent = "SIGNAL LOST (OFFLINE)";
+        watchdogDesc.textContent = `Phone buffering offline in car | ${Math.round(lagSec)}s elapsed`;
+        watchdogPing.textContent = `${Math.round(lagSec)}s`;
+      }
+    }, 1000);
+
+    // Initial render calls
+    renderLapTable();
+    updateFuelUI();
+  </script>
+</body>
+</html>
