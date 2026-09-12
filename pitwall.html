@@ -689,7 +689,10 @@
   <!-- Top Header -->
   <header>
     <div class="event-section">
-      <span class="event-label">🏁 Event Title</span>
+      <div style="display:flex; justify-content:space-between; align-items:baseline; max-width:320px;">
+        <span class="event-label">🏁 Event Title</span>
+        <span id="event-sync-status" style="font-size:9px; font-weight:800; font-family:ui-monospace, monospace; color:#4ade80;">CLOUD SYNCED</span>
+      </div>
       <input type="text" id="event-input" class="event-input" value="Sunday Autocross" placeholder="Event Name..." />
     </div>
 
@@ -763,17 +766,24 @@
         </div>
       </div>
 
-      <!-- Cone Penalties -->
+      <!-- Cone Penalties (Direct Number Entry & Stepper) -->
       <div style="display: flex; flex-direction: column; gap: 6px;">
-        <span class="section-title">Cone Penalties (+2s each)</span>
-        <div class="penalty-row">
-          <button type="button" class="btn-cone active" id="cone-btn-0" onclick="setRunCones(0)">Clean (0)</button>
-          <button type="button" class="btn-cone" id="cone-btn-1" onclick="setRunCones(1)">1 Cone (+2s)</button>
-          <button type="button" class="btn-cone" id="cone-btn-2" onclick="setRunCones(2)">2 Cones (+4s)</button>
-          <button type="button" class="btn-cone" id="cone-btn-3" onclick="setRunCones(3)">3 Cones (+6s)</button>
+        <span class="section-title">Cones Hit (+2s each)</span>
+        <div class="penalty-row" style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+          <div class="stepper-controls">
+            <button type="button" class="btn-step" onclick="changeReviewCones(-1)">&minus;</button>
+            <input type="number" id="review-cones-input" class="run-input" value="0" min="0" max="99" style="width: 75px; font-size: 18px;" oninput="onReviewConesChanged()" />
+            <button type="button" class="btn-step" onclick="changeReviewCones(1)">&#43;</button>
+          </div>
+          <button type="button" class="btn-cone active" id="btn-cone-clean" onclick="setReviewCones(0)">
+            Clean (0)
+          </button>
           <button type="button" class="dnf-toggle" id="btn-dnf-toggle" onclick="toggleRunDnf()">
             ❌ Flag DNF
           </button>
+          <span id="review-cone-penalty-text" style="font-size: 13px; font-weight: 800; font-family: ui-monospace, monospace; color: #94a3b8;">
+            +0s (Clean)
+          </span>
         </div>
       </div>
 
@@ -877,8 +887,12 @@
 
       <div style="display: flex; flex-direction: column; gap: 6px;">
         <span class="section-title">Adjust Cones (+2s each)</span>
-        <div class="penalty-row">
-          <input type="number" id="edit-cones-input" class="run-input" min="0" max="20" style="width: 80px;" oninput="recalcEditTime()" />
+        <div class="penalty-row" style="display: flex; align-items: center; gap: 8px;">
+          <div class="stepper-controls">
+            <button type="button" class="btn-step" onclick="changeEditCones(-1)">&minus;</button>
+            <input type="number" id="edit-cones-input" class="run-input" min="0" max="99" style="width: 75px; font-size: 18px;" oninput="recalcEditTime()" />
+            <button type="button" class="btn-step" onclick="changeEditCones(1)">&#43;</button>
+          </div>
           <button type="button" class="dnf-toggle" id="edit-dnf-toggle" onclick="toggleEditDnf()">
             ❌ Toggle DNF
           </button>
@@ -1043,10 +1057,114 @@
       broadcastAutoxState("READY");
     });
 
+    function getEventKey(name) {
+      return (name || "Sunday Autocross")
+        .trim()
+        .toLowerCase()
+        .replace(/[.$#[\]/]/g, "")
+        .replace(/\s+/g, "_")
+        .slice(0, 64) || "sunday_autocross";
+    }
+
+    let currentEventRef = null;
+    let currentEventKey = "";
+    let eventDebounceTimer = null;
+
+    function bindEventSync(eventName) {
+      const eventKey = getEventKey(eventName);
+      currentEventKey = eventKey;
+      currentEventName = eventName;
+      localStorage.setItem("autox_event_name", eventName);
+
+      const titleDisplay = document.getElementById("leaderboard-event-title");
+      if (titleDisplay) titleDisplay.textContent = eventName;
+
+      const eventStatusEl = document.getElementById("event-sync-status");
+      if (eventStatusEl) {
+        eventStatusEl.textContent = "SYNCING...";
+        eventStatusEl.style.color = "#38bdf8";
+      }
+
+      // Detach previous event listener if any
+      if (currentEventRef) {
+        currentEventRef.off();
+      }
+
+      // 1. Instant local load from cache for this event (supports full offline usage)
+      const localCached = localStorage.getItem(`autox_runs_${eventKey}`);
+      if (localCached) {
+        try {
+          runsDatabase = JSON.parse(localCached);
+        } catch (e) {
+          runsDatabase = [];
+        }
+      } else {
+        const legacy = JSON.parse(localStorage.getItem("autox_runs_db") || "[]");
+        if (eventKey === "sunday_autocross" && legacy.length > 0) {
+          runsDatabase = legacy;
+        } else {
+          runsDatabase = [];
+        }
+      }
+
+      calculateNextRuns();
+      renderLeaderboard();
+
+      // 2. Attach to Firebase under raceTelemetry/events/${eventKey}/runs
+      currentEventRef = db.child("events").child(eventKey).child("runs");
+
+      currentEventRef.on("value", (snap) => {
+        const data = snap.val();
+        if (eventStatusEl) {
+          eventStatusEl.textContent = "CLOUD SYNCED";
+          eventStatusEl.style.color = "#4ade80";
+        }
+
+        if (data) {
+          const runs = Object.values(data);
+          runs.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+          runsDatabase = runs;
+          localStorage.setItem(`autox_runs_${eventKey}`, JSON.stringify(runsDatabase));
+          localStorage.setItem("autox_runs_db", JSON.stringify(runsDatabase));
+          calculateNextRuns();
+          renderLeaderboard();
+        } else {
+          // If remote is empty, but local has runs for this event, push them up!
+          if (runsDatabase.length > 0) {
+            const bulk = {};
+            runsDatabase.forEach(r => {
+              r.eventName = currentEventName;
+              bulk[r.id] = r;
+            });
+            currentEventRef.update(bulk).catch(() => {});
+          }
+        }
+      }, (err) => {
+        console.warn("Event Firebase sync error:", err);
+        if (eventStatusEl) {
+          eventStatusEl.textContent = "OFFLINE MODE";
+          eventStatusEl.style.color = "#94a3b8";
+        }
+      });
+
+      // Save metadata
+      db.child("events").child(eventKey).child("title").set(currentEventName).catch(() => {});
+    }
+
     eventInput.addEventListener("input", (e) => {
-      currentEventName = e.target.value.trim() || "Sunday Autocross";
-      localStorage.setItem("autox_event_name", currentEventName);
-      document.getElementById("leaderboard-event-title").textContent = currentEventName;
+      const newName = e.target.value.trim() || "Sunday Autocross";
+      clearTimeout(eventDebounceTimer);
+      eventDebounceTimer = setTimeout(() => {
+        bindEventSync(newName);
+        broadcastAutoxState("READY");
+      }, 500);
+    });
+
+    eventInput.addEventListener("change", (e) => {
+      clearTimeout(eventDebounceTimer);
+      const newName = e.target.value.trim() || "Sunday Autocross";
+      bindEventSync(newName);
+      broadcastAutoxState("READY");
     });
 
     function updateHeroBadge() {
@@ -1136,23 +1254,38 @@
       pendingDnf = false;
       reviewNotes.value = "";
 
+      const conesInput = document.getElementById("review-cones-input");
+      if (conesInput) conesInput.value = 0;
+      const cleanBtn = document.getElementById("btn-cone-clean");
+      if (cleanBtn) cleanBtn.classList.add("active");
+      btnDnfToggle.classList.remove("active");
+
       reviewRawTime.textContent = formatTimeMs(timeMs);
       updateReviewFinalTime();
 
-      // Reset cone buttons
-      document.querySelectorAll(".btn-cone").forEach(b => b.classList.remove("active"));
-      document.getElementById("cone-btn-0").classList.add("active");
-      btnDnfToggle.classList.remove("active");
-
       reviewCard.style.display = "flex";
-      reviewNotes.focus();
+      if (conesInput) conesInput.focus();
     }
 
-    function setRunCones(count) {
-      pendingCones = count;
-      document.querySelectorAll(".btn-cone").forEach(b => b.classList.remove("active"));
-      const targetBtn = document.getElementById(`cone-btn-${count}`);
-      if (targetBtn) targetBtn.classList.add("active");
+    function setReviewCones(count) {
+      pendingCones = Math.max(0, parseInt(count || 0, 10));
+      const input = document.getElementById("review-cones-input");
+      if (input) input.value = pendingCones;
+      const cleanBtn = document.getElementById("btn-cone-clean");
+      if (cleanBtn) cleanBtn.classList.toggle("active", pendingCones === 0);
+      updateReviewFinalTime();
+    }
+
+    function changeReviewCones(delta) {
+      setReviewCones(pendingCones + delta);
+    }
+
+    function onReviewConesChanged() {
+      const input = document.getElementById("review-cones-input");
+      const val = parseInt(input.value || 0, 10);
+      pendingCones = Math.max(0, isNaN(val) ? 0 : val);
+      const cleanBtn = document.getElementById("btn-cone-clean");
+      if (cleanBtn) cleanBtn.classList.toggle("active", pendingCones === 0);
       updateReviewFinalTime();
     }
 
@@ -1163,13 +1296,23 @@
     }
 
     function updateReviewFinalTime() {
+      const penaltyLabel = document.getElementById("review-cone-penalty-text");
       if (pendingDnf) {
         reviewFinalTime.textContent = "DNF";
         reviewFinalTime.style.color = "#f87171";
+        if (penaltyLabel) {
+          penaltyLabel.textContent = "DNF";
+          penaltyLabel.style.color = "#f87171";
+        }
       } else {
-        const adjustedMs = pendingRawMs + (pendingCones * 2000);
+        const penaltySec = pendingCones * 2;
+        const adjustedMs = pendingRawMs + (penaltySec * 1000);
         reviewFinalTime.textContent = formatTimeMs(adjustedMs);
         reviewFinalTime.style.color = "#4ade80";
+        if (penaltyLabel) {
+          penaltyLabel.textContent = pendingCones > 0 ? `+${penaltySec}s (${pendingCones} cone${pendingCones > 1 ? 's' : ''})` : "+0s (Clean)";
+          penaltyLabel.style.color = pendingCones > 0 ? "var(--accent)" : "#94a3b8";
+        }
       }
     }
 
@@ -1181,6 +1324,7 @@
         id: `run-${Date.now()}`,
         runNum: runNum,
         driver: activeDriver,
+        eventName: currentEventName,
         rawTimeMs: pendingRawMs,
         rawFormatted: formatTimeMs(pendingRawMs),
         cones: pendingCones,
@@ -1192,12 +1336,19 @@
       };
 
       runsDatabase.unshift(runRecord);
+      const eventKey = getEventKey(currentEventName);
+      localStorage.setItem(`autox_runs_${eventKey}`, JSON.stringify(runsDatabase));
       localStorage.setItem("autox_runs_db", JSON.stringify(runsDatabase));
 
-      // Sync to Firebase RTDB & Cloudflare
+      // 1. Sync to Firebase under this specific event (so other devices pull it instantly!)
+      if (currentEventRef) {
+        currentEventRef.child(runRecord.id).set(runRecord).catch(e => console.warn("Firebase run push err:", e));
+      }
+
+      // 2. Sync to flat laps node for legacy / Cloudflare backup
       db.child("laps").push(runRecord).catch(() => {});
 
-      // Broadcast saved penalties and notes to stream overlay
+      // 3. Broadcast saved penalties and notes to stream overlay
       broadcastAutoxState("SAVED", {
         rawTimeMs: pendingRawMs,
         rawFormatted: formatTimeMs(pendingRawMs),
@@ -1208,7 +1359,7 @@
         notes: reviewNotes.value.trim()
       });
 
-      // Increment run number for this driver
+      // 4. Increment run number for this driver
       driverNextRuns[activeDriver] = runNum + 1;
       runInput.value = driverNextRuns[activeDriver];
       updateHeroBadge();
@@ -1341,6 +1492,14 @@
       recalcEditTime();
     }
 
+    function changeEditCones(delta) {
+      const input = document.getElementById("edit-cones-input");
+      let val = parseInt(input.value || 0, 10) + delta;
+      if (val < 0) val = 0;
+      input.value = val;
+      recalcEditTime();
+    }
+
     function recalcEditTime() {
       const cones = parseInt(document.getElementById("edit-cones-input").value || 0, 10);
       const display = document.getElementById("edit-final-display");
@@ -1365,7 +1524,15 @@
       run.finalFormatted = editingDnf ? "DNF" : formatTimeMs(run.finalTimeMs);
       run.notes = document.getElementById("edit-notes-input").value.trim();
 
+      const eventKey = getEventKey(currentEventName);
+      localStorage.setItem(`autox_runs_${eventKey}`, JSON.stringify(runsDatabase));
       localStorage.setItem("autox_runs_db", JSON.stringify(runsDatabase));
+
+      // Sync edited run to Firebase under this specific event
+      if (currentEventRef) {
+        currentEventRef.child(run.id).set(run).catch(e => console.warn("Firebase edit push err:", e));
+      }
+
       closeEditModal();
       renderLeaderboard();
       playChime(880, 0.1);
@@ -1407,9 +1574,14 @@
     }
 
     function clearAllRuns() {
-      if (confirm("Are you sure you want to clear all recorded runs for this event?")) {
+      if (confirm(`Are you sure you want to clear all recorded runs for "${currentEventName}"?`)) {
         runsDatabase = [];
+        const eventKey = getEventKey(currentEventName);
+        localStorage.removeItem(`autox_runs_${eventKey}`);
         localStorage.removeItem("autox_runs_db");
+        if (currentEventRef) {
+          currentEventRef.remove().catch(e => console.warn("Firebase remove err:", e));
+        }
         calculateNextRuns();
         renderLeaderboard();
         broadcastAutoxState("READY");
@@ -1521,6 +1693,7 @@
     }
 
     // Init
+    bindEventSync(currentEventName);
     selectDriver(activeDriver);
     renderLeaderboard();
   </script>
