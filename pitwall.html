@@ -815,12 +815,10 @@
           </span>
         </div>
         <div class="preview-actions">
-          <a href="overlay.html" target="_blank" class="preview-btn" title="Open overlay in dedicated window">
-            ↗ Pop Out HUD
-          </a>
-          <button type="button" class="preview-btn" id="btn-toggle-overlay-preview" onclick="toggleOverlayPreview()">
-            Hide Preview
-          </button>
+          <button type="button" class="preview-btn" onclick="switchPreviewSource('overlay.html')" id="btn-prev-hud" style="background: var(--accent); color:#fff;">Stage HUD</button>
+          <button type="button" class="preview-btn" onclick="switchPreviewSource('leaderboard.html')" id="btn-prev-board">Leaderboard</button>
+          <a href="overlay.html" target="_blank" class="preview-btn" id="link-popout-preview" title="Open overlay in dedicated window">↗ Pop Out</a>
+          <button type="button" class="preview-btn" id="btn-toggle-overlay-preview" onclick="toggleOverlayPreview()">Hide</button>
         </div>
       </div>
 
@@ -1701,10 +1699,30 @@
       const btn = document.getElementById("btn-toggle-overlay-preview");
       if (wrap.style.display === "none") {
         wrap.style.display = "flex";
-        btn.textContent = "Hide Preview";
+        btn.textContent = "Hide";
       } else {
         wrap.style.display = "none";
         btn.textContent = "Show Preview";
+      }
+    }
+
+    function switchPreviewSource(src) {
+      const iframe = document.getElementById("preview-iframe");
+      if (iframe) iframe.src = src;
+      const btnHud = document.getElementById("btn-prev-hud");
+      const btnBoard = document.getElementById("btn-prev-board");
+      const linkPop = document.getElementById("link-popout-preview");
+      if (btnHud) {
+        btnHud.style.background = (src === 'overlay.html') ? 'var(--accent)' : '#1e293b';
+        btnHud.style.color = (src === 'overlay.html') ? '#ffffff' : '#94a3b8';
+      }
+      if (btnBoard) {
+        btnBoard.style.background = (src === 'leaderboard.html') ? 'var(--accent)' : '#1e293b';
+        btnBoard.style.color = (src === 'leaderboard.html') ? '#ffffff' : '#94a3b8';
+      }
+      if (linkPop) {
+        linkPop.href = src;
+        linkPop.title = "Open " + (src === 'overlay.html' ? 'HUD' : 'Leaderboard') + " in dedicated window";
       }
     }
 
