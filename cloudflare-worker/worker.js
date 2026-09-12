@@ -39,18 +39,7 @@ export default {
         });
       }
 
-      // 3. TRACCAR INGESTION (Matches root /, /traccar, /gps, or any request with ?lat= or ?latitude=)
-      if (
-        path === "/" ||
-        path === "/traccar" ||
-        path === "/gps" ||
-        url.searchParams.has("lat") ||
-        url.searchParams.has("latitude")
-      ) {
-        return await handleTraccarIngestion(request, env);
-      }
-
-      // 4. REST APIS FOR PIT WALL (Laps, Stints, Pitstops)
+      // 3. REST APIS FOR PIT WALL (Laps, Stints, Pitstops, Exports, Analysis)
       if (path === "/api/lap" && request.method === "POST") {
         return await handleRecordLap(request, env);
       }
@@ -60,8 +49,6 @@ export default {
       if (path === "/api/pitstop" && request.method === "POST") {
         return await handleRecordPitstop(request, env);
       }
-
-      // 5. EXPORT APIS (CSV & GPX)
       if (path === "/api/export/csv") {
         return await handleExportCsv(url, env);
       }
@@ -72,7 +59,9 @@ export default {
         return await handleAnalysisSummary(url, env);
       }
 
-      return new Response("Not Found", { status: 404, headers: corsHeaders });
+      // 4. TRACCAR & GPS INGESTION (CATCH-ALL)
+      // Any other path (/, /traccar, /gps, /positions, etc.) is handled as telemetry ingestion.
+      return await handleTraccarIngestion(request, env);
     } catch (err) {
       console.error("Worker error:", err);
       return new Response(JSON.stringify({ error: err.message }), {
