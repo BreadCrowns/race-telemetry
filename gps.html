@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
-  <title>Cockpit GPS Transmitter</title>
+  <title>Cockpit GPS Transmitter & Offline Buffer</title>
   <style>
     * {
       box-sizing: border-box;
@@ -15,13 +15,13 @@
     body {
       background: #050811;
       color: #fff;
-      height: 100vh;
+      min-height: 100vh;
       display: flex;
       flex-direction: column;
       justify-content: space-between;
-      padding: 24px;
+      padding: 18px 16px;
       text-align: center;
-      overflow: hidden;
+      overflow-x: hidden;
     }
 
     /* Top Metadata Bar */
@@ -39,12 +39,28 @@
       color: #f97316;
       letter-spacing: 1px;
     }
+    .status-pills {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+    }
     .status-pill {
       background: #1e293b;
-      padding: 3px 8px;
+      padding: 4px 8px;
       border-radius: 4px;
       font-size: 11px;
       font-weight: 700;
+      color: #cbd5e1;
+    }
+    .sync-pill {
+      background: #14532d;
+      color: #4ade80;
+      border: 1px solid #22c55e;
+    }
+    .sync-pill.offline {
+      background: #713f12;
+      color: #fde047;
+      border-color: #eab308;
     }
 
     /* Big Speed Readout */
@@ -53,9 +69,10 @@
       flex-direction: column;
       align-items: center;
       justify-content: center;
+      margin: 16px 0;
     }
     .speed-display {
-      font-size: 120px;
+      font-size: 115px;
       font-weight: 900;
       line-height: 1;
       color: #f8fafc;
@@ -70,21 +87,21 @@
       margin-top: 4px;
     }
 
-    /* GPS Diagnostic Info */
+    /* GPS & Telemetry Diagnostic Box */
     .coords-box {
-      background: rgba(15, 23, 42, 0.75);
-      border: 1px solid rgba(255, 255, 255, 0.08);
+      background: rgba(15, 23, 42, 0.85);
+      border: 1px solid rgba(255, 255, 255, 0.1);
       border-radius: 8px;
-      padding: 10px 14px;
+      padding: 12px 14px;
       margin: 0 auto;
       width: 100%;
-      max-width: 360px;
+      max-width: 420px;
       font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, monospace;
       font-size: 12px;
       color: #cbd5e1;
       display: flex;
       flex-direction: column;
-      gap: 4px;
+      gap: 6px;
     }
     .coords-line {
       display: flex;
@@ -92,18 +109,20 @@
     }
     .coords-label { color: #64748b; }
     .coords-val { font-weight: 600; color: #38bdf8; }
+    .highlight-val { color: #4ade80; font-weight: 700; }
 
     /* Action Button & Status */
     .controls-section {
       display: flex;
       flex-direction: column;
       gap: 10px;
+      margin-top: 14px;
     }
     .btn {
       background: #16a34a;
       color: white;
       border: none;
-      padding: 22px;
+      padding: 18px;
       font-size: 18px;
       font-weight: 800;
       border-radius: 12px;
@@ -118,10 +137,33 @@
       background: #dc2626;
       box-shadow: 0 4px 20px rgba(220, 38, 38, 0.4);
     }
+
+    .aux-controls {
+      display: flex;
+      gap: 8px;
+      justify-content: center;
+      margin-top: 4px;
+    }
+    .aux-btn {
+      background: #1e293b;
+      color: #94a3b8;
+      border: 1px solid #334155;
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .aux-btn:hover {
+      color: #fff;
+      border-color: #f97316;
+    }
+
     .log-status {
       font-size: 12px;
       color: #64748b;
       font-family: ui-monospace, monospace;
+      margin-top: 4px;
     }
   </style>
 </head>
@@ -130,7 +172,10 @@
   <!-- Top Bar: Pit Wall Driver Name & Session Status -->
   <div class="top-meta">
     <span class="driver-tag" id="driver-indicator">DRIVER: --</span>
-    <span class="status-pill" id="session-indicator">ON TRACK</span>
+    <div class="status-pills">
+      <span class="status-pill" id="session-indicator">ON TRACK</span>
+      <span class="status-pill sync-pill" id="sync-indicator">ONLINE</span>
+    </div>
   </div>
 
   <!-- Center Speedometer -->
@@ -139,22 +184,34 @@
     <div class="unit-display">MPH</div>
   </div>
 
-  <!-- Live GPS Coordinate Diagnostics -->
+  <!-- Live GPS Coordinate & Offline Diagnostics -->
   <div class="coords-box">
     <div class="coords-line">
       <span class="coords-label">COORDINATES:</span>
       <span class="coords-val" id="coords-val">--.----°, --.----°</span>
     </div>
     <div class="coords-line">
-      <span class="coords-label">ACCURACY / PING:</span>
+      <span class="coords-label">ACCURACY / LOCK:</span>
       <span class="coords-val" id="accuracy-val">STANDBY</span>
+    </div>
+    <div class="coords-line">
+      <span class="coords-label">CAR ODOMETER:</span>
+      <span class="coords-val highlight-val" id="odo-val">0.00 MI</span>
+    </div>
+    <div class="coords-line">
+      <span class="coords-label">OFFLINE QUEUE:</span>
+      <span class="coords-val" id="queue-val">0 buffered pts</span>
     </div>
   </div>
 
   <!-- Action Controls -->
   <div class="controls-section">
     <button class="btn" id="start-btn" type="button">START TRANSMITTING</button>
-    <div class="log-status" id="log-status">Tap button & leave phone screen awake</div>
+    <div class="aux-controls">
+      <button class="aux-btn" id="btn-export-csv" type="button">💾 Export Phone CSV</button>
+      <button class="aux-btn" id="btn-reset-odo" type="button">🔄 Reset Odometer</button>
+    </div>
+    <div class="log-status" id="log-status">Tap button & leave phone screen awake in car</div>
   </div>
 
   <!-- Firebase SDKs -->
@@ -180,15 +237,180 @@
     const logStatus = document.getElementById("log-status");
     const driverIndicator = document.getElementById("driver-indicator");
     const sessionIndicator = document.getElementById("session-indicator");
+    const syncIndicator = document.getElementById("sync-indicator");
     const coordsVal = document.getElementById("coords-val");
     const accuracyVal = document.getElementById("accuracy-val");
+    const odoVal = document.getElementById("odo-val");
+    const queueVal = document.getElementById("queue-val");
+    const btnExportCsv = document.getElementById("btn-export-csv");
+    const btnResetOdo = document.getElementById("btn-reset-odo");
 
     let watchId = null;
     let wakeLock = null;
     let lastPush = 0;
+    let isConnected = true;
+    let isFlushingQueue = false;
 
     // Minimum speed threshold to kill 1 mph idle jitter
     const SPEED_CUTOFF_MPH = 2.5;
+
+    // --- CAR ODOMETER SYSTEM ---
+    let totalMiles = parseFloat(localStorage.getItem("race_car_total_miles") || "0");
+    odoVal.textContent = `${totalMiles.toFixed(2)} MI`;
+    let lastGpsPoint = null;
+
+    function haversineMiles(lat1, lon1, lat2, lon2) {
+      const R = 3958.8; // Earth radius in miles
+      const dLat = (lat2 - lat1) * Math.PI / 180;
+      const dLon = (lon2 - lon1) * Math.PI / 180;
+      const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                Math.sin(dLon / 2) * Math.sin(dLon / 2);
+      return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    }
+
+    // --- INDEXEDDB STORE-AND-FORWARD BUFFER ---
+    const DB_NAME = "RaceTelemetryPhoneDB";
+    const DB_VERSION = 1;
+    let idb = null;
+
+    function initIndexedDB() {
+      return new Promise((resolve, reject) => {
+        const req = indexedDB.open(DB_NAME, DB_VERSION);
+        req.onupgradeneeded = (e) => {
+          const db = e.target.result;
+          if (!db.objectStoreNames.contains("offline_queue")) {
+            db.createObjectStore("offline_queue", { keyPath: "id", autoIncrement: true });
+          }
+          if (!db.objectStoreNames.contains("all_telemetry")) {
+            const allStore = db.createObjectStore("all_telemetry", { keyPath: "id", autoIncrement: true });
+            allStore.createIndex("timestamp", "lastGpsTimestamp", { unique: false });
+          }
+        };
+        req.onsuccess = (e) => {
+          idb = e.target.result;
+          updateQueueBadge();
+          resolve(idb);
+        };
+        req.onerror = (e) => reject(e);
+      });
+    }
+
+    async function storeTelemetryPoint(point, isOffline) {
+      if (!idb) return;
+      return new Promise((resolve) => {
+        try {
+          const tx = idb.transaction(["all_telemetry", "offline_queue"], "readwrite");
+          tx.objectStore("all_telemetry").add(point);
+          if (isOffline) {
+            tx.objectStore("offline_queue").add(point);
+          }
+          tx.oncomplete = () => {
+            updateQueueBadge();
+            resolve();
+          };
+          tx.onerror = () => resolve();
+        } catch (err) {
+          console.warn("IndexedDB write error:", err);
+          resolve();
+        }
+      });
+    }
+
+    async function updateQueueBadge() {
+      if (!idb) return;
+      try {
+        const tx = idb.transaction("offline_queue", "readonly");
+        const countReq = tx.objectStore("offline_queue").count();
+        countReq.onsuccess = () => {
+          const count = countReq.result;
+          queueVal.textContent = `${count} buffered pts`;
+          if (count > 0 && !isConnected) {
+            syncIndicator.className = "status-pill sync-pill offline";
+            syncIndicator.textContent = `BUFFERING (${count})`;
+          } else if (isConnected && count === 0) {
+            syncIndicator.className = "status-pill sync-pill";
+            syncIndicator.textContent = "ONLINE";
+          }
+        };
+      } catch (err) {}
+    }
+
+    async function flushOfflineQueue() {
+      if (!idb || !isConnected || isFlushingQueue) return;
+      isFlushingQueue = true;
+
+      try {
+        const tx = idb.transaction("offline_queue", "readonly");
+        const req = tx.objectStore("offline_queue").getAll();
+        req.onsuccess = async () => {
+          const items = req.result;
+          if (!items || items.length === 0) {
+            isFlushingQueue = false;
+            updateQueueBadge();
+            return;
+          }
+
+          syncIndicator.className = "status-pill sync-pill";
+          syncIndicator.textContent = `FLUSHING ${items.length}...`;
+
+          // Batch push buffered points into raceTelemetry/buffer
+          const updates = {};
+          items.forEach(pt => {
+            const key = `pt_${pt.lastGpsTimestamp}`;
+            updates[`buffer/${key}`] = pt;
+          });
+          // Also update head with latest point in queue
+          const latest = items[items.length - 1];
+          updates["speed"] = latest.speed;
+          updates["latitude"] = latest.latitude;
+          updates["longitude"] = latest.longitude;
+          updates["accuracy"] = latest.accuracy;
+          updates["odometer"] = latest.odometer;
+          updates["lastGpsTimestamp"] = latest.lastGpsTimestamp;
+
+          try {
+            await db.update(updates);
+            // Clear flushed items from offline_queue store
+            const clearTx = idb.transaction("offline_queue", "readwrite");
+            clearTx.objectStore("offline_queue").clear();
+            clearTx.oncomplete = () => {
+              isFlushingQueue = false;
+              updateQueueBadge();
+              syncIndicator.textContent = "ONLINE";
+            };
+          } catch (netErr) {
+            console.warn("Queue flush failed, will retry:", netErr);
+            isFlushingQueue = false;
+          }
+        };
+      } catch (e) {
+        isFlushingQueue = false;
+      }
+    }
+
+    // Monitor Firebase Connection
+    firebase.database().ref(".info/connected").on("value", (snap) => {
+      isConnected = snap.val() === true;
+      if (isConnected) {
+        syncIndicator.className = "status-pill sync-pill";
+        syncIndicator.textContent = "ONLINE";
+        flushOfflineQueue();
+      } else {
+        syncIndicator.className = "status-pill sync-pill offline";
+        syncIndicator.textContent = "OFFLINE (CELL DEAD ZONE)";
+      }
+    });
+
+    window.addEventListener("online", () => {
+      isConnected = true;
+      flushOfflineQueue();
+    });
+    window.addEventListener("offline", () => {
+      isConnected = false;
+      syncIndicator.className = "status-pill sync-pill offline";
+      syncIndicator.textContent = "OFFLINE";
+    });
 
     // Listen to changes from Pit Wall
     db.on("value", (snap) => {
@@ -202,6 +424,45 @@
       }
     });
 
+    // Export Telemetry CSV from Phone IndexedDB
+    btnExportCsv.addEventListener("click", async () => {
+      if (!idb) {
+        alert("Database not ready yet.");
+        return;
+      }
+      const tx = idb.transaction("all_telemetry", "readonly");
+      const req = tx.objectStore("all_telemetry").getAll();
+      req.onsuccess = () => {
+        const points = req.result;
+        if (!points || points.length === 0) {
+          alert("No recorded telemetry points yet.");
+          return;
+        }
+        let csv = "Timestamp,ISO_Time,Latitude,Longitude,Speed_MPH,Accuracy_M,Odometer_MI\n";
+        points.forEach(p => {
+          const iso = new Date(p.lastGpsTimestamp).toISOString();
+          csv += `${p.lastGpsTimestamp},${iso},${p.latitude},${p.longitude},${p.speed.toFixed(1)},${p.accuracy},${(p.odometer || 0).toFixed(3)}\n`;
+        });
+        const blob = new Blob([csv], { type: "text/csv" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `phone_telemetry_${Date.now()}.csv`;
+        a.click();
+        URL.revokeObjectURL(url);
+      };
+    });
+
+    btnResetOdo.addEventListener("click", () => {
+      if (confirm("Reset vehicle trip odometer to 0.00 MI?")) {
+        totalMiles = 0;
+        localStorage.setItem("race_car_total_miles", "0");
+        odoVal.textContent = "0.00 MI";
+        db.update({ odometer: 0 });
+      }
+    });
+
+    // Start / Stop Transmitter
     startBtn.addEventListener("click", async () => {
       if (watchId !== null) {
         // Stop Transmitting
@@ -219,10 +480,12 @@
         accuracyVal.textContent = "STANDBY";
 
         // Push clean zeroed state
-        db.update({
-          speed: 0,
-          lastGpsTimestamp: 0
-        });
+        if (isConnected) {
+          db.update({
+            speed: 0,
+            lastGpsTimestamp: 0
+          });
+        }
       } else {
         // Start Transmitting
         if (!navigator.geolocation) {
@@ -230,7 +493,9 @@
           return;
         }
 
-        // Request Screen Wake Lock so transmission never sleeps
+        await initIndexedDB();
+
+        // Request Screen Wake Lock
         if ("wakeLock" in navigator) {
           try {
             wakeLock = await navigator.wakeLock.request("screen");
@@ -241,12 +506,12 @@
 
         startBtn.textContent = "STOP TRANSMITTING";
         startBtn.className = "btn active";
-        logStatus.textContent = "Acquiring satellite lock...";
+        logStatus.textContent = "Acquiring high-accuracy satellite lock...";
 
         watchId = navigator.geolocation.watchPosition(
-          (pos) => {
+          async (pos) => {
             const now = Date.now();
-            // Throttle network writes to ~1.5 updates per second
+            // Throttle writes to ~1.5 updates per second
             if (now - lastPush < 650) return;
             lastPush = now;
 
@@ -261,27 +526,48 @@
 
             // Convert m/s to MPH
             let speedMph = rawMps * 2.23694;
-
-            // Deadband: prevent 1 MPH drift when sitting still
             if (speedMph < SPEED_CUTOFF_MPH) {
               speedMph = 0;
             }
 
-            // Update on-screen phone UI
+            // Distance & Odometer Calculation
+            if (lastGpsPoint && acc <= 25 && speedMph > SPEED_CUTOFF_MPH) {
+              const delta = haversineMiles(lastGpsPoint.lat, lastGpsPoint.lon, lat, lon);
+              // Sanity check: cap single interval step at reasonable max (e.g. 150 MPH in 0.65s ~ 0.03 mi)
+              if (delta > 0.0005 && delta < 0.05) {
+                totalMiles += delta;
+                localStorage.setItem("race_car_total_miles", totalMiles.toString());
+                odoVal.textContent = `${totalMiles.toFixed(2)} MI`;
+              }
+            }
+            lastGpsPoint = { lat, lon, t: now };
+
+            // Update on-screen UI
             speedVal.textContent = Math.round(speedMph);
             coordsVal.textContent = `${lat.toFixed(4)}°, ${lon.toFixed(4)}°`;
             accuracyVal.textContent = `±${acc}m | ${new Date(now).toLocaleTimeString()}`;
-            logStatus.textContent = `BROADCASTING TO PIT WALL & PRISM`;
+            logStatus.textContent = isConnected ? "BROADCASTING LIVE TO PIT WALL" : "STORING IN COCKPIT PHONE BUFFER";
 
-            // Push all telemetry to Firebase
-            db.update({
+            const telemetryPacket = {
               speed: speedMph,
               latitude: lat,
               longitude: lon,
               accuracy: acc,
+              odometer: totalMiles,
               unit: "MPH",
               lastGpsTimestamp: now
-            });
+            };
+
+            // 1. Always record to local IndexedDB (complete local history)
+            await storeTelemetryPoint(telemetryPacket, !isConnected);
+
+            // 2. If online, stream live to Firebase
+            if (isConnected) {
+              db.update(telemetryPacket).catch(() => {
+                // If direct push fails, buffer it
+                storeTelemetryPoint(telemetryPacket, true);
+              });
+            }
           },
           (err) => {
             logStatus.textContent = `GPS Error (${err.code}): ${err.message}`;
@@ -289,12 +575,15 @@
           },
           {
             enableHighAccuracy: true,
-            maximumAge: 300,
-            timeout: 5000
+            maximumAge: 200,
+            timeout: 6000
           }
         );
       }
     });
+
+    // Initialize DB on page load
+    initIndexedDB();
   </script>
 </body>
 </html>

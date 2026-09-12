@@ -77,6 +77,9 @@
     }
     .status-badge.in-pits { background: #b45309; color: #fef3c7; }
     .status-badge.driver-swap { background: #6d28d9; color: #ede9fe; }
+    .status-badge.flag-yellow { background: #ca8a04; color: #fef08a; }
+    .status-badge.flag-red { background: #dc2626; color: #fee2e2; }
+    .status-badge.flag-cheq { background: #0f172a; color: #f8fafc; border: 1px solid #94a3b8; }
 
     .speed-container {
       display: flex;
@@ -208,10 +211,18 @@
       // 1. Driver and Status updates
       if (root.driver) driverEl.textContent = root.driver;
       const st = root.status || "ON TRACK";
-      statusEl.textContent = st;
+      const fl = root.flag || "GREEN";
       statusEl.className = "status-badge";
-      if (st === "IN PITS") statusEl.classList.add("in-pits");
-      if (st === "DRIVER SWAP") statusEl.classList.add("driver-swap");
+      if (fl !== "GREEN") {
+        statusEl.textContent = `${fl} FLAG`;
+        if (fl === "YELLOW") statusEl.classList.add("flag-yellow");
+        else if (fl === "RED") statusEl.classList.add("flag-red");
+        else if (fl === "CHECKERED") statusEl.classList.add("flag-cheq");
+      } else {
+        statusEl.textContent = st;
+        if (st === "IN PITS") statusEl.classList.add("in-pits");
+        if (st === "DRIVER SWAP") statusEl.classList.add("driver-swap");
+      }
 
       // 2. Resolve payload (direct properties vs nested push keys)
       let telem = root;

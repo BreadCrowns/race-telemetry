@@ -1,0 +1,13 @@
+name = "race-telemetry-worker"
+main = "worker.js"
+compatibility_date = "2024-09-01"
+
+# Bind Cloudflare D1 Database
+[[d1_databases]]
+binding = "DB"
+database_name = "race-telemetry-db"
+database_id = "287cba64-6f7f-4a93-820d-6cf8d35640e2"
+
+[vars]
+EVENT_ID = "sonoma-lemons-2026"
+FIREBASE_URL = "https://fiero-telemetry-default-rtdb.firebaseio.com/raceTelemetry.json"
