@@ -1235,15 +1235,16 @@
     });
 
     function updateHeroBadge() {
+      const isReviewing = reviewCard && reviewCard.style.display === "flex";
       if (activeDriver === "In Pits") {
         heroDriverBadge.textContent = "IN PITS - STANDBY";
-        if (!isRunning) {
+        if (!isRunning && !isReviewing) {
           heroStateLabel.textContent = "CAR IN PITS - STANDBY";
           heroStateLabel.style.color = "#f59e0b";
         }
       } else {
         heroDriverBadge.textContent = `${activeDriver.toUpperCase()} - RUN #${runInput.value}`;
-        if (!isRunning) {
+        if (!isRunning && !isReviewing) {
           heroStateLabel.textContent = "READY AT START LINE";
           heroStateLabel.style.color = "#94a3b8";
         }
@@ -1288,13 +1289,9 @@
       }
     });
 
-    function startTimer() {
-      if (activeDriver === "In Pits") {
-        alert("Please select an active driver (Jeff, Liam, Ryan, or Matt) before starting the run!");
-        return;
-      }
+    function startTimerLocal(startTime) {
       isRunning = true;
-      runStartTime = Date.now();
+      runStartTime = Number(startTime) || Date.now();
       reviewCard.style.display = "none";
 
       btnTimer.className = "btn-main-timer running";
@@ -1304,21 +1301,30 @@
 
       playChime(659.25, 0.2); // E5 start chime
 
-      // Broadcast running timer & start time to stream overlay
-      broadcastAutoxState("RUNNING", { startTime: runStartTime });
-
       clearInterval(timerInterval);
       timerInterval = setInterval(() => {
-        const elapsed = Date.now() - runStartTime;
+        const elapsed = Math.max(0, Date.now() - runStartTime);
         stopwatchClock.textContent = formatTimeMs(elapsed);
       }, 30);
     }
 
-    function stopTimer() {
+    function startTimer() {
+      if (activeDriver === "In Pits") {
+        alert("Please select an active driver (Jeff, Liam, Ryan, or Matt) before starting the run!");
+        return;
+      }
+      const now = Date.now();
+      startTimerLocal(now);
+
+      // Broadcast running timer & start time to Firebase for all other pitwall instances and stream overlay
+      broadcastAutoxState("RUNNING", { startTime: now });
+    }
+
+    function stopTimerLocal(timeMs, formattedStr) {
       isRunning = false;
       clearInterval(timerInterval);
-      lastElapsedMs = Date.now() - runStartTime;
-      stopwatchClock.textContent = formatTimeMs(lastElapsedMs);
+      lastElapsedMs = Number(timeMs) || (runStartTime > 0 ? (Date.now() - runStartTime) : 0);
+      stopwatchClock.textContent = formattedStr || formatTimeMs(lastElapsedMs);
 
       btnTimer.className = "btn-main-timer idle";
       btnTimerText.textContent = "START RUN";
@@ -1327,14 +1333,20 @@
 
       playChime(1046.5, 0.25); // C6 finish chime
 
-      // Broadcast stopped status and raw time to stream
-      broadcastAutoxState("STOPPED", {
-        rawTimeMs: lastElapsedMs,
-        rawFormatted: formatTimeMs(lastElapsedMs)
-      });
-
       // Open Post-Run Review Card
       openReview(lastElapsedMs);
+    }
+
+    function stopTimer() {
+      const elapsed = runStartTime > 0 ? (Date.now() - runStartTime) : 0;
+      const formatted = formatTimeMs(elapsed);
+      stopTimerLocal(elapsed, formatted);
+
+      // Broadcast stopped status and raw time to Firebase for all other pitwall instances and stream overlay
+      broadcastAutoxState("STOPPED", {
+        rawTimeMs: elapsed,
+        rawFormatted: formatted
+      });
     }
 
     function openReview(timeMs) {
@@ -1801,11 +1813,12 @@
       const autox = root.autox || {};
       const remoteDriver = autox.driver || root.driver;
       const remoteRunNum = autox.runNum || root.runNum;
+      const remoteState = autox.state;
 
-      if (remoteDriver && !isRunning) {
+      if (remoteDriver && (!isRunning || remoteState === "RUNNING")) {
         const isRemoteStandby = String(remoteDriver).toLowerCase().includes("in pits") || 
                                 String(remoteDriver).toLowerCase().includes("standby") || 
-                                (autox.state && String(autox.state).toUpperCase() === "IN PITS");
+                                (remoteState && String(remoteState).toUpperCase() === "IN PITS");
         const normalizedRemote = isRemoteStandby
           ? "In Pits"
           : (DRIVERS.find(d => d.toLowerCase() === String(remoteDriver).toLowerCase()) || remoteDriver);
@@ -1814,6 +1827,40 @@
           setDriverLocal(normalizedRemote, remoteRunNum);
         } else if (normalizedRemote !== "In Pits" && remoteRunNum && parseInt(runInput.value, 10) !== parseInt(remoteRunNum, 10)) {
           runInput.value = parseInt(remoteRunNum, 10);
+          updateHeroBadge();
+        }
+      }
+
+      // 2. Live Sync Stopwatch Timer State across all open Pitwall instances
+      if (remoteState === "RUNNING") {
+        const remoteStartTime = Number(autox.startTime) || Date.now();
+        // If not running or running a different start time, start local timer synchronized to cloud start time
+        if (!isRunning || Math.abs(runStartTime - remoteStartTime) > 300) {
+          startTimerLocal(remoteStartTime);
+        }
+      } else if (remoteState === "STOPPED") {
+        if (isRunning) {
+          const remoteRawMs = Number(autox.rawTimeMs) || (runStartTime > 0 ? (Date.now() - runStartTime) : 0);
+          stopTimerLocal(remoteRawMs, autox.rawFormatted);
+        }
+      } else if (remoteState === "SAVED") {
+        if (isRunning) {
+          clearInterval(timerInterval);
+          isRunning = false;
+          btnTimer.className = "btn-main-timer idle";
+          btnTimerText.textContent = "START RUN";
+        }
+        if (reviewCard.style.display !== "none") {
+          reviewCard.style.display = "none";
+        }
+      } else if (remoteState === "READY" || remoteState === "IN PITS") {
+        if (isRunning) {
+          clearInterval(timerInterval);
+          isRunning = false;
+          btnTimer.className = "btn-main-timer idle";
+          btnTimerText.textContent = "START RUN";
+          stopwatchClock.textContent = "00:00.00";
+          reviewCard.style.display = "none";
           updateHeroBadge();
         }
       }
