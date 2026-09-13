@@ -693,8 +693,13 @@
     // 3. Listen to Event Runs & Build Leaderboard
     let currentRunsRef = null;
 
-    function sanitizeKey(k) {
-      return String(k || "").replace(/[.#$\\[\\]]/g, "_").trim() || "default";
+    function getEventKey(name) {
+      return (name || "Sunday Autocross")
+        .trim()
+        .toLowerCase()
+        .replace(/[.$#[\]/]/g, "")
+        .replace(/\s+/g, "_")
+        .slice(0, 64) || "sunday_autocross";
     }
 
     function bindEventSync(eventName) {
@@ -703,71 +708,85 @@
 
       if (currentRunsRef) currentRunsRef.off();
 
-      const key = sanitizeKey(eventName);
-      currentRunsRef = db.child("events/" + key + "/runs");
+      const eventKey = getEventKey(eventName);
+      currentRunsRef = db.child("events").child(eventKey).child("runs");
 
       currentRunsRef.on("value", (snap) => {
         const raw = snap.val() || {};
-        renderLeaderboard(raw);
+        const runs = Object.values(raw);
+        renderLeaderboard(runs);
+      }, (err) => {
+        console.warn("Embed leaderboard Firebase error:", err);
       });
     }
 
-    function renderLeaderboard(runsObj) {
-      const runs = Object.values(runsObj);
-      boardRunsCountEl.textContent = runs.length + " Run" + (runs.length === 1 ? "" : "s");
+    function renderLeaderboard(runs) {
+      boardRunsCountEl.textContent = `${runs.length} RUN${runs.length === 1 ? '' : 'S'} LOGGED`;
 
-      // Calculate best clean run for each driver
-      const driverBests = {};
-      DRIVERS.forEach(d => {
-        driverBests[d] = { driver: d, bestTimeMs: Infinity, bestFormatted: "--:--.--", hasClean: false };
-      });
+      // Build stats for all known drivers
+      const allDrivers = [...new Set([...DRIVERS, ...runs.map(r => r.driver).filter(Boolean)])];
 
-      runs.forEach(r => {
-        const d = r.driver;
-        if (!d || !driverBests[d]) return;
-        if (r.isDnf) return;
-
-        const adjTime = (r.finalTimeMs !== undefined) ? r.finalTimeMs : (r.elapsedTimeMs + (r.penaltyMs || 0));
-        if (adjTime > 0 && adjTime < driverBests[d].bestTimeMs) {
-          driverBests[d].bestTimeMs = adjTime;
-          driverBests[d].bestFormatted = r.finalTimeFormatted || formatTime(adjTime);
-          driverBests[d].hasClean = true;
+      const driverStats = allDrivers.map(name => {
+        // Exclude DNFs from valid fastest times
+        const validRuns = runs.filter(r => r.driver === name && !r.isDnf);
+        if (validRuns.length === 0) {
+          return {
+            driver: name,
+            bestTimeMs: Infinity,
+            bestFormatted: "--:--.--",
+            totalRuns: runs.filter(r => r.driver === name).length
+          };
         }
+
+        validRuns.sort((a, b) => a.finalTimeMs - b.finalTimeMs);
+        const best = validRuns[0];
+        return {
+          driver: name,
+          bestTimeMs: best.finalTimeMs,
+          bestFormatted: best.finalFormatted || formatTime(best.finalTimeMs),
+          totalRuns: runs.filter(r => r.driver === name).length
+        };
       });
 
-      const standings = Object.values(driverBests).sort((a, b) => a.bestTimeMs - b.bestTimeMs);
-      const leader = standings[0];
-      const leaderTime = leader && leader.hasClean ? leader.bestTimeMs : null;
+      // Rank from fastest (lowest ms) to slowest
+      driverStats.sort((a, b) => a.bestTimeMs - b.bestTimeMs);
 
+      const leaderTime = (driverStats.length > 0 && driverStats[0].bestTimeMs !== Infinity)
+        ? driverStats[0].bestTimeMs
+        : null;
+
+      // Render rows
       boardDriverListEl.innerHTML = "";
+      driverStats.forEach((st, idx) => {
+        const isLeader = idx === 0 && st.bestTimeMs !== Infinity;
+        const hasTime = st.bestTimeMs !== Infinity;
 
-      standings.forEach((st, idx) => {
-        const isLeader = idx === 0 && st.hasClean;
-        let deltaDisplay = "NO TIME";
-
-        if (st.hasClean) {
-          if (isLeader) {
-            deltaDisplay = "LEADER";
-          } else if (leaderTime !== null) {
-            const diffSec = ((st.bestTimeMs - leaderTime) / 1000).toFixed(2);
-            deltaDisplay = "+" + diffSec + "s";
-          }
+        let deltaDisplay = "--";
+        if (isLeader) {
+          deltaDisplay = "LEADER";
+        } else if (hasTime && leaderTime !== null) {
+          const diffSec = ((st.bestTimeMs - leaderTime) / 1000).toFixed(2);
+          deltaDisplay = `+${diffSec}s`;
         }
 
         const row = document.createElement("div");
-        row.className = "driver-row " + (isLeader ? "p1" : "");
+        row.className = `driver-row ${isLeader ? 'p1' : ''}`;
         row.innerHTML = `
           <div class="row-left">
             <span class="rank-pill">#${idx + 1}</span>
             <span class="row-driver-name">${st.driver.toUpperCase()}</span>
           </div>
           <div class="row-right">
-            <span class="best-time ${st.hasClean ? '' : 'no-time'}">${st.bestFormatted}</span>
+            <span class="best-time ${hasTime ? '' : 'no-time'}">${st.bestFormatted}</span>
             <span class="delta-pill ${isLeader ? 'leader' : ''}">${deltaDisplay}</span>
           </div>
         `;
         boardDriverListEl.appendChild(row);
       });
+
+      if (typeof notifyParentHeight === "function") {
+        notifyParentHeight();
+      }
     }
 
     // Auto-listen to active event name from pit wall broadcast if not explicitly locked via URL param
