@@ -457,6 +457,16 @@
       transform: scale(0.98);
       background: #b91c1c;
     }
+    .btn-main-timer.awaiting {
+      background: #1e293b;
+      color: #64748b;
+      border: 1px solid #334155;
+      box-shadow: 0 4px 14px rgba(0,0,0,0.3);
+      cursor: not-allowed;
+    }
+    .btn-main-timer.awaiting:active {
+      transform: none;
+    }
     .btn-sub-hint {
       font-size: 11px;
       font-weight: 600;
@@ -594,6 +604,51 @@
       font-weight: 700;
       border-radius: 8px;
       cursor: pointer;
+    }
+
+    /* AWAITING REMOTE REVIEW CARD */
+    .awaiting-review-card {
+      background: #0f172a;
+      border: 1px solid rgba(56, 189, 248, 0.4);
+      border-radius: 10px;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      animation: fadeIn 0.2s ease-out;
+    }
+    .awaiting-review-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .awaiting-review-title {
+      font-size: 14px;
+      font-weight: 800;
+      color: #38bdf8;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .awaiting-review-desc {
+      font-size: 13px;
+      color: #94a3b8;
+      line-height: 1.4;
+    }
+    .btn-takeover-review {
+      align-self: flex-start;
+      background: transparent;
+      border: 1px solid #334155;
+      color: #64748b;
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .btn-takeover-review:hover {
+      border-color: var(--accent);
+      color: var(--accent);
     }
 
     /* LEADERBOARD & RUN HISTORY VIEW */
@@ -789,7 +844,21 @@
       <!-- THE MAIN ACTION BUTTON -->
       <button type="button" class="btn-main-timer idle" id="btn-timer" onclick="toggleTimer()">
         <span id="btn-timer-text">START RUN</span>
-        <span class="btn-sub-hint">PRESS SPACEBAR OR TAP</span>
+        <span class="btn-sub-hint" id="btn-timer-subhint">PRESS SPACEBAR OR TAP</span>
+      </button>
+    </div>
+
+    <!-- AWAITING REMOTE REVIEW NOTICE (SHOWN WHEN ANOTHER OPERATOR STOPPED THE RUN) -->
+    <div class="awaiting-review-card" id="awaiting-review-card" style="display: none;">
+      <div class="awaiting-review-header">
+        <span style="font-size: 18px;">⏱️</span>
+        <span class="awaiting-review-title">Finish Line Review in Progress</span>
+      </div>
+      <div class="awaiting-review-desc">
+        The finish line operator stopped this run and is currently entering cone penalties, notes, and saving or discarding.
+      </div>
+      <button type="button" class="btn-takeover-review" onclick="takeoverReview()" title="Click only if finish line device is unavailable">
+        ⚡ Take Over Review on This Device
       </button>
     </div>
 
@@ -980,9 +1049,11 @@
     const stopwatchClock = document.getElementById("stopwatch-clock");
     const btnTimer = document.getElementById("btn-timer");
     const btnTimerText = document.getElementById("btn-timer-text");
+    const btnTimerSubHint = document.getElementById("btn-timer-subhint");
     const heroDriverBadge = document.getElementById("hero-driver-badge");
     const heroStateLabel = document.getElementById("hero-state-label");
     const reviewCard = document.getElementById("review-card");
+    const awaitingReviewCard = document.getElementById("awaiting-review-card");
     const reviewRawTime = document.getElementById("review-raw-time");
     const reviewFinalTime = document.getElementById("review-final-time");
     const reviewNotes = document.getElementById("review-notes");
@@ -992,6 +1063,50 @@
     const watchdogDot = document.getElementById("watchdog-dot");
     const watchdogStatus = document.getElementById("watchdog-status");
     const liveSpeed = document.getElementById("live-speed");
+
+    // Client Session Identification & Review Ownership
+    let myClientId = sessionStorage.getItem("pitwall_client_id");
+    if (!myClientId) {
+      myClientId = "pitwall_" + Math.random().toString(36).substring(2, 9) + "_" + Date.now();
+      sessionStorage.setItem("pitwall_client_id", myClientId);
+    }
+    let isAwaitingRemoteReview = false;
+
+    function showAwaitingReviewBanner() {
+      if (awaitingReviewCard) awaitingReviewCard.style.display = "flex";
+      if (reviewCard) reviewCard.style.display = "none";
+    }
+
+    function hideAwaitingReviewBanner() {
+      if (awaitingReviewCard) awaitingReviewCard.style.display = "none";
+    }
+
+    function takeoverReview() {
+      let confirmed = false;
+      try {
+        confirmed = window.confirm("Take over review on this device?\n\nYou will be able to score cones and save or discard this run.");
+      } catch (e) {
+        confirmed = true;
+      }
+      if (confirmed) {
+        isAwaitingRemoteReview = false;
+        hideAwaitingReviewBanner();
+        btnTimer.className = "btn-main-timer idle";
+        btnTimerText.textContent = "START RUN";
+        if (btnTimerSubHint) btnTimerSubHint.textContent = "PRESS SPACEBAR OR TAP";
+        heroStateLabel.textContent = "🏁 RUN FINISHED";
+        heroStateLabel.style.color = "#4ade80";
+
+        // Claim review ownership by broadcasting our client ID as stoppedBy
+        broadcastAutoxState("STOPPED", {
+          rawTimeMs: lastElapsedMs,
+          rawFormatted: formatTimeMs(lastElapsedMs),
+          stoppedBy: myClientId
+        });
+
+        openReview(lastElapsedMs);
+      }
+    }
 
     // App State
     const DRIVERS = ["Jeff", "Liam", "Ryan", "Matt"];
@@ -1106,6 +1221,18 @@
     }
 
     function selectDriver(name) {
+      if (isRunning) {
+        alert("Cannot switch driver while a run is in progress!");
+        return;
+      }
+      if (isAwaitingRemoteReview) {
+        alert("Cannot switch driver while the completed run is being reviewed by the finish line operator.");
+        return;
+      }
+      if (reviewCard && reviewCard.style.display !== "none") {
+        alert("Please save or discard the completed run before switching drivers.");
+        return;
+      }
       setDriverLocal(name);
       // Sync active driver & ready state to Firebase for all pitwall instances & stream overlays
       broadcastAutoxState(activeDriver === "In Pits" ? "IN PITS" : "READY");
@@ -1113,6 +1240,7 @@
 
     function changeRunNum(delta) {
       if (activeDriver === "In Pits") return;
+      if (isRunning || isAwaitingRemoteReview || (reviewCard && reviewCard.style.display !== "none")) return;
       let val = parseInt(runInput.value || 1, 10) + delta;
       if (val < 1) val = 1;
       runInput.value = val;
@@ -1121,6 +1249,7 @@
     }
 
     runInput.addEventListener("input", () => {
+      if (isRunning || isAwaitingRemoteReview || (reviewCard && reviewCard.style.display !== "none")) return;
       updateHeroBadge();
       broadcastAutoxState("READY");
     });
@@ -1238,13 +1367,13 @@
       const isReviewing = reviewCard && reviewCard.style.display === "flex";
       if (activeDriver === "In Pits") {
         heroDriverBadge.textContent = "IN PITS - STANDBY";
-        if (!isRunning && !isReviewing) {
+        if (!isRunning && !isReviewing && !isAwaitingRemoteReview) {
           heroStateLabel.textContent = "CAR IN PITS - STANDBY";
           heroStateLabel.style.color = "#f59e0b";
         }
       } else {
         heroDriverBadge.textContent = `${activeDriver.toUpperCase()} - RUN #${runInput.value}`;
-        if (!isRunning && !isReviewing) {
+        if (!isRunning && !isReviewing && !isAwaitingRemoteReview) {
           heroStateLabel.textContent = "READY AT START LINE";
           heroStateLabel.style.color = "#94a3b8";
         }
@@ -1274,6 +1403,14 @@
     // --- MAIN STOPWATCH ENGINE ---
     function toggleTimer() {
       if (!isRunning) {
+        if (isAwaitingRemoteReview) {
+          alert("The previous run has completed and is currently being reviewed and scored by the finish line operator.");
+          return;
+        }
+        if (reviewCard && reviewCard.style.display !== "none") {
+          alert("Please save or discard the completed run before starting a new run.");
+          return;
+        }
         startTimer();
       } else {
         stopTimer();
@@ -1291,11 +1428,14 @@
 
     function startTimerLocal(startTime) {
       isRunning = true;
+      isAwaitingRemoteReview = false;
+      hideAwaitingReviewBanner();
       runStartTime = Number(startTime) || Date.now();
-      reviewCard.style.display = "none";
+      if (reviewCard) reviewCard.style.display = "none";
 
       btnTimer.className = "btn-main-timer running";
       btnTimerText.textContent = "STOP RUN - FINISH";
+      if (btnTimerSubHint) btnTimerSubHint.textContent = "PRESS SPACEBAR OR TAP TO FINISH";
       heroStateLabel.textContent = "⚡ RUN IN PROGRESS";
       heroStateLabel.style.color = "#38bdf8";
 
@@ -1313,39 +1453,68 @@
         alert("Please select an active driver (Jeff, Liam, Ryan, or Matt) before starting the run!");
         return;
       }
+      if (isAwaitingRemoteReview) {
+        alert("The previous run has completed and is currently being reviewed and scored by the finish line operator.");
+        return;
+      }
+      if (reviewCard && reviewCard.style.display !== "none") {
+        alert("Please save or discard the completed run before starting a new run.");
+        return;
+      }
       const now = Date.now();
       startTimerLocal(now);
 
       // Broadcast running timer & start time to Firebase for all other pitwall instances and stream overlay
-      broadcastAutoxState("RUNNING", { startTime: now });
+      broadcastAutoxState("RUNNING", { startTime: now, startedBy: myClientId });
     }
 
-    function stopTimerLocal(timeMs, formattedStr) {
+    function stopTimerLocal(timeMs, formattedStr, isCurrentDeviceStopper = false) {
       isRunning = false;
       clearInterval(timerInterval);
       lastElapsedMs = Number(timeMs) || (runStartTime > 0 ? (Date.now() - runStartTime) : 0);
       stopwatchClock.textContent = formattedStr || formatTimeMs(lastElapsedMs);
 
-      btnTimer.className = "btn-main-timer idle";
-      btnTimerText.textContent = "START RUN";
-      heroStateLabel.textContent = "🏁 RUN FINISHED";
-      heroStateLabel.style.color = "#4ade80";
-
       playChime(1046.5, 0.25); // C6 finish chime
 
-      // Open Post-Run Review Card
-      openReview(lastElapsedMs);
+      if (isCurrentDeviceStopper) {
+        // Stopper device: opens review card and can save or discard
+        isAwaitingRemoteReview = false;
+        hideAwaitingReviewBanner();
+
+        btnTimer.className = "btn-main-timer idle";
+        btnTimerText.textContent = "START RUN";
+        if (btnTimerSubHint) btnTimerSubHint.textContent = "PRESS SPACEBAR OR TAP";
+        heroStateLabel.textContent = "🏁 RUN FINISHED";
+        heroStateLabel.style.color = "#4ade80";
+
+        // Open Post-Run Review Card ONLY on the device that stopped the run
+        openReview(lastElapsedMs);
+      } else {
+        // Remote device: cannot review, save, or discard
+        if (reviewCard) reviewCard.style.display = "none";
+        isAwaitingRemoteReview = true;
+        showAwaitingReviewBanner();
+
+        btnTimer.className = "btn-main-timer awaiting";
+        btnTimerText.textContent = "AWAITING REVIEW...";
+        if (btnTimerSubHint) btnTimerSubHint.textContent = "FINISH LINE IS SCORING THIS RUN";
+        heroStateLabel.textContent = "🏁 RUN FINISHED - AWAITING REVIEW";
+        heroStateLabel.style.color = "#38bdf8";
+      }
     }
 
     function stopTimer() {
       const elapsed = runStartTime > 0 ? (Date.now() - runStartTime) : 0;
       const formatted = formatTimeMs(elapsed);
-      stopTimerLocal(elapsed, formatted);
 
-      // Broadcast stopped status and raw time to Firebase for all other pitwall instances and stream overlay
+      // Local stop with stopper flag = true
+      stopTimerLocal(elapsed, formatted, true);
+
+      // Broadcast stopped status and client ID of stopper to Firebase
       broadcastAutoxState("STOPPED", {
         rawTimeMs: elapsed,
-        rawFormatted: formatted
+        rawFormatted: formatted,
+        stoppedBy: myClientId
       });
     }
 
@@ -1461,27 +1630,41 @@
         isDnf: pendingDnf,
         finalTimeMs: adjustedMs,
         finalFormatted: pendingDnf ? "DNF" : formatTimeMs(adjustedMs),
-        notes: reviewNotes.value.trim()
+        notes: reviewNotes.value.trim(),
+        savedBy: myClientId
       });
 
       // 4. Increment run number for this driver
       driverNextRuns[activeDriver] = runNum + 1;
       runInput.value = driverNextRuns[activeDriver];
-      updateHeroBadge();
 
       // Close review and update leaderboard
+      isAwaitingRemoteReview = false;
+      hideAwaitingReviewBanner();
       reviewCard.style.display = "none";
+      updateHeroBadge();
       renderLeaderboard();
       playChime(880, 0.1);
     }
 
     function discardRun() {
-      if (confirm("Discard this run without saving?")) {
+      let confirmed = false;
+      try {
+        confirmed = window.confirm("Discard this run without saving?");
+      } catch (e) {
+        confirmed = true;
+      }
+      if (confirmed) {
+        isAwaitingRemoteReview = false;
+        hideAwaitingReviewBanner();
         reviewCard.style.display = "none";
         stopwatchClock.textContent = "00:00.00";
-        heroStateLabel.textContent = "READY AT START LINE";
-        heroStateLabel.style.color = "#94a3b8";
-        broadcastAutoxState("READY");
+        heroStateLabel.textContent = activeDriver === "In Pits" ? "CAR IN PITS - STANDBY" : "READY AT START LINE";
+        heroStateLabel.style.color = activeDriver === "In Pits" ? "#f59e0b" : "#94a3b8";
+        broadcastAutoxState("READY", {
+          driver: activeDriver,
+          runNum: (activeDriver === "In Pits") ? 0 : parseInt(runInput.value || 1, 10)
+        });
       }
     }
 
@@ -1833,36 +2016,66 @@
 
       // 2. Live Sync Stopwatch Timer State across all open Pitwall instances
       if (remoteState === "RUNNING") {
+        isAwaitingRemoteReview = false;
+        hideAwaitingReviewBanner();
         const remoteStartTime = Number(autox.startTime) || Date.now();
         // If not running or running a different start time, start local timer synchronized to cloud start time
         if (!isRunning || Math.abs(runStartTime - remoteStartTime) > 300) {
           startTimerLocal(remoteStartTime);
         }
       } else if (remoteState === "STOPPED") {
+        const remoteRawMs = Number(autox.rawTimeMs) || (runStartTime > 0 ? (Date.now() - runStartTime) : 0);
+        const isMe = Boolean(autox.stoppedBy && autox.stoppedBy === myClientId);
+
         if (isRunning) {
-          const remoteRawMs = Number(autox.rawTimeMs) || (runStartTime > 0 ? (Date.now() - runStartTime) : 0);
-          stopTimerLocal(remoteRawMs, autox.rawFormatted);
+          stopTimerLocal(remoteRawMs, autox.rawFormatted, isMe);
+        } else if (!isMe) {
+          // If we were not running and are not the stopper, show awaiting review
+          if (reviewCard) reviewCard.style.display = "none";
+          isAwaitingRemoteReview = true;
+          showAwaitingReviewBanner();
+          btnTimer.className = "btn-main-timer awaiting";
+          btnTimerText.textContent = "AWAITING REVIEW...";
+          if (btnTimerSubHint) btnTimerSubHint.textContent = "FINISH LINE IS SCORING THIS RUN";
+          if (autox.rawFormatted) stopwatchClock.textContent = autox.rawFormatted;
+          heroStateLabel.textContent = "🏁 RUN FINISHED - AWAITING REVIEW";
+          heroStateLabel.style.color = "#38bdf8";
+        } else if (isMe) {
+          // This client was the stopper
+          isAwaitingRemoteReview = false;
+          hideAwaitingReviewBanner();
+          btnTimer.className = "btn-main-timer idle";
+          btnTimerText.textContent = "START RUN";
+          if (btnTimerSubHint) btnTimerSubHint.textContent = "PRESS SPACEBAR OR TAP";
+          if (reviewCard && reviewCard.style.display === "none") {
+            openReview(remoteRawMs);
+          }
         }
       } else if (remoteState === "SAVED") {
         if (isRunning) {
           clearInterval(timerInterval);
           isRunning = false;
-          btnTimer.className = "btn-main-timer idle";
-          btnTimerText.textContent = "START RUN";
         }
-        if (reviewCard.style.display !== "none") {
-          reviewCard.style.display = "none";
-        }
+        isAwaitingRemoteReview = false;
+        hideAwaitingReviewBanner();
+        if (reviewCard) reviewCard.style.display = "none";
+        btnTimer.className = "btn-main-timer idle";
+        btnTimerText.textContent = "START RUN";
+        if (btnTimerSubHint) btnTimerSubHint.textContent = "PRESS SPACEBAR OR TAP";
+        updateHeroBadge();
       } else if (remoteState === "READY" || remoteState === "IN PITS") {
         if (isRunning) {
           clearInterval(timerInterval);
           isRunning = false;
-          btnTimer.className = "btn-main-timer idle";
-          btnTimerText.textContent = "START RUN";
-          stopwatchClock.textContent = "00:00.00";
-          reviewCard.style.display = "none";
-          updateHeroBadge();
         }
+        isAwaitingRemoteReview = false;
+        hideAwaitingReviewBanner();
+        if (reviewCard) reviewCard.style.display = "none";
+        btnTimer.className = "btn-main-timer idle";
+        btnTimerText.textContent = "START RUN";
+        if (btnTimerSubHint) btnTimerSubHint.textContent = "PRESS SPACEBAR OR TAP";
+        stopwatchClock.textContent = "00:00.00";
+        updateHeroBadge();
       }
 
       // Filter out non-telemetry keys (autox, laps, etc.)
