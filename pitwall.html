@@ -906,6 +906,7 @@
     <div class="history-controls-bar">
       <button type="button" class="btn-cone" onclick="exportRunsCsv()">💾 Download CSV</button>
       <button type="button" class="btn-cone" onclick="clearAllRuns()" style="color:#f87171;">🗑️ Clear Event Runs</button>
+      <button type="button" class="btn-cone" onclick="resetAllEvents()" style="color:#ef4444; border-color: rgba(239, 68, 68, 0.4);" title="Permanently erase all sessions and runs across all events">💥 Reset All Events</button>
     </div>
   </div>
 
@@ -1192,15 +1193,16 @@
           calculateNextRuns();
           renderLeaderboard();
         } else {
-          // If remote is empty, but local has runs for this event, push them up!
-          if (runsDatabase.length > 0) {
-            const bulk = {};
-            runsDatabase.forEach(r => {
-              r.eventName = currentEventName;
-              bulk[r.id] = r;
-            });
-            currentEventRef.update(bulk).catch(() => {});
+          // Remote runs for this event have been cleared or are empty
+          runsDatabase = [];
+          localStorage.removeItem(`autox_runs_${eventKey}`);
+          localStorage.removeItem("autox_runs_db");
+          DRIVERS.forEach(d => { driverNextRuns[d] = 1; });
+          if (activeDriver !== "In Pits") {
+            runInput.value = 1;
           }
+          calculateNextRuns();
+          renderLeaderboard();
         }
       }, (err) => {
         console.warn("Event Firebase sync error:", err);
@@ -1216,18 +1218,20 @@
     }
 
     eventInput.addEventListener("input", (e) => {
-      const newName = e.target.value.trim() || "Sunday Autocross";
+      const val = e.target.value.trim();
       clearTimeout(eventDebounceTimer);
+      if (!val) return; // Don't interrupt user with auto-revert while typing or clearing
       eventDebounceTimer = setTimeout(() => {
-        bindEventSync(newName);
+        bindEventSync(val);
         broadcastAutoxState("READY");
-      }, 500);
+      }, 600);
     });
 
     eventInput.addEventListener("change", (e) => {
       clearTimeout(eventDebounceTimer);
-      const newName = e.target.value.trim() || "Sunday Autocross";
-      bindEventSync(newName);
+      const val = e.target.value.trim() || "Sunday Autocross";
+      e.target.value = val;
+      bindEventSync(val);
       broadcastAutoxState("READY");
     });
 
@@ -1685,9 +1689,54 @@
         const eventKey = getEventKey(currentEventName);
         localStorage.removeItem(`autox_runs_${eventKey}`);
         localStorage.removeItem("autox_runs_db");
+        for (let i = localStorage.length - 1; i >= 0; i--) {
+          const k = localStorage.key(i);
+          if (k && (k.startsWith("autox_runs") || k === "autox_runs_db")) {
+            localStorage.removeItem(k);
+          }
+        }
+
+        // 1. Remove runs from Firebase under this specific event
         if (currentEventRef) {
           currentEventRef.remove().catch(e => console.warn("Firebase remove err:", e));
         }
+        db.child("events").child(eventKey).child("runs").remove().catch(() => {});
+
+        // 2. Also clear legacy laps node so old runs don't linger
+        db.child("laps").remove().catch(() => {});
+
+        // 3. Reset driver next run numbers back to 1
+        DRIVERS.forEach(d => { driverNextRuns[d] = 1; });
+        if (activeDriver !== "In Pits") {
+          runInput.value = 1;
+        }
+
+        calculateNextRuns();
+        renderLeaderboard();
+        broadcastAutoxState("READY");
+      }
+    }
+
+    function resetAllEvents() {
+      if (confirm("Are you sure you want to completely RESET all events and runs in the cloud? This will erase all event data across all sessions.")) {
+        runsDatabase = [];
+        for (let i = localStorage.length - 1; i >= 0; i--) {
+          const k = localStorage.key(i);
+          if (k && (k.startsWith("autox_runs") || k === "autox_runs_db")) {
+            localStorage.removeItem(k);
+          }
+        }
+
+        // Wipe all events & laps from Firebase
+        db.child("events").remove().catch(e => console.warn("Firebase remove events err:", e));
+        db.child("laps").remove().catch(() => {});
+
+        DRIVERS.forEach(d => { driverNextRuns[d] = 1; });
+        if (activeDriver !== "In Pits") {
+          runInput.value = 1;
+        }
+
+        bindEventSync(currentEventName);
         calculateNextRuns();
         renderLeaderboard();
         broadcastAutoxState("READY");
