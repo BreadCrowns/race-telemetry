@@ -3,6 +3,9 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta http-equiv="Expires" content="0" />
   <title>Autocross Pit Wall Stopwatch & Leaderboard</title>
   <style>
     * {
@@ -905,8 +908,8 @@
 
     <div class="history-controls-bar">
       <button type="button" class="btn-cone" onclick="exportRunsCsv()">💾 Download CSV</button>
-      <button type="button" class="btn-cone" onclick="clearAllRuns()" style="color:#f87171;">🗑️ Clear Event Runs</button>
-      <button type="button" class="btn-cone" onclick="resetAllEvents()" style="color:#ef4444; border-color: rgba(239, 68, 68, 0.4);" title="Permanently erase all sessions and runs across all events">💥 Reset All Events</button>
+      <button type="button" id="btn-clear-runs" class="btn-cone" onclick="clearAllRuns()" style="color:#f87171;">🗑️ Clear Event Runs</button>
+      <button type="button" id="btn-reset-events" class="btn-cone" onclick="resetAllEvents()" style="color:#ef4444; border-color: rgba(239, 68, 68, 0.4);" title="Permanently erase all sessions and runs across all events">💥 Reset All Events</button>
     </div>
   </div>
 
@@ -993,7 +996,8 @@
     // App State
     const DRIVERS = ["Jeff", "Liam", "Ryan", "Matt"];
     let activeDriver = "In Pits";
-    let runsDatabase = JSON.parse(localStorage.getItem("autox_runs_db") || "[]");
+    localStorage.removeItem("autox_runs_db");
+    let runsDatabase = [];
     let currentEventName = localStorage.getItem("autox_event_name") || "Sunday Autocross";
     eventInput.value = currentEventName;
 
@@ -1154,7 +1158,7 @@
         currentEventRef.off();
       }
 
-      // 1. Instant local load from cache for this event (supports full offline usage)
+      // 1. Instant local load from cache for this event (supports offline usage)
       const localCached = localStorage.getItem(`autox_runs_${eventKey}`);
       if (localCached) {
         try {
@@ -1163,12 +1167,7 @@
           runsDatabase = [];
         }
       } else {
-        const legacy = JSON.parse(localStorage.getItem("autox_runs_db") || "[]");
-        if (eventKey === "sunday_autocross" && legacy.length > 0) {
-          runsDatabase = legacy;
-        } else {
-          runsDatabase = [];
-        }
+        runsDatabase = [];
       }
 
       calculateNextRuns();
@@ -1684,62 +1683,108 @@
     }
 
     function clearAllRuns() {
-      if (confirm(`Are you sure you want to clear all recorded runs for "${currentEventName}"?`)) {
-        runsDatabase = [];
-        const eventKey = getEventKey(currentEventName);
-        localStorage.removeItem(`autox_runs_${eventKey}`);
-        localStorage.removeItem("autox_runs_db");
-        for (let i = localStorage.length - 1; i >= 0; i--) {
-          const k = localStorage.key(i);
-          if (k && (k.startsWith("autox_runs") || k === "autox_runs_db")) {
-            localStorage.removeItem(k);
-          }
+      let shouldClear = true;
+      try {
+        if (typeof window.confirm === "function") {
+          shouldClear = window.confirm(`Are you sure you want to clear all recorded runs for "${currentEventName}"?`);
         }
+      } catch (e) {
+        shouldClear = true;
+      }
+      if (!shouldClear) return;
 
-        // 1. Remove runs from Firebase under this specific event
-        if (currentEventRef) {
-          currentEventRef.remove().catch(e => console.warn("Firebase remove err:", e));
+      runsDatabase = [];
+      const eventKey = getEventKey(currentEventName);
+      localStorage.removeItem(`autox_runs_${eventKey}`);
+      localStorage.removeItem("autox_runs_db");
+      for (let i = localStorage.length - 1; i >= 0; i--) {
+        const k = localStorage.key(i);
+        if (k && (k.startsWith("autox_runs") || k === "autox_runs_db")) {
+          localStorage.removeItem(k);
         }
-        db.child("events").child(eventKey).child("runs").remove().catch(() => {});
+      }
 
-        // 2. Also clear legacy laps node so old runs don't linger
-        db.child("laps").remove().catch(() => {});
+      // 1. Remove runs from Firebase under this specific event
+      if (currentEventRef) {
+        currentEventRef.remove().catch(e => console.warn("Firebase remove err:", e));
+      }
+      db.child("events").child(eventKey).child("runs").remove().catch(() => {});
 
-        // 3. Reset driver next run numbers back to 1
-        DRIVERS.forEach(d => { driverNextRuns[d] = 1; });
-        if (activeDriver !== "In Pits") {
-          runInput.value = 1;
-        }
+      // 2. Also clear legacy laps node so old runs don't linger
+      db.child("laps").remove().catch(() => {});
 
-        calculateNextRuns();
-        renderLeaderboard();
-        broadcastAutoxState("READY");
+      // 3. Reset driver next run numbers back to 1
+      DRIVERS.forEach(d => { driverNextRuns[d] = 1; });
+      if (activeDriver !== "In Pits") {
+        runInput.value = 1;
+      }
+
+      calculateNextRuns();
+      renderLeaderboard();
+      broadcastAutoxState("READY");
+
+      const btn = document.getElementById("btn-clear-runs");
+      if (btn) {
+        const orig = btn.textContent;
+        btn.textContent = "✅ Runs Cleared!";
+        btn.style.color = "#4ade80";
+        setTimeout(() => {
+          btn.textContent = orig;
+          btn.style.color = "#f87171";
+        }, 2500);
       }
     }
 
     function resetAllEvents() {
-      if (confirm("Are you sure you want to completely RESET all events and runs in the cloud? This will erase all event data across all sessions.")) {
-        runsDatabase = [];
-        for (let i = localStorage.length - 1; i >= 0; i--) {
-          const k = localStorage.key(i);
-          if (k && (k.startsWith("autox_runs") || k === "autox_runs_db")) {
-            localStorage.removeItem(k);
-          }
+      let shouldReset = true;
+      try {
+        if (typeof window.confirm === "function") {
+          shouldReset = window.confirm("Are you sure you want to completely RESET all events and runs in the cloud? This will erase all event data across all sessions.");
         }
+      } catch (e) {
+        shouldReset = true;
+      }
+      if (!shouldReset) return;
 
-        // Wipe all events & laps from Firebase
-        db.child("events").remove().catch(e => console.warn("Firebase remove events err:", e));
-        db.child("laps").remove().catch(() => {});
-
-        DRIVERS.forEach(d => { driverNextRuns[d] = 1; });
-        if (activeDriver !== "In Pits") {
-          runInput.value = 1;
+      runsDatabase = [];
+      for (let i = localStorage.length - 1; i >= 0; i--) {
+        const k = localStorage.key(i);
+        if (k && (k.startsWith("autox_runs") || k === "autox_runs_db" || k === "autox_event_name")) {
+          localStorage.removeItem(k);
         }
+      }
 
-        bindEventSync(currentEventName);
-        calculateNextRuns();
-        renderLeaderboard();
-        broadcastAutoxState("READY");
+      // Wipe all events & laps from Firebase
+      db.child("events").remove().catch(e => console.warn("Firebase remove events err:", e));
+      db.child("laps").remove().catch(() => {});
+      db.child("autox").update({
+        driver: "In Pits",
+        state: "IN PITS",
+        timerStatus: "in pits",
+        runNum: 0,
+        runNumber: 0,
+        eventName: "Sunday Autocross",
+        updatedAt: Date.now()
+      }).catch(() => {});
+
+      DRIVERS.forEach(d => { driverNextRuns[d] = 1; });
+      currentEventName = "Sunday Autocross";
+      eventInput.value = "Sunday Autocross";
+      setDriverLocal("In Pits");
+      bindEventSync(currentEventName);
+      calculateNextRuns();
+      renderLeaderboard();
+      broadcastAutoxState("IN PITS");
+
+      const btn = document.getElementById("btn-reset-events");
+      if (btn) {
+        const orig = btn.textContent;
+        btn.textContent = "✅ All Events Reset!";
+        btn.style.color = "#4ade80";
+        setTimeout(() => {
+          btn.textContent = orig;
+          btn.style.color = "#ef4444";
+        }, 2500);
       }
     }
 
