@@ -318,6 +318,20 @@
       color: #fff;
       box-shadow: 0 0 12px rgba(249, 115, 22, 0.25);
     }
+    .driver-btn.driver-btn-standby {
+      border-color: #475569;
+      color: #94a3b8;
+    }
+    .driver-btn.driver-btn-standby:hover {
+      border-color: #f59e0b;
+      color: #f59e0b;
+    }
+    .driver-btn.driver-btn-standby.active {
+      border-color: #f59e0b;
+      background: rgba(245, 158, 11, 0.15);
+      color: #f59e0b;
+      box-shadow: 0 0 12px rgba(245, 158, 11, 0.3);
+    }
 
     .run-number-stepper {
       display: flex;
@@ -745,6 +759,7 @@
           <button type="button" class="driver-btn" onclick="selectDriver('Liam')">Liam</button>
           <button type="button" class="driver-btn" onclick="selectDriver('Ryan')">Ryan</button>
           <button type="button" class="driver-btn" onclick="selectDriver('Matt')">Matt</button>
+          <button type="button" class="driver-btn driver-btn-standby" onclick="selectDriver('In Pits')" title="Car in pit lane / no driver active">In Pits</button>
         </div>
       </div>
 
@@ -1022,9 +1037,9 @@
 
     // --- FIREBASE BROADCAST FOR STREAM OVERLAY ---
     function broadcastAutoxState(state, extra = {}) {
-      const currentRun = parseInt(runInput.value || 1, 10);
+      const currentRun = (activeDriver === "In Pits") ? 0 : parseInt(runInput.value || 1, 10);
       const autoxData = {
-        state: state, // "READY", "RUNNING", "STOPPED", "SAVED"
+        state: state, // "READY", "RUNNING", "STOPPED", "SAVED", "IN PITS"
         driver: activeDriver,
         runNum: currentRun,
         updatedAt: Date.now(),
@@ -1034,7 +1049,7 @@
       const payload = {
         driver: activeDriver,
         runNum: currentRun,
-        status: state === "RUNNING" ? "ON TRACK" : (state === "STOPPED" ? "FINISHED" : (state === "SAVED" ? "SAVED" : "READY")),
+        status: state === "RUNNING" ? "ON TRACK" : (state === "STOPPED" ? "FINISHED" : (state === "SAVED" ? "SAVED" : (activeDriver === "In Pits" ? "IN PITS" : "READY"))),
         autox: autoxData
       };
 
@@ -1042,10 +1057,15 @@
     }
 
     function cueReadyForOverlay() {
-      broadcastAutoxState("READY");
+      broadcastAutoxState(activeDriver === "In Pits" ? "IN PITS" : "READY");
       stopwatchClock.textContent = "00:00.00";
-      heroStateLabel.textContent = "READY AT START LINE";
-      heroStateLabel.style.color = "#94a3b8";
+      if (activeDriver === "In Pits") {
+        heroStateLabel.textContent = "CAR IN PITS - STANDBY";
+        heroStateLabel.style.color = "#f59e0b";
+      } else {
+        heroStateLabel.textContent = "READY AT START LINE";
+        heroStateLabel.style.color = "#94a3b8";
+      }
     }
 
     // --- SETUP: DRIVER & RUN CONTROLS ---
@@ -1057,15 +1077,21 @@
         btn.classList.toggle("active", btn.textContent.trim() === name);
       });
 
-      // Update Run Number automatically for this driver
-      runInput.value = driverNextRuns[name] || 1;
+      if (name === "In Pits") {
+        runInput.value = "-";
+        runInput.disabled = true;
+      } else {
+        runInput.disabled = false;
+        runInput.value = driverNextRuns[name] || 1;
+      }
       updateHeroBadge();
 
       // Sync active driver & ready state to Firebase for stream overlay
-      broadcastAutoxState("READY");
+      broadcastAutoxState(name === "In Pits" ? "IN PITS" : "READY");
     }
 
     function changeRunNum(delta) {
+      if (activeDriver === "In Pits") return;
       let val = parseInt(runInput.value || 1, 10) + delta;
       if (val < 1) val = 1;
       runInput.value = val;
@@ -1189,7 +1215,19 @@
     });
 
     function updateHeroBadge() {
-      heroDriverBadge.textContent = `${activeDriver.toUpperCase()} - RUN #${runInput.value}`;
+      if (activeDriver === "In Pits") {
+        heroDriverBadge.textContent = "IN PITS - STANDBY";
+        if (!isRunning) {
+          heroStateLabel.textContent = "CAR IN PITS - STANDBY";
+          heroStateLabel.style.color = "#f59e0b";
+        }
+      } else {
+        heroDriverBadge.textContent = `${activeDriver.toUpperCase()} - RUN #${runInput.value}`;
+        if (!isRunning) {
+          heroStateLabel.textContent = "READY AT START LINE";
+          heroStateLabel.style.color = "#94a3b8";
+        }
+      }
     }
 
     function calculateNextRuns() {
@@ -1202,7 +1240,13 @@
           driverNextRuns[d] = 1;
         }
       });
-      runInput.value = driverNextRuns[activeDriver] || 1;
+      if (activeDriver === "In Pits") {
+        runInput.value = "-";
+        runInput.disabled = true;
+      } else {
+        runInput.disabled = false;
+        runInput.value = driverNextRuns[activeDriver] || 1;
+      }
       updateHeroBadge();
     }
 
@@ -1338,6 +1382,10 @@
     }
 
     function saveCompletedRun() {
+      if (activeDriver === "In Pits") {
+        alert("Please select an active driver (Jeff, Liam, Ryan, or Matt) before logging this run.");
+        return;
+      }
       const adjustedMs = pendingDnf ? 99999999 : pendingRawMs + (pendingCones * 2000);
       const runNum = parseInt(runInput.value || 1, 10);
 

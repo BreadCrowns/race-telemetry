@@ -211,6 +211,7 @@
     .status-badge.running { background: rgba(34, 197, 94, 0.2); color: #4ade80; border: 1px solid #22c55e; animation: pulse 1.2s infinite; }
     .status-badge.finished { background: rgba(234, 179, 8, 0.2); color: #facc15; border: 1px solid #eab308; }
     .status-badge.cone { background: rgba(249, 115, 22, 0.2); color: #fb923c; border: 1px solid #f97316; }
+    .status-badge.inpits { background: rgba(245, 158, 11, 0.2); color: #f59e0b; border: 1px solid #f59e0b; }
 
     @keyframes pulse {
       0%, 100% { opacity: 1; }
@@ -485,12 +486,26 @@
       const data = snap.val();
       if (!data) return;
 
-      if (data.driver) hudDriverEl.textContent = String(data.driver).toUpperCase();
-      if (data.runNumber) hudRunEl.textContent = "RUN #" + data.runNumber;
+      const driver = data.driver || "";
+      const isInPits = driver.toLowerCase().includes("in pits") || driver.toLowerCase().includes("standby");
+
+      if (isInPits) {
+        hudDriverEl.textContent = "IN PITS";
+        hudRunEl.textContent = "STANDBY";
+      } else {
+        if (data.driver) hudDriverEl.textContent = String(data.driver).toUpperCase();
+        if (data.runNumber) hudRunEl.textContent = "RUN #" + data.runNumber;
+      }
 
       const status = data.timerStatus || "ready";
 
-      if (status === "running") {
+      if (isInPits && status !== "running" && status !== "stopped" && status !== "saved") {
+        stopLiveStopwatch(0);
+        hudTimerEl.textContent = "--:--.--";
+        hudTimerEl.className = "timer-readout ready";
+        hudStatusBadgeEl.textContent = "IN PITS";
+        hudStatusBadgeEl.className = "status-badge inpits";
+      } else if (status === "running") {
         hudStatusBadgeEl.textContent = "ON COURSE";
         hudStatusBadgeEl.className = "status-badge running";
         if (data.startTime) {

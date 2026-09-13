@@ -134,6 +134,11 @@
       color: #c084fc;
       border: 1px solid #a855f7;
     }
+    .status-badge.inpits {
+      background: rgba(245, 158, 11, 0.25);
+      color: #f59e0b;
+      border: 1px solid #f59e0b;
+    }
 
     @keyframes pulse-green {
       0%, 100% { opacity: 1; }
@@ -460,18 +465,32 @@
 
       const autox = root.autox || {};
 
-      // 1. Driver Name
+      // 1. Driver Name & Run Number
       const driver = autox.driver || root.driver || "Jeff";
-      driverEl.textContent = driver.toUpperCase();
+      const isInPits = driver.toLowerCase().includes("in pits") || driver.toLowerCase().includes("standby");
 
-      // 2. Run Number
-      const runNum = autox.runNum || root.runNum || 1;
-      runEl.textContent = `RUN #${runNum}`;
+      if (isInPits) {
+        driverEl.textContent = "IN PITS";
+        runEl.textContent = "STANDBY";
+      } else {
+        driverEl.textContent = driver.toUpperCase();
+        const runNum = autox.runNum || root.runNum || 1;
+        runEl.textContent = `RUN #${runNum}`;
+      }
 
-      // 3. Autocross Timing State: "READY" | "RUNNING" | "STOPPED" | "SAVED"
-      autoxState = autox.state || (root.status === "ON TRACK" ? "RUNNING" : (root.status === "FINISHED" ? "STOPPED" : "READY"));
+      // 3. Autocross Timing State: "READY" | "RUNNING" | "STOPPED" | "SAVED" | "IN PITS"
+      autoxState = autox.state || (root.status === "ON TRACK" ? "RUNNING" : (root.status === "FINISHED" ? "STOPPED" : (isInPits ? "IN PITS" : "READY")));
 
-      if (autoxState === "READY") {
+      if (isInPits && autoxState !== "RUNNING" && autoxState !== "STOPPED" && autoxState !== "SAVED") {
+        runStartTime = 0;
+        timerEl.textContent = "STANDBY";
+        timerEl.className = "timer-readout ready";
+        statusEl.textContent = "IN PITS";
+        statusEl.className = "status-badge inpits";
+        penaltyEl.style.display = "none";
+        notesBanner.style.display = "none";
+
+      } else if (autoxState === "READY") {
         runStartTime = 0;
         timerEl.textContent = "READY";
         timerEl.className = "timer-readout ready";
