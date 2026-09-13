@@ -1070,25 +1070,40 @@
     }
 
     // --- SETUP: DRIVER & RUN CONTROLS ---
-    function selectDriver(name) {
-      activeDriver = name;
-      localStorage.setItem("autox_driver", name);
+    function setDriverLocal(name, runNum = null) {
+      if (!name) return;
+      const isStandby = name.toLowerCase().includes("in pits") || name.toLowerCase().includes("standby");
+      const normalizedName = isStandby ? "In Pits" : name;
+
+      activeDriver = normalizedName;
+      localStorage.setItem("autox_driver", normalizedName);
 
       document.querySelectorAll(".driver-btn").forEach(btn => {
-        btn.classList.toggle("active", btn.textContent.trim() === name);
+        const btnText = btn.textContent.trim();
+        const matches = isStandby
+          ? (btnText.toLowerCase().includes("in pits") || btnText.toLowerCase().includes("standby"))
+          : (btnText.toLowerCase() === normalizedName.toLowerCase());
+        btn.classList.toggle("active", matches);
       });
 
-      if (name === "In Pits") {
+      if (isStandby) {
         runInput.value = "-";
         runInput.disabled = true;
       } else {
         runInput.disabled = false;
-        runInput.value = driverNextRuns[name] || 1;
+        if (runNum !== null && runNum !== undefined && !isNaN(parseInt(runNum, 10)) && parseInt(runNum, 10) > 0) {
+          runInput.value = parseInt(runNum, 10);
+        } else {
+          runInput.value = driverNextRuns[normalizedName] || 1;
+        }
       }
       updateHeroBadge();
+    }
 
-      // Sync active driver & ready state to Firebase for stream overlay
-      broadcastAutoxState(name === "In Pits" ? "IN PITS" : "READY");
+    function selectDriver(name) {
+      setDriverLocal(name);
+      // Sync active driver & ready state to Firebase for all pitwall instances & stream overlays
+      broadcastAutoxState(activeDriver === "In Pits" ? "IN PITS" : "READY");
     }
 
     function changeRunNum(delta) {
@@ -1688,6 +1703,27 @@
       const root = snap.val();
       if (!root) return;
 
+      // 1. Live Sync Driver & Run Number across all open Pitwall instances
+      const autox = root.autox || {};
+      const remoteDriver = autox.driver || root.driver;
+      const remoteRunNum = autox.runNum || root.runNum;
+
+      if (remoteDriver && !isRunning) {
+        const isRemoteStandby = String(remoteDriver).toLowerCase().includes("in pits") || 
+                                String(remoteDriver).toLowerCase().includes("standby") || 
+                                (autox.state && String(autox.state).toUpperCase() === "IN PITS");
+        const normalizedRemote = isRemoteStandby
+          ? "In Pits"
+          : (DRIVERS.find(d => d.toLowerCase() === String(remoteDriver).toLowerCase()) || remoteDriver);
+
+        if (normalizedRemote !== activeDriver) {
+          setDriverLocal(normalizedRemote, remoteRunNum);
+        } else if (normalizedRemote !== "In Pits" && remoteRunNum && parseInt(runInput.value, 10) !== parseInt(remoteRunNum, 10)) {
+          runInput.value = parseInt(remoteRunNum, 10);
+          updateHeroBadge();
+        }
+      }
+
       // Filter out non-telemetry keys (autox, laps, etc.)
       let telem = root;
       if (root.lat === undefined && root.latitude === undefined) {
@@ -1874,7 +1910,7 @@
 
     // Init
     bindEventSync(currentEventName);
-    selectDriver(activeDriver);
+    setDriverLocal(activeDriver);
     renderLeaderboard();
     setTimeout(fitOverlayPreview, 100);
   </script>
