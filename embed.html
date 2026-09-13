@@ -34,6 +34,7 @@
       max-width: 900px;
       display: flex;
       flex-direction: column;
+      justify-content: flex-start;
       gap: 12px;
     }
 
@@ -101,6 +102,12 @@
     @media (max-width: 740px) {
       .dashboard-grid {
         grid-template-columns: 1fr;
+        grid-template-rows: auto auto;
+        align-content: start;
+        align-items: start;
+      }
+      .hud-card-side {
+        justify-content: flex-start !important;
       }
     }
 
@@ -109,36 +116,86 @@
         padding: 4px;
       }
       .embed-container {
-        gap: 8px;
+        gap: 6px;
       }
       .embed-top-bar {
-        padding: 6px 10px;
+        padding: 5px 8px;
         font-size: 10px;
       }
+      .dashboard-grid {
+        grid-template-columns: 1fr;
+        gap: 6px;
+      }
       .card {
-        padding: 10px 12px;
-        gap: 8px;
+        padding: 8px 10px;
+        gap: 6px;
+      }
+      .card-header {
+        padding-bottom: 4px;
+      }
+      .card-header-title {
+        font-size: 9px;
+      }
+      .hud-main {
+        gap: 6px;
+        justify-content: space-between;
+      }
+      .driver-block {
+        min-width: 80px;
+        gap: 1px;
       }
       .driver-name {
-        font-size: 18px;
+        font-size: 16px;
+        line-height: 1.1;
+      }
+      .run-chip {
+        font-size: 9px;
+        padding: 0 4px;
+      }
+      .timer-block {
+        gap: 1px;
       }
       .timer-readout {
-        font-size: 26px;
+        font-size: 22px;
+        line-height: 1;
       }
       .timer-readout.ready {
-        font-size: 20px;
+        font-size: 18px;
+      }
+      .speed-block {
+        gap: 1px;
       }
       .speed-num {
-        font-size: 28px;
+        font-size: 22px;
+        line-height: 1;
+      }
+      .speed-unit {
+        font-size: 9px;
+      }
+      .status-badge {
+        font-size: 8px;
+        padding: 1px 5px;
+      }
+      .driver-list {
+        gap: 3px;
       }
       .driver-row {
-        padding: 4px 8px;
+        padding: 3px 8px;
+      }
+      .rank-pill {
+        font-size: 9px;
+        padding: 1px 4px;
+        min-width: 20px;
       }
       .row-driver-name {
-        font-size: 12px;
+        font-size: 11px;
       }
       .best-time {
-        font-size: 13px;
+        font-size: 12px;
+      }
+      .delta-pill {
+        font-size: 8px;
+        padding: 1px 4px;
       }
     }
 
