@@ -366,19 +366,19 @@
       <div class="card hud-card-side">
         <div class="card-header">
           <span class="card-header-title">🏎️ Active On Track</span>
-          <span class="status-badge ready" id="hud-status-badge">STAGED</span>
+          <span class="status-badge inpits" id="hud-status-badge">IN PITS</span>
         </div>
 
         <div class="hud-main">
           <div class="driver-block">
             <span style="font-size: 9px; color: #94a3b8; text-transform: uppercase; font-weight: 800;">Driver</span>
-            <span class="driver-name" id="hud-driver-name">JEFF</span>
-            <span class="run-chip" id="hud-run-badge">RUN #1</span>
+            <span class="driver-name" id="hud-driver-name">IN PITS</span>
+            <span class="run-chip" id="hud-run-badge">STANDBY</span>
           </div>
 
           <div class="timer-block">
             <span style="font-size: 9px; color: #94a3b8; text-transform: uppercase; font-weight: 800;">Autocross Time</span>
-            <div class="timer-readout ready" id="hud-timer-val">READY</div>
+            <div class="timer-readout ready" id="hud-timer-val">STANDBY</div>
           </div>
 
           <div class="speed-block">
@@ -482,42 +482,53 @@
     }
 
     // 1. Listen to Live Autocross Staging & Stopwatch State
-    db.child("autox/liveState").on("value", (snap) => {
+    db.child("autox").on("value", (snap) => {
       const data = snap.val();
       if (!data) return;
 
       const driver = data.driver || "";
-      const isInPits = driver.toLowerCase().includes("in pits") || driver.toLowerCase().includes("standby");
+      const isInPits = driver.toLowerCase().includes("in pits") || driver.toLowerCase().includes("standby") || data.state === "IN PITS";
 
       if (isInPits) {
         hudDriverEl.textContent = "IN PITS";
         hudRunEl.textContent = "STANDBY";
-      } else {
-        if (data.driver) hudDriverEl.textContent = String(data.driver).toUpperCase();
-        if (data.runNumber) hudRunEl.textContent = "RUN #" + data.runNumber;
-      }
-
-      const status = data.timerStatus || "ready";
-
-      if (isInPits && status !== "running" && status !== "stopped" && status !== "saved") {
         stopLiveStopwatch(0);
-        hudTimerEl.textContent = "--:--.--";
+        hudTimerEl.textContent = "STANDBY";
         hudTimerEl.className = "timer-readout ready";
         hudStatusBadgeEl.textContent = "IN PITS";
         hudStatusBadgeEl.className = "status-badge inpits";
-      } else if (status === "running") {
+        hudNotesBox.style.display = "none";
+        return;
+      }
+
+      if (data.driver) hudDriverEl.textContent = String(data.driver).toUpperCase();
+      const runNum = data.runNum || data.runNumber || 1;
+      hudRunEl.textContent = "RUN #" + runNum;
+
+      const rawState = (data.state || data.timerStatus || "READY").toUpperCase();
+
+      if (rawState === "RUNNING") {
         hudStatusBadgeEl.textContent = "ON COURSE";
         hudStatusBadgeEl.className = "status-badge running";
+        hudTimerEl.className = "timer-readout running";
         if (data.startTime) {
           startLiveStopwatch(data.startTime);
         }
-      } else if (status === "stopped") {
-        stopLiveStopwatch(data.elapsedTimeMs);
+      } else if (rawState === "STOPPED") {
+        const rawMs = Number(data.rawTimeMs || data.elapsedTimeMs) || 0;
+        stopLiveStopwatch(rawMs);
+        if (data.rawFormatted) {
+          hudTimerEl.textContent = data.rawFormatted;
+        }
         hudStatusBadgeEl.textContent = "FINISHED";
         hudStatusBadgeEl.className = "status-badge finished";
         hudTimerEl.className = "timer-readout finished";
-      } else if (status === "saved") {
-        stopLiveStopwatch(data.elapsedTimeMs);
+      } else if (rawState === "SAVED") {
+        const finalMs = Number(data.finalTimeMs || data.elapsedTimeMs) || 0;
+        stopLiveStopwatch(finalMs);
+        if (data.finalFormatted) {
+          hudTimerEl.textContent = data.finalFormatted;
+        }
         if (data.isDnf) {
           hudStatusBadgeEl.textContent = "DNF";
           hudStatusBadgeEl.className = "status-badge";
@@ -548,12 +559,35 @@
       }
     });
 
-    // 2. Listen to 1Hz GPS Speed
-    db.child("telemetry_raw").on("value", (snap) => {
-      const t = snap.val();
-      if (!t) return;
-      const mph = Math.round(Number(t.speedMph || t.speed || 0));
-      hudSpeedEl.textContent = String(mph);
+    // 2. Listen to 1Hz GPS Speed & Telemetry
+    db.on("value", (snap) => {
+      const root = snap.val();
+      if (!root) return;
+
+      let telem = root;
+      if (root.speed === undefined && root.vel === undefined && root.speedMph === undefined) {
+        if (root.telemetry_raw) {
+          telem = root.telemetry_raw;
+        } else {
+          const keys = Object.keys(root).filter(k => typeof root[k] === 'object' && root[k] !== null && k !== 'autox' && k !== 'laps' && k !== 'events');
+          if (keys.length > 0) {
+            keys.sort((a, b) => {
+              const timeA = Number(root[a].lastGpsTimestamp || (root[a].tst ? root[a].tst * 1000 : 0));
+              const timeB = Number(root[b].lastGpsTimestamp || (root[b].tst ? root[b].tst * 1000 : 0));
+              return timeA - timeB;
+            });
+            telem = root[keys[keys.length - 1]];
+          }
+        }
+      }
+
+      let calcMph = 0;
+      if (telem.speedMph !== undefined) calcMph = Number(telem.speedMph);
+      else if (telem.speed !== undefined && telem.speed !== null) calcMph = Number(telem.speed);
+      else if (telem.vel !== undefined && telem.vel !== null) calcMph = Number(telem.vel) * 0.621371;
+
+      if (calcMph < 2.0 || isNaN(calcMph)) calcMph = 0;
+      hudSpeedEl.textContent = String(Math.round(calcMph));
     });
 
     // 3. Listen to Event Runs & Build Leaderboard

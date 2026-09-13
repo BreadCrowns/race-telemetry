@@ -353,16 +353,16 @@
       <div class="driver-col">
         <div class="driver-top-row">
           <span class="tag-label">Driver</span>
-          <span class="run-badge" id="run-val">RUN #1</span>
+          <span class="run-badge" id="run-val">STANDBY</span>
         </div>
-        <span class="driver-name" id="driver-val">JEFF</span>
-        <span class="status-badge ready" id="status-val">STAGED</span>
+        <span class="driver-name" id="driver-val">IN PITS</span>
+        <span class="status-badge inpits" id="status-val">IN PITS</span>
       </div>
 
       <!-- 2. Autocross Timer & Penalty -->
       <div class="timer-col">
         <span class="tag-label">Autocross Time</span>
-        <div class="timer-readout ready" id="timer-val">READY</div>
+        <div class="timer-readout ready" id="timer-val">STANDBY</div>
         <span class="penalty-pill" id="penalty-val" style="display: none;">CLEAN</span>
       </div>
 
@@ -423,11 +423,18 @@
     const gpsAcc = document.getElementById("gps-acc");
 
     // State
-    let autoxState = "READY";
+    let autoxState = "IN PITS";
     let runStartTime = 0;
     let targetSpeed = 0;
     let smoothSpeed = 0;
     const SPEED_CUTOFF_MPH = 2.5;
+
+    // Continuous GPS Watchdog State (declared before Firebase listener)
+    let lastGpsFixTimestamp = 0;
+    let lastGpsPacketWallTime = 0;
+    let latestGpsLat = 0;
+    let latestGpsLon = 0;
+    let latestGpsAcc = 0;
 
     function formatTimeMs(ms) {
       if (ms >= 99999999) return "DNF";
@@ -466,8 +473,8 @@
       const autox = root.autox || {};
 
       // 1. Driver Name & Run Number
-      const driver = autox.driver || root.driver || "Jeff";
-      const isInPits = driver.toLowerCase().includes("in pits") || driver.toLowerCase().includes("standby");
+      const driver = autox.driver || root.driver || "In Pits";
+      const isInPits = driver.toLowerCase().includes("in pits") || driver.toLowerCase().includes("standby") || autox.state === "IN PITS";
 
       if (isInPits) {
         driverEl.textContent = "IN PITS";
@@ -601,12 +608,6 @@
     });
 
     // --- CONTINUOUS GPS WATCHDOG (GREEN -> YELLOW -> RED) ---
-    let lastGpsFixTimestamp = 0;
-    let lastGpsPacketWallTime = 0;
-    let latestGpsLat = 0;
-    let latestGpsLon = 0;
-    let latestGpsAcc = 0;
-
     function checkOverlayGpsWatchdog() {
       const now = Date.now();
       if (!lastGpsFixTimestamp && !lastGpsPacketWallTime) {
