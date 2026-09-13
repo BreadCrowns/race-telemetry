@@ -1,0 +1,637 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Autocross Live Dashboard - Google Sites Embed</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+    }
+
+    body {
+      background: transparent;
+      color: #ffffff;
+      padding: 10px;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* Container Box */
+    .embed-container {
+      width: 100%;
+      max-width: 900px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    /* Top Bar */
+    .embed-top-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: rgba(15, 23, 42, 0.85);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 8px;
+      padding: 8px 14px;
+      font-size: 11px;
+    }
+
+    .top-left {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .event-badge {
+      font-size: 10px;
+      font-weight: 800;
+      color: #f97316;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .event-title {
+      font-weight: 700;
+      color: #ffffff;
+      font-family: ui-monospace, SFMono-Regular, monospace;
+    }
+
+    .sync-status {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 10px;
+      font-weight: 700;
+      color: #4ade80;
+      font-family: ui-monospace, monospace;
+    }
+
+    .status-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: #22c55e;
+      box-shadow: 0 0 6px #22c55e;
+      display: inline-block;
+    }
+
+    /* Responsive Grid: Side-by-side on desktop, stacked on mobile */
+    .dashboard-grid {
+      display: grid;
+      grid-template-columns: 1.2fr 1fr;
+      gap: 12px;
+      align-items: stretch;
+    }
+
+    @media (max-width: 740px) {
+      .dashboard-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* Reusable Card Style */
+    .card {
+      background: rgba(8, 12, 22, 0.94);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 10px;
+      padding: 14px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+    }
+
+    .hud-card-side {
+      border-left: 5px solid #f97316;
+      justify-content: space-between;
+    }
+
+    .board-card-side {
+      border-left: 5px solid #3b82f6;
+    }
+
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      padding-bottom: 6px;
+    }
+
+    .card-header-title {
+      font-size: 10px;
+      font-weight: 800;
+      letter-spacing: 1.2px;
+      text-transform: uppercase;
+      color: #94a3b8;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    /* HUD Content */
+    .hud-main {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .driver-block {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+      min-width: 110px;
+    }
+
+    .driver-name {
+      font-size: 22px;
+      font-weight: 900;
+      color: #ffffff;
+      letter-spacing: 0.5px;
+      line-height: 1.1;
+    }
+
+    .run-chip {
+      font-size: 10px;
+      font-weight: 800;
+      color: #f97316;
+      background: rgba(249, 115, 22, 0.15);
+      border: 1px solid rgba(249, 115, 22, 0.4);
+      padding: 1px 6px;
+      border-radius: 4px;
+      align-self: flex-start;
+      font-family: ui-monospace, monospace;
+    }
+
+    .timer-block {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2px;
+    }
+
+    .timer-readout {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 32px;
+      font-weight: 900;
+      color: #ffffff;
+      line-height: 1;
+    }
+
+    .timer-readout.ready { color: #38bdf8; font-size: 26px; }
+    .timer-readout.running { color: #22c55e; }
+    .timer-readout.finished { color: #facc15; }
+    .timer-readout.dnf { color: #ef4444; text-decoration: line-through; }
+
+    .status-badge {
+      font-size: 9px;
+      font-weight: 800;
+      padding: 2px 7px;
+      border-radius: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      font-family: ui-monospace, monospace;
+    }
+
+    .status-badge.ready { background: rgba(56, 189, 248, 0.2); color: #38bdf8; border: 1px solid #38bdf8; }
+    .status-badge.running { background: rgba(34, 197, 94, 0.2); color: #4ade80; border: 1px solid #22c55e; animation: pulse 1.2s infinite; }
+    .status-badge.finished { background: rgba(234, 179, 8, 0.2); color: #facc15; border: 1px solid #eab308; }
+    .status-badge.cone { background: rgba(249, 115, 22, 0.2); color: #fb923c; border: 1px solid #f97316; }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.6; }
+    }
+
+    .speed-block {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 2px;
+    }
+
+    .speed-wrap {
+      display: flex;
+      align-items: baseline;
+      gap: 4px;
+    }
+
+    .speed-num {
+      font-size: 34px;
+      font-weight: 900;
+      font-variant-numeric: tabular-nums;
+      line-height: 1;
+      color: #ffffff;
+    }
+
+    .speed-unit {
+      font-size: 11px;
+      font-weight: 800;
+      color: #94a3b8;
+    }
+
+    /* Notes Row */
+    .hud-notes {
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 5px;
+      padding: 6px 10px;
+      font-size: 11px;
+      color: #cbd5e1;
+      font-style: italic;
+    }
+
+    /* Leaderboard Rows */
+    .driver-list {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+
+    .driver-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      border-radius: 6px;
+      padding: 6px 10px;
+    }
+
+    .driver-row.p1 {
+      background: rgba(34, 197, 94, 0.12);
+      border-color: rgba(34, 197, 94, 0.4);
+    }
+
+    .row-left {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .rank-pill {
+      font-size: 10px;
+      font-weight: 900;
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-family: ui-monospace, monospace;
+      color: #94a3b8;
+      background: rgba(255, 255, 255, 0.06);
+      min-width: 26px;
+      text-align: center;
+    }
+
+    .driver-row.p1 .rank-pill {
+      background: rgba(34, 197, 94, 0.25);
+      color: #4ade80;
+      border: 1px solid #22c55e;
+    }
+
+    .row-driver-name {
+      font-size: 13px;
+      font-weight: 800;
+      color: #ffffff;
+      letter-spacing: 0.5px;
+    }
+
+    .row-right {
+      display: flex;
+      align-items: baseline;
+      gap: 6px;
+    }
+
+    .best-time {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 14px;
+      font-weight: 900;
+      color: #ffffff;
+    }
+
+    .best-time.no-time {
+      color: #64748b;
+      font-weight: 600;
+      font-size: 12px;
+    }
+
+    .delta-pill {
+      font-size: 9px;
+      font-weight: 800;
+      padding: 1px 5px;
+      border-radius: 3px;
+      font-family: ui-monospace, monospace;
+      color: #94a3b8;
+      background: rgba(255, 255, 255, 0.06);
+    }
+
+    .delta-pill.leader {
+      background: rgba(34, 197, 94, 0.25);
+      color: #4ade80;
+      font-weight: 900;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="embed-container">
+    <!-- Top Status Bar -->
+    <div class="embed-top-bar">
+      <div class="top-left">
+        <span class="event-badge">Autocross Live</span>
+        <span class="event-title" id="top-event-name">Sunday Autocross</span>
+      </div>
+      <div class="sync-status">
+        <span class="status-dot"></span>
+        <span id="sync-text">LIVE SYNC</span>
+      </div>
+    </div>
+
+    <!-- Responsive Grid -->
+    <div class="dashboard-grid">
+      <!-- 1. Live Car on Track (Stage HUD) -->
+      <div class="card hud-card-side">
+        <div class="card-header">
+          <span class="card-header-title">🏎️ Active On Track</span>
+          <span class="status-badge ready" id="hud-status-badge">STAGED</span>
+        </div>
+
+        <div class="hud-main">
+          <div class="driver-block">
+            <span style="font-size: 9px; color: #94a3b8; text-transform: uppercase; font-weight: 800;">Driver</span>
+            <span class="driver-name" id="hud-driver-name">JEFF</span>
+            <span class="run-chip" id="hud-run-badge">RUN #1</span>
+          </div>
+
+          <div class="timer-block">
+            <span style="font-size: 9px; color: #94a3b8; text-transform: uppercase; font-weight: 800;">Autocross Time</span>
+            <div class="timer-readout ready" id="hud-timer-val">READY</div>
+          </div>
+
+          <div class="speed-block">
+            <span style="font-size: 9px; color: #94a3b8; text-transform: uppercase; font-weight: 800;">GPS Speed</span>
+            <div class="speed-wrap">
+              <span class="speed-num" id="hud-speed-val">0</span>
+              <span class="speed-unit">MPH</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="hud-notes" id="hud-notes-box" style="display: none;">
+          <span id="hud-notes-text"></span>
+        </div>
+      </div>
+
+      <!-- 2. Live Leaderboard -->
+      <div class="card board-card-side">
+        <div class="card-header">
+          <span class="card-header-title">🏆 Fastest Times Ranking</span>
+          <span style="font-size: 9px; color: #64748b; font-family: ui-monospace, monospace;" id="board-runs-count">0 Runs</span>
+        </div>
+
+        <div class="driver-list" id="board-driver-list">
+          <!-- Populated in JS -->
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Firebase SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyCC4JUzjr5lk9zaT78wwZ1RcjUguP5Q70s",
+      authDomain: "fiero-telemetry.firebaseapp.com",
+      databaseURL: "https://fiero-telemetry-default-rtdb.firebaseio.com",
+      projectId: "fiero-telemetry",
+      storageBucket: "fiero-telemetry.firebasestorage.app",
+      messagingSenderId: "183922450878",
+      appId: "1:183922450878:web:5faabfd6d163f1c6c119ef"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database().ref("raceTelemetry");
+
+    const DRIVERS = ["Jeff", "Liam", "Ryan", "Matt"];
+    const urlParams = new URLSearchParams(window.location.search);
+    let activeEventName = urlParams.get("event") || "Sunday Autocross";
+
+    // DOM Elements
+    const topEventNameEl = document.getElementById("top-event-name");
+    const hudDriverEl = document.getElementById("hud-driver-name");
+    const hudRunEl = document.getElementById("hud-run-badge");
+    const hudTimerEl = document.getElementById("hud-timer-val");
+    const hudStatusBadgeEl = document.getElementById("hud-status-badge");
+    const hudSpeedEl = document.getElementById("hud-speed-val");
+    const hudNotesBox = document.getElementById("hud-notes-box");
+    const hudNotesText = document.getElementById("hud-notes-text");
+    const boardDriverListEl = document.getElementById("board-driver-list");
+    const boardRunsCountEl = document.getElementById("board-runs-count");
+
+    // Stopwatch State
+    let timerInterval = null;
+    let currentStartTime = null;
+
+    function formatTime(ms) {
+      if (!ms || isNaN(ms) || ms <= 0) return "--:--.--";
+      const totalSec = Math.floor(ms / 1000);
+      const mins = Math.floor(totalSec / 60);
+      const secs = totalSec % 60;
+      const hundredths = Math.floor((ms % 1000) / 10);
+      return String(mins).padStart(2, "0") + ":" +
+             String(secs).padStart(2, "0") + "." +
+             String(hundredths).padStart(2, "0");
+    }
+
+    function startLiveStopwatch(serverStartTime) {
+      if (timerInterval) clearInterval(timerInterval);
+      currentStartTime = serverStartTime;
+      hudTimerEl.className = "timer-readout running";
+
+      function tick() {
+        const elapsed = Math.max(0, Date.now() - currentStartTime);
+        hudTimerEl.textContent = formatTime(elapsed);
+      }
+      tick();
+      timerInterval = setInterval(tick, 30);
+    }
+
+    function stopLiveStopwatch(frozenMs) {
+      if (timerInterval) {
+        clearInterval(timerInterval);
+        timerInterval = null;
+      }
+      if (frozenMs !== undefined) {
+        hudTimerEl.textContent = formatTime(frozenMs);
+      }
+    }
+
+    // 1. Listen to Live Autocross Staging & Stopwatch State
+    db.child("autox/liveState").on("value", (snap) => {
+      const data = snap.val();
+      if (!data) return;
+
+      if (data.driver) hudDriverEl.textContent = String(data.driver).toUpperCase();
+      if (data.runNumber) hudRunEl.textContent = "RUN #" + data.runNumber;
+
+      const status = data.timerStatus || "ready";
+
+      if (status === "running") {
+        hudStatusBadgeEl.textContent = "ON COURSE";
+        hudStatusBadgeEl.className = "status-badge running";
+        if (data.startTime) {
+          startLiveStopwatch(data.startTime);
+        }
+      } else if (status === "stopped") {
+        stopLiveStopwatch(data.elapsedTimeMs);
+        hudStatusBadgeEl.textContent = "FINISHED";
+        hudStatusBadgeEl.className = "status-badge finished";
+        hudTimerEl.className = "timer-readout finished";
+      } else if (status === "saved") {
+        stopLiveStopwatch(data.elapsedTimeMs);
+        if (data.isDnf) {
+          hudStatusBadgeEl.textContent = "DNF";
+          hudStatusBadgeEl.className = "status-badge";
+          hudStatusBadgeEl.style.color = "#f87171";
+          hudTimerEl.className = "timer-readout dnf";
+        } else if (data.cones && data.cones > 0) {
+          hudStatusBadgeEl.textContent = "+" + data.cones + " CONE" + (data.cones > 1 ? "S" : "");
+          hudStatusBadgeEl.className = "status-badge cone";
+          hudTimerEl.className = "timer-readout finished";
+        } else {
+          hudStatusBadgeEl.textContent = "SAVED";
+          hudStatusBadgeEl.className = "status-badge finished";
+          hudTimerEl.className = "timer-readout finished";
+        }
+      } else {
+        stopLiveStopwatch(0);
+        hudTimerEl.textContent = "READY";
+        hudTimerEl.className = "timer-readout ready";
+        hudStatusBadgeEl.textContent = "STAGED";
+        hudStatusBadgeEl.className = "status-badge ready";
+      }
+
+      if (data.notes && data.notes.trim()) {
+        hudNotesBox.style.display = "block";
+        hudNotesText.textContent = '💬 "' + data.notes.trim() + '"';
+      } else {
+        hudNotesBox.style.display = "none";
+      }
+    });
+
+    // 2. Listen to 1Hz GPS Speed
+    db.child("telemetry_raw").on("value", (snap) => {
+      const t = snap.val();
+      if (!t) return;
+      const mph = Math.round(Number(t.speedMph || t.speed || 0));
+      hudSpeedEl.textContent = String(mph);
+    });
+
+    // 3. Listen to Event Runs & Build Leaderboard
+    let currentRunsRef = null;
+
+    function sanitizeKey(k) {
+      return String(k || "").replace(/[.#$\\[\\]]/g, "_").trim() || "default";
+    }
+
+    function bindEventSync(eventName) {
+      activeEventName = eventName;
+      topEventNameEl.textContent = eventName;
+
+      if (currentRunsRef) currentRunsRef.off();
+
+      const key = sanitizeKey(eventName);
+      currentRunsRef = db.child("events/" + key + "/runs");
+
+      currentRunsRef.on("value", (snap) => {
+        const raw = snap.val() || {};
+        renderLeaderboard(raw);
+      });
+    }
+
+    function renderLeaderboard(runsObj) {
+      const runs = Object.values(runsObj);
+      boardRunsCountEl.textContent = runs.length + " Run" + (runs.length === 1 ? "" : "s");
+
+      // Calculate best clean run for each driver
+      const driverBests = {};
+      DRIVERS.forEach(d => {
+        driverBests[d] = { driver: d, bestTimeMs: Infinity, bestFormatted: "--:--.--", hasClean: false };
+      });
+
+      runs.forEach(r => {
+        const d = r.driver;
+        if (!d || !driverBests[d]) return;
+        if (r.isDnf) return;
+
+        const adjTime = (r.finalTimeMs !== undefined) ? r.finalTimeMs : (r.elapsedTimeMs + (r.penaltyMs || 0));
+        if (adjTime > 0 && adjTime < driverBests[d].bestTimeMs) {
+          driverBests[d].bestTimeMs = adjTime;
+          driverBests[d].bestFormatted = r.finalTimeFormatted || formatTime(adjTime);
+          driverBests[d].hasClean = true;
+        }
+      });
+
+      const standings = Object.values(driverBests).sort((a, b) => a.bestTimeMs - b.bestTimeMs);
+      const leader = standings[0];
+      const leaderTime = leader && leader.hasClean ? leader.bestTimeMs : null;
+
+      boardDriverListEl.innerHTML = "";
+
+      standings.forEach((st, idx) => {
+        const isLeader = idx === 0 && st.hasClean;
+        let deltaDisplay = "NO TIME";
+
+        if (st.hasClean) {
+          if (isLeader) {
+            deltaDisplay = "LEADER";
+          } else if (leaderTime !== null) {
+            const diffSec = ((st.bestTimeMs - leaderTime) / 1000).toFixed(2);
+            deltaDisplay = "+" + diffSec + "s";
+          }
+        }
+
+        const row = document.createElement("div");
+        row.className = "driver-row " + (isLeader ? "p1" : "");
+        row.innerHTML = `
+          <div class="row-left">
+            <span class="rank-pill">#${idx + 1}</span>
+            <span class="row-driver-name">${st.driver.toUpperCase()}</span>
+          </div>
+          <div class="row-right">
+            <span class="best-time ${st.hasClean ? '' : 'no-time'}">${st.bestFormatted}</span>
+            <span class="delta-pill ${isLeader ? 'leader' : ''}">${deltaDisplay}</span>
+          </div>
+        `;
+        boardDriverListEl.appendChild(row);
+      });
+    }
+
+    // Auto-listen to active event name from pit wall broadcast if not explicitly locked via URL param
+    if (!urlParams.has("event")) {
+      db.child("autox/eventName").on("value", (snap) => {
+        const name = snap.val();
+        if (name && name !== activeEventName) {
+          bindEventSync(name);
+        }
+      });
+    }
+
+    bindEventSync(activeEventName);
+  </script>
+</body>
+</html>

@@ -78,8 +78,9 @@ flowchart TD
 
 | Web Page | Live URL | Purpose |
 | :--- | :--- | :--- |
-| **Stage HUD Overlay** | `https://breadcrowns.github.io/race-telemetry/overlay.html` | **Added to PRISM Mobile**: Displays driver, run #, live stopwatch, penalties, notes, speed MPH. |
-| **Leaderboard Overlay** | `https://breadcrowns.github.io/race-telemetry/leaderboard.html` | **Added to PRISM Mobile or OBS**: Displays ranked fastest clean times (#1 to #4) and gap deltas. |
+| **Combined Embed Dashboard** | `https://breadcrowns.github.io/race-telemetry/embed.html` | **Google Sites / Web Embed**: Both Stage HUD & Leaderboard together in a responsive layout. |
+| **Stage HUD Overlay** | `https://breadcrowns.github.io/race-telemetry/overlay.html` | **PRISM Mobile / OBS / Embed**: Displays driver, run #, live stopwatch, penalties, notes, speed MPH. |
+| **Leaderboard Overlay** | `https://breadcrowns.github.io/race-telemetry/leaderboard.html` | **PRISM Mobile / OBS / Embed**: Displays ranked fastest clean times (#1 to #4) and gap deltas. |
 | **Pit Wall Stopwatch App** | `https://breadcrowns.github.io/race-telemetry/pitwall.html` | **Used on Pit Device**: Stopwatch, driver select, cone stepper, DNF, notes, and broadcast monitor. |
 | **Cockpit Web GPS** | `https://breadcrowns.github.io/race-telemetry/gps.html` | Web-based GPS fallback transmitter. |
 | **Endurance Pit Wall** | `https://breadcrowns.github.io/race-telemetry/pitwall_future.html` | Full endurance racing suite (stints, fuel, tire logs). |
@@ -234,6 +235,59 @@ The person on the pit wall opens **`https://breadcrowns.github.io/race-telemetry
 | **HUD numbers don't update when pit wall clicks Start** | Different Event Name or network disconnect. | 1. Check pit wall internet connection.<br>2. Make sure the pit wall device didn't accidentally change the event name.<br>3. In PRISM, tap the web widget and click reload. |
 | **In-car phone gets warm or battery drains** | Video encoding + GPS uses high power. | 1. Use a 12V cigarette adapter capable of at least 18W–30W (PD or QuickCharge).<br>2. Reduce phone screen brightness inside the car to 30% while streaming. |
 | **Stream video stutters or drops frames** | Cellular upload bandwidth fluctuating. | In PRISM settings, enable **Adaptive Bitrate** and set resolution to `720p` at `3000 kbps`. |
+
+---
+
+## 9. Embedding into Google Sites & Public Web Pages
+
+To embed the live telemetry and leaderboard into a **Google Site**, team website, or blog:
+
+### Option A: Combined Live Dashboard (`embed.html`) — Recommended!
+Displays **both** the Stage HUD (active car on track) and the Leaderboard (fastest times) in a single responsive widget:
+* **Desktop / Wide screens**: Displays side-by-side cleanly.
+* **Mobile / Narrow screens**: Stacks vertically with zero clipping.
+
+#### How to embed in Google Sites:
+1. In Google Sites editor, click **Insert** $\to$ **Embed** (`<>`).
+2. **Method 1 (By URL)**:
+   - Select the **By URL** tab.
+   - Paste: `https://breadcrowns.github.io/race-telemetry/embed.html`
+   - Click **Insert**.
+   - Drag the blue corner handles on Google Sites to expand the block (recommended height: `380px` - `450px`).
+3. **Method 2 (Embed Code — cleanest scaling)**:
+   - Select the **Embed code** tab.
+   - Paste this snippet:
+     ```html
+     <iframe src="https://breadcrowns.github.io/race-telemetry/embed.html" 
+             style="width: 100%; height: 420px; border: none; overflow: hidden;" 
+             scrolling="no">
+     </iframe>
+     ```
+   - Click **Next** $\to$ **Insert**.
+
+---
+
+### Option B: Embedding Stage HUD Only (`overlay.html`)
+If you only want the active driver, run number, live stopwatch, and speedometer:
+* **Embed Code**:
+  ```html
+  <iframe src="https://breadcrowns.github.io/race-telemetry/overlay.html" 
+          style="width: 100%; height: 230px; border: none; overflow: hidden;" 
+          scrolling="no">
+  </iframe>
+  ```
+
+---
+
+### Option C: Embedding Leaderboard Only (`leaderboard.html`)
+If you only want the ranked fastest times:
+* **Embed Code**:
+  ```html
+  <iframe src="https://breadcrowns.github.io/race-telemetry/leaderboard.html" 
+          style="width: 100%; height: 280px; border: none; overflow: hidden;" 
+          scrolling="no">
+  </iframe>
+  ```
 
 ---
 

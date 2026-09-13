@@ -4,6 +4,7 @@ A real-time racing telemetry, pit wall stopwatch, and live broadcast overlay sui
 
 ## 🚀 Live Web Apps & Stream Overlays (GitHub Pages)
 
+* 🌐 **[Google Sites Live Dashboard (embed.html)](https://breadcrowns.github.io/race-telemetry/embed.html)** - Drop-in responsive embed combining Stage HUD and Leaderboard for Google Sites and blogs.
 * ⏱️ **[Pit Wall App](https://breadcrowns.github.io/race-telemetry/pitwall.html)** - Sunday Autocross stopwatch, driver queue, cone penalties, and live stream monitor.
 * 📺 **[PRISM / OBS Stage HUD Overlay](https://breadcrowns.github.io/race-telemetry/overlay.html)** - Live driver, run #, stopwatch, penalties, notes, and GPS speed.
 * 🏆 **[PRISM / OBS Leaderboard Overlay](https://breadcrowns.github.io/race-telemetry/leaderboard.html)** - Real-time ranked fastest times and deltas.
