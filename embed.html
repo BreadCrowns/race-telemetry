@@ -12,15 +12,20 @@
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
     }
 
-    body {
+    html, body {
       background: transparent;
       color: #ffffff;
-      padding: 10px;
+      margin: 0;
+      padding: 8px;
+      overflow-x: hidden;
+      overflow-y: hidden;
+    }
+
+    body {
       display: flex;
       justify-content: center;
       align-items: flex-start;
-      min-height: 100vh;
-      overflow-x: hidden;
+      min-height: auto;
     }
 
     /* Container Box */
@@ -96,6 +101,44 @@
     @media (max-width: 740px) {
       .dashboard-grid {
         grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 640px) {
+      html, body {
+        padding: 4px;
+      }
+      .embed-container {
+        gap: 8px;
+      }
+      .embed-top-bar {
+        padding: 6px 10px;
+        font-size: 10px;
+      }
+      .card {
+        padding: 10px 12px;
+        gap: 8px;
+      }
+      .driver-name {
+        font-size: 18px;
+      }
+      .timer-readout {
+        font-size: 26px;
+      }
+      .timer-readout.ready {
+        font-size: 20px;
+      }
+      .speed-num {
+        font-size: 28px;
+      }
+      .driver-row {
+        padding: 4px 8px;
+      }
+      .row-driver-name {
+        font-size: 12px;
+      }
+      .best-time {
+        font-size: 13px;
       }
     }
 
@@ -347,7 +390,7 @@
 </head>
 <body>
 
-  <div class="embed-container">
+  <div class="embed-container" id="embed-container">
     <!-- Top Status Bar -->
     <div class="embed-top-bar">
       <div class="top-left">
@@ -681,6 +724,24 @@
     }
 
     bindEventSync(activeEventName);
+
+    // Auto-broadcast content height to Google Sites or embedding iframe wrapper
+    function notifyParentHeight() {
+      const container = document.getElementById("embed-container");
+      const h = container ? (container.offsetHeight + 16) : (document.body.scrollHeight || 480);
+      try {
+        window.parent.postMessage({ type: "AUTORACE_HEIGHT", height: h }, "*");
+      } catch (e) {}
+    }
+
+    window.addEventListener("resize", notifyParentHeight);
+    window.addEventListener("load", notifyParentHeight);
+    if (window.ResizeObserver && document.getElementById("embed-container")) {
+      new ResizeObserver(notifyParentHeight).observe(document.getElementById("embed-container"));
+    }
+    setTimeout(notifyParentHeight, 100);
+    setTimeout(notifyParentHeight, 600);
+    setTimeout(notifyParentHeight, 1500);
   </script>
 </body>
 </html>
