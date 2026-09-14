@@ -48,44 +48,133 @@ async function bundleTelemetry() {
   const runs = Object.values(fbRuns).sort((a, b) => a.timestamp - b.timestamp);
   console.log(`Fetched ${runs.length} runs from Firebase.`);
 
+  function dmsToDecimal(deg, min, sec, dir) {
+    let d = deg + min / 60 + sec / 3600;
+    if (dir === 'S' || dir === 'W') d = -d;
+    return d;
+  }
+
+  // Exact Start: 38°09'38.8"N 122°27'19.7"W
+  // Exact Finish: 38°09'32.3"N 122°27'17.2"W
+  const targetStart = {
+    lat: Number(dmsToDecimal(38, 9, 38.8, 'N').toFixed(7)),
+    lon: Number(dmsToDecimal(122, 27, 19.7, 'W').toFixed(7))
+  };
+
+  const targetFinish = {
+    lat: Number(dmsToDecimal(38, 9, 32.3, 'N').toFixed(7)),
+    lon: Number(dmsToDecimal(122, 27, 17.2, 'W').toFixed(7))
+  };
+
   const bundledRuns = [];
 
   runs.forEach((r, idx) => {
-    const startTs = r.timestamp - r.rawTimeMs;
-    const endTs = r.timestamp;
+    const timerStartTs = r.timestamp - r.rawTimeMs;
+    const timerEndTs = r.timestamp;
+    const rawDurationMs = r.rawTimeMs;
 
-    // Filter points in run window (with 400ms padding)
-    const runPts = rawPoints.filter(p => p.ts >= startTs - 400 && p.ts <= endTs + 400);
+    // Search window around timer: default +/- 70s, wider for edge cases
+    const searchMargin = (idx === 19 || idx === 23 || idx === 31) ? 240000 : 70000;
+    const windowPts = rawPoints.filter(p => p.ts >= timerStartTs - searchMargin && p.ts <= timerEndTs + searchMargin);
+
+    // Find best start & finish pair matching target coordinates and run duration
+    const startCandidates = windowPts.filter(p => haversineMeters(p.lat, p.lon, targetStart.lat, targetStart.lon) <= 20);
+    const finishCandidates = windowPts.filter(p => haversineMeters(p.lat, p.lon, targetFinish.lat, targetFinish.lon) <= 20);
+
+    let bestPair = null;
+    let bestScore = Infinity;
+
+    startCandidates.forEach(sp => {
+      finishCandidates.forEach(fp => {
+        if (fp.ts > sp.ts) {
+          const dur = fp.ts - sp.ts;
+          const durDiff = Math.abs(dur - rawDurationMs);
+          if (durDiff < 15000) {
+            const ds = haversineMeters(sp.lat, sp.lon, targetStart.lat, targetStart.lon);
+            const df = haversineMeters(fp.lat, fp.lon, targetFinish.lat, targetFinish.lon);
+            const score = durDiff * 0.05 + ds + df;
+            if (score < bestScore) {
+              bestScore = score;
+              bestPair = { sp, fp, dur, durDiff, ds, df };
+            }
+          }
+        }
+      });
+    });
+
+    let runPts = [];
+    if (bestPair) {
+      runPts = rawPoints.filter(p => p.ts >= bestPair.sp.ts && p.ts <= bestPair.fp.ts);
+    } else {
+      console.warn(`Fallback window for run ${r.driver} #${r.runNum}`);
+      runPts = rawPoints.filter(p => p.ts >= timerStartTs && p.ts <= timerEndTs);
+    }
+
+    // Build coords array
+    const rawCoords = runPts.map(pt => ({
+      lat: Number(pt.lat.toFixed(7)),
+      lon: Number(pt.lon.toFixed(7)),
+      speed: Number(pt.speed.toFixed(1)),
+      heading: Math.round(pt.heading),
+      alt: Number(pt.alt.toFixed(1)),
+      acc: Math.round(pt.acc),
+      ts: pt.ts
+    }));
+
+    // Ensure line starts at exact targetStart point
+    const firstPt = rawCoords[0];
+    if (!firstPt || haversineMeters(firstPt.lat, firstPt.lon, targetStart.lat, targetStart.lon) > 0.5) {
+      rawCoords.unshift({
+        lat: targetStart.lat,
+        lon: targetStart.lon,
+        speed: 0.0,
+        heading: firstPt ? firstPt.heading : 145,
+        alt: firstPt ? firstPt.alt : 5.0,
+        acc: 0,
+        ts: firstPt ? firstPt.ts - 1000 : timerStartTs
+      });
+    } else {
+      rawCoords[0].lat = targetStart.lat;
+      rawCoords[0].lon = targetStart.lon;
+    }
+
+    // Ensure line ends at exact targetFinish point
+    const lastPt = rawCoords[rawCoords.length - 1];
+    if (!lastPt || haversineMeters(lastPt.lat, lastPt.lon, targetFinish.lat, targetFinish.lon) > 0.5) {
+      rawCoords.push({
+        lat: targetFinish.lat,
+        lon: targetFinish.lon,
+        speed: lastPt ? lastPt.speed : 20.0,
+        heading: lastPt ? lastPt.heading : 145,
+        alt: lastPt ? lastPt.alt : 5.0,
+        acc: 0,
+        ts: lastPt ? lastPt.ts + 1000 : timerEndTs
+      });
+    } else {
+      rawCoords[rawCoords.length - 1].lat = targetFinish.lat;
+      rawCoords[rawCoords.length - 1].lon = targetFinish.lon;
+    }
 
     // Compute cumulative distance along the line
     let totalDistM = 0;
-    const coords = [];
+    const startTsActual = rawCoords[0].ts;
 
-    for (let j = 0; j < runPts.length; j++) {
-      const pt = runPts[j];
-      if (j > 0) {
-        const prev = runPts[j - 1];
+    const finalCoords = rawCoords.map((pt, i) => {
+      if (i > 0) {
+        const prev = rawCoords[i - 1];
         const stepDist = haversineMeters(prev.lat, prev.lon, pt.lat, pt.lon);
-        // Only add if reasonable step (< 100 meters per second)
         if (stepDist < 100) {
           totalDistM += stepDist;
         }
       }
-
-      coords.push({
-        lat: Number(pt.lat.toFixed(7)),
-        lon: Number(pt.lon.toFixed(7)),
-        speed: Number(pt.speed.toFixed(1)),
-        heading: Math.round(pt.heading),
-        alt: Number(pt.alt.toFixed(1)),
-        acc: Math.round(pt.acc),
-        ts: pt.ts,
-        relMs: Math.max(0, pt.ts - startTs),
+      return {
+        ...pt,
+        relMs: Math.max(0, pt.ts - startTsActual),
         distM: Number(totalDistM.toFixed(1))
-      });
-    }
+      };
+    });
 
-    const speeds = coords.map(c => c.speed);
+    const speeds = finalCoords.map(c => c.speed);
     const maxSpeed = speeds.length ? Math.max(...speeds) : 0;
     const minSpeed = speeds.length ? Math.min(...speeds) : 0;
     const avgSpeed = speeds.length ? Number((speeds.reduce((a, b) => a + b, 0) / speeds.length).toFixed(1)) : 0;
@@ -103,27 +192,29 @@ async function bundleTelemetry() {
       cones: r.cones || 0,
       isDnf: !!r.isDnf,
       notes: r.notes || '',
-      startTs: startTs,
-      endTs: endTs,
-      pointCount: coords.length,
+      startTs: timerStartTs,
+      endTs: timerEndTs,
+      pointCount: finalCoords.length,
       maxSpeedMph: maxSpeed,
       minSpeedMph: minSpeed,
       avgSpeedMph: avgSpeed,
       totalDistanceMeters: Number(totalDistM.toFixed(1)),
       totalDistanceMiles: Number((totalDistM * 0.000621371).toFixed(3)),
-      coords: coords
+      coords: finalCoords
     });
   });
 
   const output = {
     eventName: 'Sunday Autocross',
     trackName: 'Sonoma Raceway Paddock',
-    center: [38.1596365, -122.4551010],
+    center: [38.1598, -122.4551],
+    startCoords: [targetStart.lat, targetStart.lon],
+    finishCoords: [targetFinish.lat, targetFinish.lon],
     bounds: {
-      minLat: 38.1583094,
-      maxLat: 38.1609636,
-      minLon: -122.4560945,
-      maxLon: -122.4541076
+      minLat: 38.1583,
+      maxLat: 38.1610,
+      minLon: -122.4561,
+      maxLon: -122.4541
     },
     totalRuns: bundledRuns.length,
     generatedAt: new Date().toISOString(),
