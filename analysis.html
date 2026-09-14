@@ -82,6 +82,7 @@
       gap: 8px;
       white-space: nowrap;
     }
+    .title-short { display: none; }
     .header-tag {
       background: #ea580c;
       color: #fff;
@@ -135,6 +136,160 @@
       border-color: var(--accent);
       color: #fff;
     }
+
+    .desktop-quick-bar {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .btn-options-toggle {
+      background: #1e293b;
+      color: #cbd5e1;
+      border: 1px solid #334155;
+    }
+    .btn-options-toggle.active, .btn-options-toggle:hover {
+      border-color: var(--accent);
+      color: #fff;
+    }
+
+    /* OPTIONS DROPDOWN & BACKDROP */
+    .options-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.65);
+      backdrop-filter: blur(2px);
+      z-index: 1150;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s ease;
+    }
+    .options-backdrop.active {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .options-dropdown {
+      position: fixed;
+      top: 54px;
+      right: 14px;
+      width: 330px;
+      max-width: calc(100vw - 28px);
+      background: #0f172a;
+      border: 1px solid #334155;
+      border-radius: 12px;
+      padding: 16px;
+      box-shadow: 0 20px 45px rgba(0,0,0,0.75);
+      z-index: 1200;
+      display: none;
+      flex-direction: column;
+      gap: 14px;
+    }
+    .options-dropdown.open {
+      display: flex;
+    }
+    .options-dropdown-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid #1e293b;
+      padding-bottom: 8px;
+    }
+    .options-dropdown-title {
+      font-size: 13px;
+      font-weight: 800;
+      color: #38bdf8;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .btn-close-options {
+      background: #1e293b;
+      border: 1px solid #334155;
+      color: #94a3b8;
+      width: 26px;
+      height: 26px;
+      border-radius: 6px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      font-weight: bold;
+    }
+    .btn-close-options:hover { color: #fff; border-color: var(--accent); }
+    .options-section {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      border-bottom: 1px solid #1e293b;
+      padding-bottom: 10px;
+    }
+    .options-label {
+      font-size: 11px;
+      font-weight: 700;
+      color: #94a3b8;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .options-btn-group {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+    .opt-btn {
+      flex: 1;
+      min-width: 80px;
+      background: #1e293b;
+      color: #cbd5e1;
+      border: 1px solid #334155;
+      padding: 7px 10px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 700;
+      cursor: pointer;
+      text-align: center;
+      transition: all 0.15s;
+      white-space: nowrap;
+    }
+    .opt-btn:hover { border-color: var(--accent); color: #fff; }
+    .opt-btn.active {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #fff;
+    }
+    .opt-checkbox-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+      color: #e2e8f0;
+      font-size: 12px;
+      padding: 4px 0;
+    }
+    .opt-checkbox-row input {
+      accent-color: var(--accent);
+      width: 16px;
+      height: 16px;
+      cursor: pointer;
+    }
+    .opt-subtext {
+      font-size: 10px;
+      color: #64748b;
+      line-height: 1.4;
+    }
+    .opt-action-btn {
+      width: 100%;
+      background: #1e293b;
+      border: 1px solid #334155;
+      color: #cbd5e1;
+      padding: 8px 12px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 800;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .opt-action-btn:hover { background: var(--accent); border-color: var(--accent); color: #fff; }
 
     /* BUTTON TO OPEN SIDEBAR (MOBILE HEADER) */
     .btn-toggle-sidebar {
@@ -648,17 +803,29 @@
         -webkit-overflow-scrolling: touch;
       }
       .app-header {
-        flex-direction: column;
-        align-items: stretch;
-        padding: 8px 12px;
-        gap: 8px;
+        flex-direction: row;
+        align-items: center;
+        justify-content: space-between;
+        padding: 8px 10px;
+        gap: 4px;
       }
       .header-left {
-        width: 100%;
-        justify-content: space-between;
+        width: auto;
+        display: flex;
+        align-items: center;
+        gap: 6px;
       }
       .header-title {
-        font-size: 14px;
+        font-size: 13px;
+        white-space: nowrap;
+      }
+      .title-full {
+        display: none;
+      }
+      .title-short {
+        display: inline;
+        font-weight: 800;
+        font-size: 12px;
       }
       .header-tag {
         display: none;
@@ -668,21 +835,38 @@
       }
       .btn-toggle-sidebar {
         display: inline-flex;
+        padding: 5px 8px;
+        font-size: 11px;
+      }
+      .btn-back {
+        padding: 5px 8px;
+        font-size: 11px;
+        white-space: nowrap;
       }
       .header-controls {
-        overflow-x: auto;
-        -webkit-overflow-scrolling: touch;
-        white-space: nowrap;
-        padding-bottom: 2px;
-        scrollbar-width: none;
-        width: 100%;
+        width: auto;
+        overflow: visible;
+        display: flex;
+        align-items: center;
+        gap: 6px;
       }
-      .header-controls::-webkit-scrollbar {
-        display: none;
+      .desktop-quick-bar {
+        display: none !important;
       }
-      .ctrl-btn {
-        padding: 5px 10px;
+      .btn-options-toggle {
+        display: inline-flex;
+        padding: 5px 9px;
         font-size: 11px;
+      }
+      .floating-runs-btn {
+        display: none !important;
+      }
+      .options-dropdown {
+        top: 52px;
+        right: 10px;
+        left: 10px;
+        width: auto;
+        max-width: none;
       }
 
       .main-workspace {
@@ -895,7 +1079,8 @@
     <div class="header-left">
       <button type="button" class="btn-toggle-sidebar" id="btn-toggle-sidebar" onclick="toggleSidebar()">☰ Runs (4)</button>
       <div class="header-title">
-        <span>🏁 SONOMA RACEWAY</span>
+        <span class="title-full">🏁 SONOMA RACEWAY</span>
+        <span class="title-short">🏁 SONOMA</span>
         <span class="header-tag">GPS ANALYSIS</span>
       </div>
       <a href="pitwall.html" class="btn-back">← Pit Wall</a>
@@ -907,21 +1092,78 @@
     </div>
 
     <div class="header-controls">
-      <!-- MAP LAYER SWITCHER -->
-      <button type="button" class="ctrl-btn active" id="btn-layer-sat" onclick="setMapLayer('satellite')">🛰️ Satellite</button>
-      <button type="button" class="ctrl-btn" id="btn-layer-dark" onclick="setMapLayer('dark')">🌑 Dark</button>
-      <button type="button" class="ctrl-btn" id="btn-layer-street" onclick="setMapLayer('street')">🗺️ Street</button>
+      <!-- DESKTOP QUICK TOOLBAR -->
+      <div class="desktop-quick-bar">
+        <!-- MAP LAYER SWITCHER -->
+        <button type="button" class="ctrl-btn active" id="btn-layer-sat" onclick="setMapLayer('satellite')">🛰️ Satellite</button>
+        <button type="button" class="ctrl-btn" id="btn-layer-dark" onclick="setMapLayer('dark')">🌑 Dark</button>
+        <button type="button" class="ctrl-btn" id="btn-layer-street" onclick="setMapLayer('street')">🗺️ Street</button>
 
-      <!-- COLOR MODE SWITCHER -->
-      <button type="button" class="ctrl-btn active" id="btn-color-driver" onclick="setColorMode('driver')">🎨 Driver Color</button>
-      <button type="button" class="ctrl-btn" id="btn-color-heat" onclick="setColorMode('heatmap')">🔥 Speed Heatmap</button>
+        <!-- COLOR MODE SWITCHER -->
+        <button type="button" class="ctrl-btn active" id="btn-color-driver" onclick="setColorMode('driver')">🎨 Driver Color</button>
+        <button type="button" class="ctrl-btn" id="btn-color-heat" onclick="setColorMode('heatmap')">🔥 Speed Heatmap</button>
 
-      <!-- LINE SMOOTHING SWITCHER -->
-      <button type="button" class="ctrl-btn active" id="btn-smooth-lines" onclick="toggleLineSmoothing()" title="Toggle Heading-Guided Kinematic Racing Line Smoothing">🏎️ Smooth Lines</button>
+        <!-- LINE SMOOTHING SWITCHER -->
+        <button type="button" class="ctrl-btn active" id="btn-smooth-lines" onclick="toggleLineSmoothing()" title="Toggle Heading-Guided Kinematic Racing Line Smoothing">🏎️ Smooth Lines</button>
 
-      <button type="button" class="ctrl-btn" onclick="fitTrackBounds()" title="Center view on track">🎯 Center</button>
+        <button type="button" class="ctrl-btn" onclick="fitTrackBounds()" title="Center view on track">🎯 Center</button>
+      </div>
+
+      <!-- OPTIONS DROPDOWN BUTTON (MOBILE & DESKTOP) -->
+      <button type="button" class="ctrl-btn btn-options-toggle" id="btn-options-toggle" onclick="toggleOptionsMenu()" title="Display & Map Options">
+        ⚙️ Options
+      </button>
     </div>
   </header>
+
+  <!-- OPTIONS BACKDROP & DROPDOWN MENU -->
+  <div class="options-backdrop" id="options-backdrop" onclick="closeOptionsMenu()"></div>
+  <div class="options-dropdown" id="options-dropdown">
+    <div class="options-dropdown-header">
+      <div class="options-dropdown-title">⚙️ Map & Analysis Options</div>
+      <button type="button" class="btn-close-options" onclick="closeOptionsMenu()">✕</button>
+    </div>
+
+    <div class="options-section">
+      <div class="options-label">Map Background</div>
+      <div class="options-btn-group">
+        <button type="button" class="opt-btn active" id="opt-layer-sat" onclick="setMapLayer('satellite')">🛰️ Satellite</button>
+        <button type="button" class="opt-btn" id="opt-layer-dark" onclick="setMapLayer('dark')">🌑 Dark</button>
+        <button type="button" class="opt-btn" id="opt-layer-street" onclick="setMapLayer('street')">🗺️ Street</button>
+      </div>
+    </div>
+
+    <div class="options-section">
+      <div class="options-label">Line Colors</div>
+      <div class="options-btn-group">
+        <button type="button" class="opt-btn active" id="opt-color-driver" onclick="setColorMode('driver')">🎨 Driver Colors</button>
+        <button type="button" class="opt-btn" id="opt-color-heat" onclick="setColorMode('heatmap')">🔥 Speed Heatmap</button>
+      </div>
+    </div>
+
+    <div class="options-section">
+      <div class="options-label">GPS Smoothing</div>
+      <div class="options-btn-group">
+        <button type="button" class="opt-btn active" id="opt-smooth-lines" onclick="setSmoothingMode(true)">🏎️ Smooth (Heading)</button>
+        <button type="button" class="opt-btn" id="opt-raw-lines" onclick="setSmoothingMode(false)">📍 Raw (1 Hz)</button>
+      </div>
+    </div>
+
+    <div class="options-section">
+      <div class="options-label">Actual Track Racing Line</div>
+      <label class="opt-checkbox-row">
+        <input type="checkbox" id="opt-toggle-consensus" checked onchange="toggleConsensusLine(this.checked)" />
+        <span><strong>🏁 Actual Racing Line</strong> (Dotted)</span>
+      </label>
+      <div class="opt-subtext">Consensus track groove extracted from 2,500+ GPS points across all 47 runs via 2D density heatmap. Rendered on the bottom layer.</div>
+    </div>
+
+    <div class="options-section" style="border-bottom:none; margin-bottom:0; padding-bottom:0;">
+      <button type="button" class="opt-action-btn" onclick="fitTrackBounds(); closeOptionsMenu();">
+        🎯 Reset & Center Track Map
+      </button>
+    </div>
+  </div>
 
   <!-- MAIN WORKSPACE -->
   <div class="main-workspace">
@@ -971,11 +1213,6 @@
     <div class="map-container-wrap">
       <div id="map"></div>
 
-      <!-- FLOATING RUNS BUTTON (MOBILE) -->
-      <button type="button" class="floating-runs-btn" id="floating-runs-btn" onclick="openSidebar()">
-        ☰ Runs <span class="badge badge-run-count">4</span>
-      </button>
-
       <!-- FLOATING SCROLL BUTTON (MOBILE) -->
       <button type="button" class="floating-scroll-btn" id="btn-scroll-timeline" onclick="scrollToTimeline()">
         ⬇ Timeline
@@ -989,6 +1226,9 @@
             <div class="legend-row"><span class="legend-color-box" style="background:var(--color-jeff);"></span> Jeff</div>
             <div class="legend-row"><span class="legend-color-box" style="background:var(--color-ryan);"></span> Ryan</div>
             <div class="legend-row"><span class="legend-color-box" style="background:var(--color-matt);"></span> Matt</div>
+            <div class="legend-row" style="margin-top:6px; padding-top:6px; border-top:1px solid #334155; font-size:11px;">
+              <span style="color:#f8fafc; font-weight:900; letter-spacing:2px; font-size:12px;">···</span> Track Line
+            </div>
           </div>
           <div class="map-legend" id="legend-heat-content" style="display:none;">
             <div style="font-size:11px; font-weight:800;">Speed Gradient</div>
@@ -1061,7 +1301,893 @@
     "maxLon": -122.4541
   },
   "totalRuns": 47,
-  "generatedAt": "2026-09-14T03:18:43.335Z",
+  "consensusLine": [
+    [
+      38.1607778,
+      -122.4554722
+    ],
+    [
+      38.1607666,
+      -122.4554823
+    ],
+    [
+      38.1607564,
+      -122.4554825
+    ],
+    [
+      38.1607384,
+      -122.4554821
+    ],
+    [
+      38.160714,
+      -122.4554823
+    ],
+    [
+      38.1606865,
+      -122.4554841
+    ],
+    [
+      38.1606583,
+      -122.455488
+    ],
+    [
+      38.1606302,
+      -122.4554948
+    ],
+    [
+      38.1606025,
+      -122.4555047
+    ],
+    [
+      38.1605752,
+      -122.4555172
+    ],
+    [
+      38.1605483,
+      -122.4555315
+    ],
+    [
+      38.1605217,
+      -122.4555467
+    ],
+    [
+      38.160495,
+      -122.4555621
+    ],
+    [
+      38.1604681,
+      -122.4555769
+    ],
+    [
+      38.1604409,
+      -122.4555905
+    ],
+    [
+      38.1604132,
+      -122.4556026
+    ],
+    [
+      38.160385,
+      -122.4556128
+    ],
+    [
+      38.1603564,
+      -122.4556207
+    ],
+    [
+      38.1603274,
+      -122.4556257
+    ],
+    [
+      38.1602984,
+      -122.4556271
+    ],
+    [
+      38.1602695,
+      -122.4556242
+    ],
+    [
+      38.160241,
+      -122.4556172
+    ],
+    [
+      38.160213,
+      -122.4556064
+    ],
+    [
+      38.1601859,
+      -122.4555924
+    ],
+    [
+      38.1601603,
+      -122.4555747
+    ],
+    [
+      38.1601366,
+      -122.4555531
+    ],
+    [
+      38.1601152,
+      -122.455528
+    ],
+    [
+      38.1600955,
+      -122.4555007
+    ],
+    [
+      38.1600766,
+      -122.4554726
+    ],
+    [
+      38.1600581,
+      -122.455444
+    ],
+    [
+      38.16004,
+      -122.4554151
+    ],
+    [
+      38.160022,
+      -122.4553859
+    ],
+    [
+      38.1600035,
+      -122.455357
+    ],
+    [
+      38.1599846,
+      -122.4553284
+    ],
+    [
+      38.1599662,
+      -122.4552992
+    ],
+    [
+      38.1599503,
+      -122.4552682
+    ],
+    [
+      38.1599388,
+      -122.4552347
+    ],
+    [
+      38.1599333,
+      -122.4551994
+    ],
+    [
+      38.1599348,
+      -122.4551639
+    ],
+    [
+      38.1599436,
+      -122.4551306
+    ],
+    [
+      38.1599593,
+      -122.455102
+    ],
+    [
+      38.1599807,
+      -122.4550803
+    ],
+    [
+      38.1600062,
+      -122.4550668
+    ],
+    [
+      38.1600341,
+      -122.4550615
+    ],
+    [
+      38.1600627,
+      -122.4550637
+    ],
+    [
+      38.1600907,
+      -122.4550722
+    ],
+    [
+      38.1601173,
+      -122.4550863
+    ],
+    [
+      38.1601416,
+      -122.4551057
+    ],
+    [
+      38.1601631,
+      -122.4551299
+    ],
+    [
+      38.1601819,
+      -122.4551576
+    ],
+    [
+      38.1601984,
+      -122.4551878
+    ],
+    [
+      38.1602131,
+      -122.4552194
+    ],
+    [
+      38.1602271,
+      -122.4552513
+    ],
+    [
+      38.1602418,
+      -122.4552822
+    ],
+    [
+      38.1602591,
+      -122.4553101
+    ],
+    [
+      38.16028,
+      -122.4553327
+    ],
+    [
+      38.1603043,
+      -122.4553484
+    ],
+    [
+      38.1603308,
+      -122.4553559
+    ],
+    [
+      38.1603575,
+      -122.4553545
+    ],
+    [
+      38.160383,
+      -122.4553442
+    ],
+    [
+      38.1604057,
+      -122.4553259
+    ],
+    [
+      38.1604249,
+      -122.4553015
+    ],
+    [
+      38.1604398,
+      -122.4552725
+    ],
+    [
+      38.1604499,
+      -122.4552402
+    ],
+    [
+      38.1604553,
+      -122.4552056
+    ],
+    [
+      38.1604557,
+      -122.4551703
+    ],
+    [
+      38.1604512,
+      -122.4551355
+    ],
+    [
+      38.1604418,
+      -122.4551025
+    ],
+    [
+      38.1604279,
+      -122.4550719
+    ],
+    [
+      38.1604105,
+      -122.455044
+    ],
+    [
+      38.1603904,
+      -122.4550188
+    ],
+    [
+      38.1603681,
+      -122.4549965
+    ],
+    [
+      38.1603439,
+      -122.4549769
+    ],
+    [
+      38.1603184,
+      -122.4549593
+    ],
+    [
+      38.1602926,
+      -122.4549423
+    ],
+    [
+      38.1602669,
+      -122.4549245
+    ],
+    [
+      38.1602421,
+      -122.4549049
+    ],
+    [
+      38.1602186,
+      -122.4548828
+    ],
+    [
+      38.1601977,
+      -122.454857
+    ],
+    [
+      38.1601803,
+      -122.4548274
+    ],
+    [
+      38.1601666,
+      -122.4547947
+    ],
+    [
+      38.1601555,
+      -122.4547603
+    ],
+    [
+      38.1601458,
+      -122.4547254
+    ],
+    [
+      38.160136,
+      -122.4546908
+    ],
+    [
+      38.160125,
+      -122.4546575
+    ],
+    [
+      38.1601113,
+      -122.4546268
+    ],
+    [
+      38.1600943,
+      -122.4546001
+    ],
+    [
+      38.1600742,
+      -122.4545789
+    ],
+    [
+      38.1600514,
+      -122.4545648
+    ],
+    [
+      38.1600269,
+      -122.4545594
+    ],
+    [
+      38.1600019,
+      -122.454563
+    ],
+    [
+      38.1599781,
+      -122.4545749
+    ],
+    [
+      38.1599564,
+      -122.4545939
+    ],
+    [
+      38.1599372,
+      -122.4546182
+    ],
+    [
+      38.1599201,
+      -122.4546462
+    ],
+    [
+      38.1599036,
+      -122.4546759
+    ],
+    [
+      38.1598865,
+      -122.4547053
+    ],
+    [
+      38.1598677,
+      -122.4547332
+    ],
+    [
+      38.1598468,
+      -122.4547586
+    ],
+    [
+      38.159824,
+      -122.454781
+    ],
+    [
+      38.1597991,
+      -122.4547992
+    ],
+    [
+      38.1597726,
+      -122.454812
+    ],
+    [
+      38.1597453,
+      -122.4548176
+    ],
+    [
+      38.1597182,
+      -122.4548148
+    ],
+    [
+      38.1596925,
+      -122.4548041
+    ],
+    [
+      38.1596695,
+      -122.4547869
+    ],
+    [
+      38.1596508,
+      -122.4547644
+    ],
+    [
+      38.1596374,
+      -122.4547375
+    ],
+    [
+      38.1596293,
+      -122.4547081
+    ],
+    [
+      38.1596262,
+      -122.4546777
+    ],
+    [
+      38.159628,
+      -122.4546476
+    ],
+    [
+      38.1596349,
+      -122.4546186
+    ],
+    [
+      38.159647,
+      -122.4545915
+    ],
+    [
+      38.1596632,
+      -122.4545665
+    ],
+    [
+      38.1596823,
+      -122.4545429
+    ],
+    [
+      38.1597021,
+      -122.4545191
+    ],
+    [
+      38.1597199,
+      -122.4544934
+    ],
+    [
+      38.1597336,
+      -122.4544641
+    ],
+    [
+      38.1597415,
+      -122.4544313
+    ],
+    [
+      38.1597423,
+      -122.4543964
+    ],
+    [
+      38.1597358,
+      -122.454362
+    ],
+    [
+      38.1597227,
+      -122.4543299
+    ],
+    [
+      38.1597049,
+      -122.4543018
+    ],
+    [
+      38.1596838,
+      -122.4542783
+    ],
+    [
+      38.1596603,
+      -122.4542598
+    ],
+    [
+      38.1596348,
+      -122.454246
+    ],
+    [
+      38.1596078,
+      -122.4542358
+    ],
+    [
+      38.1595802,
+      -122.4542274
+    ],
+    [
+      38.1595524,
+      -122.4542187
+    ],
+    [
+      38.1595245,
+      -122.4542091
+    ],
+    [
+      38.1594961,
+      -122.4541997
+    ],
+    [
+      38.1594672,
+      -122.4541933
+    ],
+    [
+      38.1594383,
+      -122.4541924
+    ],
+    [
+      38.1594099,
+      -122.454198
+    ],
+    [
+      38.1593825,
+      -122.4542093
+    ],
+    [
+      38.1593568,
+      -122.454225
+    ],
+    [
+      38.1593334,
+      -122.4542447
+    ],
+    [
+      38.1593134,
+      -122.4542687
+    ],
+    [
+      38.1592974,
+      -122.4542969
+    ],
+    [
+      38.159286,
+      -122.4543282
+    ],
+    [
+      38.1592796,
+      -122.4543617
+    ],
+    [
+      38.1592786,
+      -122.4543961
+    ],
+    [
+      38.1592829,
+      -122.4544303
+    ],
+    [
+      38.1592922,
+      -122.4544633
+    ],
+    [
+      38.1593057,
+      -122.4544945
+    ],
+    [
+      38.1593225,
+      -122.4545238
+    ],
+    [
+      38.1593413,
+      -122.4545516
+    ],
+    [
+      38.1593612,
+      -122.4545786
+    ],
+    [
+      38.1593813,
+      -122.4546054
+    ],
+    [
+      38.1594011,
+      -122.4546328
+    ],
+    [
+      38.1594197,
+      -122.4546614
+    ],
+    [
+      38.1594362,
+      -122.4546919
+    ],
+    [
+      38.1594503,
+      -122.4547244
+    ],
+    [
+      38.1594624,
+      -122.4547585
+    ],
+    [
+      38.1594738,
+      -122.4547932
+    ],
+    [
+      38.1594855,
+      -122.4548275
+    ],
+    [
+      38.1594985,
+      -122.4548609
+    ],
+    [
+      38.1595131,
+      -122.4548931
+    ],
+    [
+      38.1595294,
+      -122.4549238
+    ],
+    [
+      38.1595471,
+      -122.4549534
+    ],
+    [
+      38.159566,
+      -122.454982
+    ],
+    [
+      38.1595862,
+      -122.455009
+    ],
+    [
+      38.1596079,
+      -122.4550341
+    ],
+    [
+      38.1596309,
+      -122.4550572
+    ],
+    [
+      38.1596546,
+      -122.4550793
+    ],
+    [
+      38.1596784,
+      -122.4551012
+    ],
+    [
+      38.159702,
+      -122.4551233
+    ],
+    [
+      38.1597253,
+      -122.4551457
+    ],
+    [
+      38.1597485,
+      -122.4551684
+    ],
+    [
+      38.1597711,
+      -122.4551917
+    ],
+    [
+      38.1597925,
+      -122.4552165
+    ],
+    [
+      38.1598116,
+      -122.4552436
+    ],
+    [
+      38.1598273,
+      -122.4552733
+    ],
+    [
+      38.1598381,
+      -122.4553054
+    ],
+    [
+      38.1598423,
+      -122.4553388
+    ],
+    [
+      38.1598388,
+      -122.4553713
+    ],
+    [
+      38.1598276,
+      -122.4554005
+    ],
+    [
+      38.1598101,
+      -122.4554249
+    ],
+    [
+      38.159788,
+      -122.4554441
+    ],
+    [
+      38.1597631,
+      -122.4554578
+    ],
+    [
+      38.1597363,
+      -122.4554656
+    ],
+    [
+      38.1597084,
+      -122.4554672
+    ],
+    [
+      38.1596804,
+      -122.4554633
+    ],
+    [
+      38.1596525,
+      -122.4554551
+    ],
+    [
+      38.1596251,
+      -122.4554438
+    ],
+    [
+      38.1595981,
+      -122.4554305
+    ],
+    [
+      38.1595715,
+      -122.4554156
+    ],
+    [
+      38.1595453,
+      -122.455399
+    ],
+    [
+      38.1595198,
+      -122.4553807
+    ],
+    [
+      38.1594952,
+      -122.4553604
+    ],
+    [
+      38.1594718,
+      -122.4553379
+    ],
+    [
+      38.1594497,
+      -122.4553133
+    ],
+    [
+      38.1594287,
+      -122.4552871
+    ],
+    [
+      38.1594088,
+      -122.4552594
+    ],
+    [
+      38.1593908,
+      -122.45523
+    ],
+    [
+      38.1593752,
+      -122.4551986
+    ],
+    [
+      38.1593618,
+      -122.4551655
+    ],
+    [
+      38.1593504,
+      -122.4551312
+    ],
+    [
+      38.1593411,
+      -122.455096
+    ],
+    [
+      38.1593338,
+      -122.45506
+    ],
+    [
+      38.1593281,
+      -122.4550235
+    ],
+    [
+      38.1593232,
+      -122.4549868
+    ],
+    [
+      38.1593178,
+      -122.4549503
+    ],
+    [
+      38.1593114,
+      -122.4549141
+    ],
+    [
+      38.1593034,
+      -122.4548786
+    ],
+    [
+      38.1592929,
+      -122.4548447
+    ],
+    [
+      38.1592791,
+      -122.4548139
+    ],
+    [
+      38.1592615,
+      -122.4547878
+    ],
+    [
+      38.1592402,
+      -122.4547683
+    ],
+    [
+      38.1592163,
+      -122.4547566
+    ],
+    [
+      38.1591907,
+      -122.4547531
+    ],
+    [
+      38.1591645,
+      -122.4547572
+    ],
+    [
+      38.1591386,
+      -122.4547675
+    ],
+    [
+      38.159113,
+      -122.4547814
+    ],
+    [
+      38.1590873,
+      -122.4547951
+    ],
+    [
+      38.1590611,
+      -122.4548045
+    ],
+    [
+      38.1590352,
+      -122.4548071
+    ],
+    [
+      38.159012,
+      -122.4548039
+    ],
+    [
+      38.1589943,
+      -122.4547982
+    ],
+    [
+      38.1589835,
+      -122.4547927
+    ],
+    [
+      38.1589722,
+      -122.4547778
+    ]
+  ],
+  "generatedAt": "2026-09-14T03:57:19.488Z",
   "runs": [
     {
       "id": "run-1789316119817",
@@ -31277,6 +32403,7 @@
       L.control.zoom({ position: "bottomright" }).addTo(map);
 
       setMapLayer("satellite");
+      initConsensusRacingLine();
 
       window.addEventListener("resize", () => {
         if (map) map.invalidateSize();
@@ -31295,9 +32422,9 @@
         attribution: TILE_ATTRIB[type]
       }).addTo(map);
 
-      document.getElementById("btn-layer-sat").classList.toggle("active", type === "satellite");
-      document.getElementById("btn-layer-dark").classList.toggle("active", type === "dark");
-      document.getElementById("btn-layer-street").classList.toggle("active", type === "street");
+      document.querySelectorAll("#btn-layer-sat, #opt-layer-sat").forEach(el => el.classList.toggle("active", type === "satellite"));
+      document.querySelectorAll("#btn-layer-dark, #opt-layer-dark").forEach(el => el.classList.toggle("active", type === "dark"));
+      document.querySelectorAll("#btn-layer-street, #opt-layer-street").forEach(el => el.classList.toggle("active", type === "street"));
     }
 
     function fitTrackBounds() {
@@ -31311,8 +32438,8 @@
 
     function setColorMode(mode) {
       activeColorMode = mode;
-      document.getElementById("btn-color-driver").classList.toggle("active", mode === "driver");
-      document.getElementById("btn-color-heat").classList.toggle("active", mode === "heatmap");
+      document.querySelectorAll("#btn-color-driver, #opt-color-driver").forEach(el => el.classList.toggle("active", mode === "driver"));
+      document.querySelectorAll("#btn-color-heat, #opt-color-heat").forEach(el => el.classList.toggle("active", mode === "heatmap"));
 
       document.getElementById("legend-driver-content").style.display = mode === "driver" ? "flex" : "none";
       document.getElementById("legend-heat-content").style.display = mode === "heatmap" ? "flex" : "none";
@@ -31429,14 +32556,106 @@
       return smoothed;
     }
 
-    function toggleLineSmoothing() {
-      activeLineSmoothing = !activeLineSmoothing;
+    function setSmoothingMode(enabled) {
+      activeLineSmoothing = enabled;
       const btn = document.getElementById("btn-smooth-lines");
       if (btn) {
         btn.classList.toggle("active", activeLineSmoothing);
         btn.innerHTML = activeLineSmoothing ? "🏎️ Smooth Lines" : "📍 Raw 1Hz GPS";
       }
+      const optSmooth = document.getElementById("opt-smooth-lines");
+      const optRaw = document.getElementById("opt-raw-lines");
+      if (optSmooth) optSmooth.classList.toggle("active", activeLineSmoothing);
+      if (optRaw) optRaw.classList.toggle("active", !activeLineSmoothing);
       updateMapPolylines();
+    }
+
+    function toggleLineSmoothing() {
+      setSmoothingMode(!activeLineSmoothing);
+    }
+
+    // --- OPTIONS DROPDOWN MENU HANDLERS ---
+    function toggleOptionsMenu() {
+      const dd = document.getElementById("options-dropdown");
+      const bd = document.getElementById("options-backdrop");
+      const btn = document.getElementById("btn-options-toggle");
+      if (!dd) return;
+      const isOpen = dd.classList.toggle("open");
+      if (bd) bd.classList.toggle("active", isOpen);
+      if (btn) btn.classList.toggle("active", isOpen);
+    }
+
+    function closeOptionsMenu() {
+      const dd = document.getElementById("options-dropdown");
+      const bd = document.getElementById("options-backdrop");
+      const btn = document.getElementById("btn-options-toggle");
+      if (dd) dd.classList.remove("open");
+      if (bd) bd.classList.remove("active");
+      if (btn) btn.classList.remove("active");
+    }
+
+    // --- ACTUAL TRACK RACING LINE (HEATMAP CONSENSUS DOTTED OVERLAY) ---
+    let consensusPolylineGroup = null;
+    let showConsensusLine = true;
+
+    function initConsensusRacingLine() {
+      if (!map || !telemetryData || !telemetryData.consensusLine) return;
+
+      // Dedicated pane rendered strictly BELOW overlayPane (zIndex: 390 vs 400)
+      if (!map.getPane('consensusPane')) {
+        map.createPane('consensusPane');
+        map.getPane('consensusPane').style.zIndex = 390;
+        map.getPane('consensusPane').style.pointerEvents = 'none';
+      }
+
+      const latlngs = telemetryData.consensusLine;
+      if (!latlngs || latlngs.length < 2) return;
+
+      // Contrast halo for high visibility on satellite imagery
+      const halo = L.polyline(latlngs, {
+        pane: 'consensusPane',
+        color: '#000000',
+        weight: 5.5,
+        opacity: 0.8,
+        lineCap: 'round',
+        lineJoin: 'round'
+      });
+
+      // Core crisp dotted track racing line
+      const core = L.polyline(latlngs, {
+        pane: 'consensusPane',
+        color: '#f8fafc',
+        weight: 2.5,
+        dashArray: '3, 6',
+        opacity: 0.92,
+        lineCap: 'round',
+        lineJoin: 'round'
+      });
+
+      halo.bindTooltip("🏁 Consensus Track Racing Line (Heatmap Peak)", { direction: "top", sticky: true });
+      core.bindTooltip("🏁 Consensus Track Racing Line (Heatmap Peak)", { direction: "top", sticky: true });
+
+      consensusPolylineGroup = L.layerGroup([halo, core]);
+      if (showConsensusLine) {
+        consensusPolylineGroup.addTo(map);
+      }
+    }
+
+    function toggleConsensusLine(visible) {
+      showConsensusLine = visible;
+      const chk = document.getElementById("opt-toggle-consensus");
+      if (chk) chk.checked = visible;
+
+      if (!consensusPolylineGroup) return;
+      if (showConsensusLine) {
+        if (!map.hasLayer(consensusPolylineGroup)) {
+          map.addLayer(consensusPolylineGroup);
+        }
+      } else {
+        if (map.hasLayer(consensusPolylineGroup)) {
+          map.removeLayer(consensusPolylineGroup);
+        }
+      }
     }
 
     // --- RENDER RUN POLYLINES ON MAP ---

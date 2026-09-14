@@ -88,6 +88,7 @@ const htmlContent = `<!DOCTYPE html>
       gap: 8px;
       white-space: nowrap;
     }
+    .title-short { display: none; }
     .header-tag {
       background: #ea580c;
       color: #fff;
@@ -141,6 +142,160 @@ const htmlContent = `<!DOCTYPE html>
       border-color: var(--accent);
       color: #fff;
     }
+
+    .desktop-quick-bar {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .btn-options-toggle {
+      background: #1e293b;
+      color: #cbd5e1;
+      border: 1px solid #334155;
+    }
+    .btn-options-toggle.active, .btn-options-toggle:hover {
+      border-color: var(--accent);
+      color: #fff;
+    }
+
+    /* OPTIONS DROPDOWN & BACKDROP */
+    .options-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.65);
+      backdrop-filter: blur(2px);
+      z-index: 1150;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s ease;
+    }
+    .options-backdrop.active {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .options-dropdown {
+      position: fixed;
+      top: 54px;
+      right: 14px;
+      width: 330px;
+      max-width: calc(100vw - 28px);
+      background: #0f172a;
+      border: 1px solid #334155;
+      border-radius: 12px;
+      padding: 16px;
+      box-shadow: 0 20px 45px rgba(0,0,0,0.75);
+      z-index: 1200;
+      display: none;
+      flex-direction: column;
+      gap: 14px;
+    }
+    .options-dropdown.open {
+      display: flex;
+    }
+    .options-dropdown-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid #1e293b;
+      padding-bottom: 8px;
+    }
+    .options-dropdown-title {
+      font-size: 13px;
+      font-weight: 800;
+      color: #38bdf8;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .btn-close-options {
+      background: #1e293b;
+      border: 1px solid #334155;
+      color: #94a3b8;
+      width: 26px;
+      height: 26px;
+      border-radius: 6px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      font-weight: bold;
+    }
+    .btn-close-options:hover { color: #fff; border-color: var(--accent); }
+    .options-section {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      border-bottom: 1px solid #1e293b;
+      padding-bottom: 10px;
+    }
+    .options-label {
+      font-size: 11px;
+      font-weight: 700;
+      color: #94a3b8;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .options-btn-group {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+    .opt-btn {
+      flex: 1;
+      min-width: 80px;
+      background: #1e293b;
+      color: #cbd5e1;
+      border: 1px solid #334155;
+      padding: 7px 10px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 700;
+      cursor: pointer;
+      text-align: center;
+      transition: all 0.15s;
+      white-space: nowrap;
+    }
+    .opt-btn:hover { border-color: var(--accent); color: #fff; }
+    .opt-btn.active {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #fff;
+    }
+    .opt-checkbox-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+      color: #e2e8f0;
+      font-size: 12px;
+      padding: 4px 0;
+    }
+    .opt-checkbox-row input {
+      accent-color: var(--accent);
+      width: 16px;
+      height: 16px;
+      cursor: pointer;
+    }
+    .opt-subtext {
+      font-size: 10px;
+      color: #64748b;
+      line-height: 1.4;
+    }
+    .opt-action-btn {
+      width: 100%;
+      background: #1e293b;
+      border: 1px solid #334155;
+      color: #cbd5e1;
+      padding: 8px 12px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 800;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .opt-action-btn:hover { background: var(--accent); border-color: var(--accent); color: #fff; }
 
     /* BUTTON TO OPEN SIDEBAR (MOBILE HEADER) */
     .btn-toggle-sidebar {
@@ -654,17 +809,29 @@ const htmlContent = `<!DOCTYPE html>
         -webkit-overflow-scrolling: touch;
       }
       .app-header {
-        flex-direction: column;
-        align-items: stretch;
-        padding: 8px 12px;
-        gap: 8px;
+        flex-direction: row;
+        align-items: center;
+        justify-content: space-between;
+        padding: 8px 10px;
+        gap: 4px;
       }
       .header-left {
-        width: 100%;
-        justify-content: space-between;
+        width: auto;
+        display: flex;
+        align-items: center;
+        gap: 6px;
       }
       .header-title {
-        font-size: 14px;
+        font-size: 13px;
+        white-space: nowrap;
+      }
+      .title-full {
+        display: none;
+      }
+      .title-short {
+        display: inline;
+        font-weight: 800;
+        font-size: 12px;
       }
       .header-tag {
         display: none;
@@ -674,21 +841,38 @@ const htmlContent = `<!DOCTYPE html>
       }
       .btn-toggle-sidebar {
         display: inline-flex;
+        padding: 5px 8px;
+        font-size: 11px;
+      }
+      .btn-back {
+        padding: 5px 8px;
+        font-size: 11px;
+        white-space: nowrap;
       }
       .header-controls {
-        overflow-x: auto;
-        -webkit-overflow-scrolling: touch;
-        white-space: nowrap;
-        padding-bottom: 2px;
-        scrollbar-width: none;
-        width: 100%;
+        width: auto;
+        overflow: visible;
+        display: flex;
+        align-items: center;
+        gap: 6px;
       }
-      .header-controls::-webkit-scrollbar {
-        display: none;
+      .desktop-quick-bar {
+        display: none !important;
       }
-      .ctrl-btn {
-        padding: 5px 10px;
+      .btn-options-toggle {
+        display: inline-flex;
+        padding: 5px 9px;
         font-size: 11px;
+      }
+      .floating-runs-btn {
+        display: none !important;
+      }
+      .options-dropdown {
+        top: 52px;
+        right: 10px;
+        left: 10px;
+        width: auto;
+        max-width: none;
       }
 
       .main-workspace {
@@ -901,7 +1085,8 @@ const htmlContent = `<!DOCTYPE html>
     <div class="header-left">
       <button type="button" class="btn-toggle-sidebar" id="btn-toggle-sidebar" onclick="toggleSidebar()">☰ Runs (4)</button>
       <div class="header-title">
-        <span>🏁 SONOMA RACEWAY</span>
+        <span class="title-full">🏁 SONOMA RACEWAY</span>
+        <span class="title-short">🏁 SONOMA</span>
         <span class="header-tag">GPS ANALYSIS</span>
       </div>
       <a href="pitwall.html" class="btn-back">← Pit Wall</a>
@@ -913,21 +1098,78 @@ const htmlContent = `<!DOCTYPE html>
     </div>
 
     <div class="header-controls">
-      <!-- MAP LAYER SWITCHER -->
-      <button type="button" class="ctrl-btn active" id="btn-layer-sat" onclick="setMapLayer('satellite')">🛰️ Satellite</button>
-      <button type="button" class="ctrl-btn" id="btn-layer-dark" onclick="setMapLayer('dark')">🌑 Dark</button>
-      <button type="button" class="ctrl-btn" id="btn-layer-street" onclick="setMapLayer('street')">🗺️ Street</button>
+      <!-- DESKTOP QUICK TOOLBAR -->
+      <div class="desktop-quick-bar">
+        <!-- MAP LAYER SWITCHER -->
+        <button type="button" class="ctrl-btn active" id="btn-layer-sat" onclick="setMapLayer('satellite')">🛰️ Satellite</button>
+        <button type="button" class="ctrl-btn" id="btn-layer-dark" onclick="setMapLayer('dark')">🌑 Dark</button>
+        <button type="button" class="ctrl-btn" id="btn-layer-street" onclick="setMapLayer('street')">🗺️ Street</button>
 
-      <!-- COLOR MODE SWITCHER -->
-      <button type="button" class="ctrl-btn active" id="btn-color-driver" onclick="setColorMode('driver')">🎨 Driver Color</button>
-      <button type="button" class="ctrl-btn" id="btn-color-heat" onclick="setColorMode('heatmap')">🔥 Speed Heatmap</button>
+        <!-- COLOR MODE SWITCHER -->
+        <button type="button" class="ctrl-btn active" id="btn-color-driver" onclick="setColorMode('driver')">🎨 Driver Color</button>
+        <button type="button" class="ctrl-btn" id="btn-color-heat" onclick="setColorMode('heatmap')">🔥 Speed Heatmap</button>
 
-      <!-- LINE SMOOTHING SWITCHER -->
-      <button type="button" class="ctrl-btn active" id="btn-smooth-lines" onclick="toggleLineSmoothing()" title="Toggle Heading-Guided Kinematic Racing Line Smoothing">🏎️ Smooth Lines</button>
+        <!-- LINE SMOOTHING SWITCHER -->
+        <button type="button" class="ctrl-btn active" id="btn-smooth-lines" onclick="toggleLineSmoothing()" title="Toggle Heading-Guided Kinematic Racing Line Smoothing">🏎️ Smooth Lines</button>
 
-      <button type="button" class="ctrl-btn" onclick="fitTrackBounds()" title="Center view on track">🎯 Center</button>
+        <button type="button" class="ctrl-btn" onclick="fitTrackBounds()" title="Center view on track">🎯 Center</button>
+      </div>
+
+      <!-- OPTIONS DROPDOWN BUTTON (MOBILE & DESKTOP) -->
+      <button type="button" class="ctrl-btn btn-options-toggle" id="btn-options-toggle" onclick="toggleOptionsMenu()" title="Display & Map Options">
+        ⚙️ Options
+      </button>
     </div>
   </header>
+
+  <!-- OPTIONS BACKDROP & DROPDOWN MENU -->
+  <div class="options-backdrop" id="options-backdrop" onclick="closeOptionsMenu()"></div>
+  <div class="options-dropdown" id="options-dropdown">
+    <div class="options-dropdown-header">
+      <div class="options-dropdown-title">⚙️ Map & Analysis Options</div>
+      <button type="button" class="btn-close-options" onclick="closeOptionsMenu()">✕</button>
+    </div>
+
+    <div class="options-section">
+      <div class="options-label">Map Background</div>
+      <div class="options-btn-group">
+        <button type="button" class="opt-btn active" id="opt-layer-sat" onclick="setMapLayer('satellite')">🛰️ Satellite</button>
+        <button type="button" class="opt-btn" id="opt-layer-dark" onclick="setMapLayer('dark')">🌑 Dark</button>
+        <button type="button" class="opt-btn" id="opt-layer-street" onclick="setMapLayer('street')">🗺️ Street</button>
+      </div>
+    </div>
+
+    <div class="options-section">
+      <div class="options-label">Line Colors</div>
+      <div class="options-btn-group">
+        <button type="button" class="opt-btn active" id="opt-color-driver" onclick="setColorMode('driver')">🎨 Driver Colors</button>
+        <button type="button" class="opt-btn" id="opt-color-heat" onclick="setColorMode('heatmap')">🔥 Speed Heatmap</button>
+      </div>
+    </div>
+
+    <div class="options-section">
+      <div class="options-label">GPS Smoothing</div>
+      <div class="options-btn-group">
+        <button type="button" class="opt-btn active" id="opt-smooth-lines" onclick="setSmoothingMode(true)">🏎️ Smooth (Heading)</button>
+        <button type="button" class="opt-btn" id="opt-raw-lines" onclick="setSmoothingMode(false)">📍 Raw (1 Hz)</button>
+      </div>
+    </div>
+
+    <div class="options-section">
+      <div class="options-label">Actual Track Racing Line</div>
+      <label class="opt-checkbox-row">
+        <input type="checkbox" id="opt-toggle-consensus" checked onchange="toggleConsensusLine(this.checked)" />
+        <span><strong>🏁 Actual Racing Line</strong> (Dotted)</span>
+      </label>
+      <div class="opt-subtext">Consensus track groove extracted from 2,500+ GPS points across all 47 runs via 2D density heatmap. Rendered on the bottom layer.</div>
+    </div>
+
+    <div class="options-section" style="border-bottom:none; margin-bottom:0; padding-bottom:0;">
+      <button type="button" class="opt-action-btn" onclick="fitTrackBounds(); closeOptionsMenu();">
+        🎯 Reset & Center Track Map
+      </button>
+    </div>
+  </div>
 
   <!-- MAIN WORKSPACE -->
   <div class="main-workspace">
@@ -977,11 +1219,6 @@ const htmlContent = `<!DOCTYPE html>
     <div class="map-container-wrap">
       <div id="map"></div>
 
-      <!-- FLOATING RUNS BUTTON (MOBILE) -->
-      <button type="button" class="floating-runs-btn" id="floating-runs-btn" onclick="openSidebar()">
-        ☰ Runs <span class="badge badge-run-count">4</span>
-      </button>
-
       <!-- FLOATING SCROLL BUTTON (MOBILE) -->
       <button type="button" class="floating-scroll-btn" id="btn-scroll-timeline" onclick="scrollToTimeline()">
         ⬇ Timeline
@@ -995,6 +1232,9 @@ const htmlContent = `<!DOCTYPE html>
             <div class="legend-row"><span class="legend-color-box" style="background:var(--color-jeff);"></span> Jeff</div>
             <div class="legend-row"><span class="legend-color-box" style="background:var(--color-ryan);"></span> Ryan</div>
             <div class="legend-row"><span class="legend-color-box" style="background:var(--color-matt);"></span> Matt</div>
+            <div class="legend-row" style="margin-top:6px; padding-top:6px; border-top:1px solid #334155; font-size:11px;">
+              <span style="color:#f8fafc; font-weight:900; letter-spacing:2px; font-size:12px;">···</span> Track Line
+            </div>
           </div>
           <div class="map-legend" id="legend-heat-content" style="display:none;">
             <div style="font-size:11px; font-weight:800;">Speed Gradient</div>
@@ -1134,6 +1374,7 @@ ${bundledData}
       L.control.zoom({ position: "bottomright" }).addTo(map);
 
       setMapLayer("satellite");
+      initConsensusRacingLine();
 
       window.addEventListener("resize", () => {
         if (map) map.invalidateSize();
@@ -1152,9 +1393,9 @@ ${bundledData}
         attribution: TILE_ATTRIB[type]
       }).addTo(map);
 
-      document.getElementById("btn-layer-sat").classList.toggle("active", type === "satellite");
-      document.getElementById("btn-layer-dark").classList.toggle("active", type === "dark");
-      document.getElementById("btn-layer-street").classList.toggle("active", type === "street");
+      document.querySelectorAll("#btn-layer-sat, #opt-layer-sat").forEach(el => el.classList.toggle("active", type === "satellite"));
+      document.querySelectorAll("#btn-layer-dark, #opt-layer-dark").forEach(el => el.classList.toggle("active", type === "dark"));
+      document.querySelectorAll("#btn-layer-street, #opt-layer-street").forEach(el => el.classList.toggle("active", type === "street"));
     }
 
     function fitTrackBounds() {
@@ -1168,8 +1409,8 @@ ${bundledData}
 
     function setColorMode(mode) {
       activeColorMode = mode;
-      document.getElementById("btn-color-driver").classList.toggle("active", mode === "driver");
-      document.getElementById("btn-color-heat").classList.toggle("active", mode === "heatmap");
+      document.querySelectorAll("#btn-color-driver, #opt-color-driver").forEach(el => el.classList.toggle("active", mode === "driver"));
+      document.querySelectorAll("#btn-color-heat, #opt-color-heat").forEach(el => el.classList.toggle("active", mode === "heatmap"));
 
       document.getElementById("legend-driver-content").style.display = mode === "driver" ? "flex" : "none";
       document.getElementById("legend-heat-content").style.display = mode === "heatmap" ? "flex" : "none";
@@ -1286,14 +1527,106 @@ ${bundledData}
       return smoothed;
     }
 
-    function toggleLineSmoothing() {
-      activeLineSmoothing = !activeLineSmoothing;
+    function setSmoothingMode(enabled) {
+      activeLineSmoothing = enabled;
       const btn = document.getElementById("btn-smooth-lines");
       if (btn) {
         btn.classList.toggle("active", activeLineSmoothing);
         btn.innerHTML = activeLineSmoothing ? "🏎️ Smooth Lines" : "📍 Raw 1Hz GPS";
       }
+      const optSmooth = document.getElementById("opt-smooth-lines");
+      const optRaw = document.getElementById("opt-raw-lines");
+      if (optSmooth) optSmooth.classList.toggle("active", activeLineSmoothing);
+      if (optRaw) optRaw.classList.toggle("active", !activeLineSmoothing);
       updateMapPolylines();
+    }
+
+    function toggleLineSmoothing() {
+      setSmoothingMode(!activeLineSmoothing);
+    }
+
+    // --- OPTIONS DROPDOWN MENU HANDLERS ---
+    function toggleOptionsMenu() {
+      const dd = document.getElementById("options-dropdown");
+      const bd = document.getElementById("options-backdrop");
+      const btn = document.getElementById("btn-options-toggle");
+      if (!dd) return;
+      const isOpen = dd.classList.toggle("open");
+      if (bd) bd.classList.toggle("active", isOpen);
+      if (btn) btn.classList.toggle("active", isOpen);
+    }
+
+    function closeOptionsMenu() {
+      const dd = document.getElementById("options-dropdown");
+      const bd = document.getElementById("options-backdrop");
+      const btn = document.getElementById("btn-options-toggle");
+      if (dd) dd.classList.remove("open");
+      if (bd) bd.classList.remove("active");
+      if (btn) btn.classList.remove("active");
+    }
+
+    // --- ACTUAL TRACK RACING LINE (HEATMAP CONSENSUS DOTTED OVERLAY) ---
+    let consensusPolylineGroup = null;
+    let showConsensusLine = true;
+
+    function initConsensusRacingLine() {
+      if (!map || !telemetryData || !telemetryData.consensusLine) return;
+
+      // Dedicated pane rendered strictly BELOW overlayPane (zIndex: 390 vs 400)
+      if (!map.getPane('consensusPane')) {
+        map.createPane('consensusPane');
+        map.getPane('consensusPane').style.zIndex = 390;
+        map.getPane('consensusPane').style.pointerEvents = 'none';
+      }
+
+      const latlngs = telemetryData.consensusLine;
+      if (!latlngs || latlngs.length < 2) return;
+
+      // Contrast halo for high visibility on satellite imagery
+      const halo = L.polyline(latlngs, {
+        pane: 'consensusPane',
+        color: '#000000',
+        weight: 5.5,
+        opacity: 0.8,
+        lineCap: 'round',
+        lineJoin: 'round'
+      });
+
+      // Core crisp dotted track racing line
+      const core = L.polyline(latlngs, {
+        pane: 'consensusPane',
+        color: '#f8fafc',
+        weight: 2.5,
+        dashArray: '3, 6',
+        opacity: 0.92,
+        lineCap: 'round',
+        lineJoin: 'round'
+      });
+
+      halo.bindTooltip("🏁 Consensus Track Racing Line (Heatmap Peak)", { direction: "top", sticky: true });
+      core.bindTooltip("🏁 Consensus Track Racing Line (Heatmap Peak)", { direction: "top", sticky: true });
+
+      consensusPolylineGroup = L.layerGroup([halo, core]);
+      if (showConsensusLine) {
+        consensusPolylineGroup.addTo(map);
+      }
+    }
+
+    function toggleConsensusLine(visible) {
+      showConsensusLine = visible;
+      const chk = document.getElementById("opt-toggle-consensus");
+      if (chk) chk.checked = visible;
+
+      if (!consensusPolylineGroup) return;
+      if (showConsensusLine) {
+        if (!map.hasLayer(consensusPolylineGroup)) {
+          map.addLayer(consensusPolylineGroup);
+        }
+      } else {
+        if (map.hasLayer(consensusPolylineGroup)) {
+          map.removeLayer(consensusPolylineGroup);
+        }
+      }
     }
 
     // --- RENDER RUN POLYLINES ON MAP ---

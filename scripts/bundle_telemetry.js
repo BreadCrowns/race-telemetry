@@ -204,6 +204,10 @@ async function bundleTelemetry() {
     });
   });
 
+  console.log('Extracting heatmap consensus track racing line from all valid runs...');
+  const consensusLine = computeConsensusRacingLine(bundledRuns, targetStart, targetFinish);
+  console.log(`Generated consensus racing line with ${consensusLine.length} points.`);
+
   const output = {
     eventName: 'Sunday Autocross',
     trackName: 'Sonoma Raceway Paddock',
@@ -217,6 +221,7 @@ async function bundleTelemetry() {
       maxLon: -122.4541
     },
     totalRuns: bundledRuns.length,
+    consensusLine: consensusLine,
     generatedAt: new Date().toISOString(),
     runs: bundledRuns
   };
@@ -224,6 +229,139 @@ async function bundleTelemetry() {
   const outputPath = path.join(__dirname, '..', 'runs_telemetry.json');
   fs.writeFileSync(outputPath, JSON.stringify(output, null, 2));
   console.log(`Successfully bundled ${bundledRuns.length} runs into ${outputPath} (${(fs.statSync(outputPath).size / 1024).toFixed(1)} KB)`);
+}
+
+function computeConsensusRacingLine(runs, targetStart, targetFinish) {
+  const validRuns = runs.filter(r => !r.isDnf && r.coords && r.coords.length > 20);
+  const lat0 = 38.1598, lon0 = -122.4551;
+  const mPerLat = 111030;
+  const mPerLon = 111030 * Math.cos(lat0 * Math.PI / 180);
+
+  function toXY(lat, lon) {
+    return { x: (lon - lon0) * mPerLon, y: (lat - lat0) * mPerLat };
+  }
+  function toLatLon(x, y) {
+    return { lat: lat0 + y / mPerLat, lon: lon0 + x / mPerLon };
+  }
+
+  // Collect all points
+  const allPts = [];
+  validRuns.forEach(r => {
+    r.coords.forEach(c => {
+      const xy = toXY(c.lat, c.lon);
+      allPts.push({ x: xy.x, y: xy.y });
+    });
+  });
+
+  const sigma2 = 2 * 4.0 * 4.0;
+  function getHeatDensity(x, y) {
+    let sum = 0;
+    for (let i = 0; i < allPts.length; i++) {
+      const p = allPts[i];
+      const dx = x - p.x;
+      const dy = y - p.y;
+      const distSq = dx * dx + dy * dy;
+      if (distSq < 150) {
+        sum += Math.exp(-distSq / sigma2);
+      }
+    }
+    return sum;
+  }
+
+  const numSlices = 220;
+  const initialLine = [];
+  for (let s = 0; s <= numSlices; s++) {
+    const u = s / numSlices;
+    const slicePts = validRuns.map(r => {
+      const targetDist = u * r.coords[r.coords.length - 1].distM;
+      for (let i = 0; i < r.coords.length - 1; i++) {
+        const p1 = r.coords[i], p2 = r.coords[i+1];
+        if (p1.distM <= targetDist && p2.distM >= targetDist) {
+          const f = p2.distM > p1.distM ? (targetDist - p1.distM)/(p2.distM - p1.distM) : 0;
+          return {
+            lat: p1.lat + f * (p2.lat - p1.lat),
+            lon: p1.lon + f * (p2.lon - p1.lon)
+          };
+        }
+      }
+      return r.coords[r.coords.length - 1];
+    });
+    const xySlice = slicePts.map(p => toXY(p.lat, p.lon));
+    const avgX = xySlice.reduce((sum, p) => sum + p.x, 0) / xySlice.length;
+    const avgY = xySlice.reduce((sum, p) => sum + p.y, 0) / xySlice.length;
+    initialLine.push({ x: avgX, y: avgY });
+  }
+
+  // Ridge finding across the normal vector
+  const ridgeLine = [];
+  for (let i = 0; i < initialLine.length; i++) {
+    const curr = initialLine[i];
+    let tx = 0, ty = 0;
+    if (i === 0) {
+      tx = initialLine[1].x - curr.x;
+      ty = initialLine[1].y - curr.y;
+    } else if (i === initialLine.length - 1) {
+      tx = curr.x - initialLine[i-1].x;
+      ty = curr.y - initialLine[i-1].y;
+    } else {
+      tx = initialLine[i+1].x - initialLine[i-1].x;
+      ty = initialLine[i+1].y - initialLine[i-1].y;
+    }
+    const tLen = Math.hypot(tx, ty);
+    if (tLen === 0) {
+      ridgeLine.push(curr);
+      continue;
+    }
+    tx /= tLen;
+    ty /= tLen;
+    const nx = -ty;
+    const ny = tx;
+
+    let bestOffset = 0;
+    let maxHeat = -1;
+    for (let offset = -8; offset <= 8; offset += 0.25) {
+      const testX = curr.x + offset * nx;
+      const testY = curr.y + offset * ny;
+      const heat = getHeatDensity(testX, testY);
+      if (heat > maxHeat) {
+        maxHeat = heat;
+        bestOffset = offset;
+      }
+    }
+
+    ridgeLine.push({
+      x: curr.x + bestOffset * nx,
+      y: curr.y + bestOffset * ny
+    });
+  }
+
+  // Gaussian rolling smoothing
+  const smoothedRidge = [];
+  for (let i = 0; i < ridgeLine.length; i++) {
+    if (i === 0 || i === ridgeLine.length - 1) {
+      smoothedRidge.push(ridgeLine[i]);
+      continue;
+    }
+    let sx = 0, sy = 0, sw = 0;
+    for (let j = Math.max(0, i - 4); j <= Math.min(ridgeLine.length - 1, i + 4); j++) {
+      const w = Math.exp(-((i - j) ** 2) / 4);
+      sx += ridgeLine[j].x * w;
+      sy += ridgeLine[j].y * w;
+      sw += w;
+    }
+    smoothedRidge.push({ x: sx / sw, y: sy / sw });
+  }
+
+  // Anchor start and finish exactly
+  const startXY = toXY(targetStart.lat, targetStart.lon);
+  const finishXY = toXY(targetFinish.lat, targetFinish.lon);
+  smoothedRidge[0] = startXY;
+  smoothedRidge[smoothedRidge.length - 1] = finishXY;
+
+  return smoothedRidge.map(p => {
+    const ll = toLatLon(p.x, p.y);
+    return [Number(ll.lat.toFixed(7)), Number(ll.lon.toFixed(7))];
+  });
 }
 
 bundleTelemetry().catch(console.error);
