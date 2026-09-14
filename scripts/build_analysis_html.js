@@ -2147,7 +2147,7 @@ ${bundledData}
 </html>
 `;
 
-const targetArg = (process.argv[2] || '--all').toLowerCase();
+const targetArg = (process.argv[2] || '--prepro').toLowerCase();
 const rootDir = path.join(__dirname, '..');
 const preproDir = path.join(rootDir, 'prepro');
 
