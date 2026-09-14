@@ -745,6 +745,195 @@
     }
     .btn-table-action:hover { color: #fff; border-color: var(--accent); }
 
+    /* Archive Mode Notice Banner */
+    .archive-banner {
+      background: rgba(37, 99, 235, 0.15);
+      border: 1px solid #3b82f6;
+      color: #93c5fd;
+      padding: 10px 14px;
+      border-radius: 8px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 10px;
+      font-size: 12px;
+      margin-bottom: 8px;
+    }
+
+    /* F1 Broadcast Live Tracker Card */
+    .f1-live-tracker-card {
+      background: #080d1a;
+      border: 1px solid #1e293b;
+      border-radius: 12px;
+      padding: 14px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      box-shadow: 0 8px 30px rgba(0,0,0,0.5);
+      position: relative;
+      overflow: hidden;
+      margin-bottom: 12px;
+    }
+    .f1-live-tracker-card::before {
+      content: "";
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+      background: linear-gradient(90deg, #38bdf8, #22c55e, #f97316);
+    }
+    .f1-tracker-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    .f1-badge-wrap, .f1-meta-wrap {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .f1-live-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(34, 197, 94, 0.15);
+      border: 1px solid rgba(34, 197, 94, 0.4);
+      color: #4ade80;
+      font-size: 10px;
+      font-weight: 800;
+      padding: 3px 8px;
+      border-radius: 14px;
+      letter-spacing: 1px;
+    }
+    .f1-driver-pill {
+      background: #1e293b;
+      border: 1px solid #334155;
+      color: #fff;
+      font-size: 12px;
+      font-weight: 800;
+      padding: 3px 10px;
+      border-radius: 6px;
+    }
+    .f1-speed-chip, .f1-delta-chip {
+      background: #020617;
+      border: 1px solid #334155;
+      font-size: 11px;
+      font-family: ui-monospace, monospace;
+      padding: 3px 8px;
+      border-radius: 6px;
+      color: #94a3b8;
+    }
+    .f1-speed-chip strong { color: #f97316; font-size: 13px; }
+    .f1-delta-chip strong { color: #4ade80; font-size: 13px; }
+
+    .f1-main-stage {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 14px;
+    }
+    @media (min-width: 680px) {
+      .f1-main-stage {
+        grid-template-columns: 240px 1fr;
+      }
+    }
+    .f1-clock-panel {
+      background: #020617;
+      border: 1px solid #1e293b;
+      border-radius: 8px;
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 8px;
+    }
+    .f1-clock-label {
+      font-size: 9px;
+      font-weight: 800;
+      color: #64748b;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+    .f1-digital-clock {
+      font-size: 32px;
+      font-weight: 900;
+      font-family: ui-monospace, monospace;
+      color: #38bdf8;
+      line-height: 1;
+    }
+    .f1-progress-wrap {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      margin-top: 2px;
+    }
+    .f1-progress-label-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 10px;
+      font-weight: 800;
+      color: #64748b;
+    }
+    .f1-progress-track {
+      height: 6px;
+      background: #1e293b;
+      border-radius: 3px;
+      overflow: hidden;
+    }
+    .f1-progress-bar {
+      height: 100%;
+      background: linear-gradient(90deg, #38bdf8, #22c55e);
+      width: 0%;
+      transition: width 0.3s ease;
+    }
+    .f1-status-subtext {
+      font-size: 10px;
+      font-weight: 700;
+      color: #94a3b8;
+      letter-spacing: 0.5px;
+    }
+
+    .f1-map-viewport {
+      border: 1px solid #1e293b;
+      border-radius: 8px;
+      overflow: hidden;
+      position: relative;
+    }
+
+    /* Car Dot Marker for F1 Live Map */
+    .f1-car-marker {
+      position: relative;
+    }
+    .f1-car-dot {
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: #38bdf8;
+      border: 2px solid #fff;
+      box-shadow: 0 0 12px #38bdf8, 0 0 20px #38bdf8;
+      animation: f1-car-pulse 1s infinite alternate;
+    }
+    @keyframes f1-car-pulse {
+      from { transform: scale(0.9); }
+      to { transform: scale(1.2); }
+    }
+    .f1-car-tag {
+      position: absolute;
+      left: 18px;
+      top: -3px;
+      background: rgba(15, 23, 42, 0.9);
+      border: 1px solid #38bdf8;
+      color: #fff;
+      font-size: 9px;
+      font-weight: 800;
+      padding: 1px 5px;
+      border-radius: 4px;
+      white-space: nowrap;
+      font-family: ui-monospace, monospace;
+    }
+
     /* New Run Pulse Animation (Non-Disruptive Arrival) */
     @keyframes row-new-pulse {
       0% {
@@ -1104,6 +1293,62 @@
       <span style="font-size: 11px; color: #64748b; font-family: ui-monospace, monospace;" id="leaderboard-event-title">Sunday Autocross</span>
     </div>
 
+    <!-- ARCHIVE REVIEW MODE BANNER (Shown when ?event=... is passed) -->
+    <div id="archive-mode-banner" class="archive-banner" style="display: none;">
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <span style="font-size: 16px;">📁</span>
+        <span><strong>ARCHIVE REVIEW MODE:</strong> <span id="archive-banner-title">Historical Event</span> (Read-Only)</span>
+      </div>
+      <div style="display: flex; gap: 8px;">
+        <a href="pitwall.html" class="btn-table-action" style="background:#2563eb; color:#fff; border-color:#2563eb; text-decoration:none;">⚡ Switch to Live Session</a>
+        <a href="index.html" class="btn-table-action" style="text-decoration:none;">← Control Tower</a>
+      </div>
+    </div>
+
+    <!-- F1 BROADCAST LIVE TELEMETRY & TRACK VISUALIZER -->
+    <div class="f1-live-tracker-card" id="f1-live-tracker">
+      <div class="f1-tracker-header">
+        <div class="f1-badge-wrap">
+          <span class="f1-live-badge" id="f1-live-badge">
+            <span class="status-dot live" style="width:7px; height:7px;"></span>
+            <span id="f1-status-text">F1 BROADCAST TELEMETRY</span>
+          </span>
+          <span class="f1-driver-pill" id="f1-driver-pill">🏎️ DRIVER: MATT</span>
+        </div>
+        <div class="f1-meta-wrap">
+          <span class="f1-speed-chip" id="f1-speed-chip">SPEED: <strong>0 MPH</strong></span>
+          <span class="f1-delta-chip" id="f1-delta-chip">DELTA: <strong id="f1-delta-val">--:--</strong></span>
+        </div>
+      </div>
+
+      <div class="f1-main-stage">
+        <!-- Left Side: Live Digital Clock & Mini Tach -->
+        <div class="f1-clock-panel">
+          <div class="f1-clock-label">LIVE RUNNING CLOCK</div>
+          <div class="f1-digital-clock" id="f1-digital-clock">00:00.00</div>
+          
+          <div class="f1-progress-wrap">
+            <div class="f1-progress-label-row">
+              <span>COURSE PROGRESS</span>
+              <span id="f1-progress-pct">0%</span>
+            </div>
+            <div class="f1-progress-track">
+              <div class="f1-progress-bar" id="f1-progress-bar" style="width: 0%;"></div>
+            </div>
+          </div>
+
+          <div class="f1-status-subtext" id="f1-status-subtext">
+            STANDBY AT START LINE
+          </div>
+        </div>
+
+        <!-- Right Side: Mini Course Graphic Canvas -->
+        <div class="f1-map-viewport" id="f1-map-viewport">
+          <div id="f1-course-map" style="width: 100%; height: 220px; border-radius: 8px; background: #030712;"></div>
+        </div>
+      </div>
+    </div>
+
     <!-- Ranked Cards for the 4 Drivers -->
     <div class="driver-standings-grid" id="driver-standings-grid"></div>
 
@@ -1339,6 +1584,7 @@
     function cueReadyForOverlay() {
       broadcastAutoxState(activeDriver === "In Pits" ? "IN PITS" : "READY");
       stopwatchClock.textContent = "00:00.00";
+      if (typeof updateF1ResetState === 'function') updateF1ResetState();
       if (activeDriver === "In Pits") {
         heroStateLabel.textContent = "CAR IN PITS - STANDBY";
         heroStateLabel.style.color = "#f59e0b";
@@ -1426,19 +1672,52 @@
     let currentEventKey = "";
     let eventDebounceTimer = null;
 
-    function bindEventSync(eventName) {
-      const eventKey = getEventKey(eventName);
+    // Parse URL parameter for Archive Review Mode (?event=eventId)
+    const urlParams = new URLSearchParams(window.location.search);
+    const requestedEventParam = urlParams.get('event');
+    const isArchiveMode = Boolean(requestedEventParam);
+
+    if (isArchiveMode) {
+      const archiveBanner = document.getElementById("archive-mode-banner");
+      if (archiveBanner) {
+        archiveBanner.style.display = "flex";
+        const titleEl = document.getElementById("archive-banner-title");
+        if (titleEl) titleEl.textContent = requestedEventParam.replace(/_/g, ' ').toUpperCase();
+      }
+      currentEventName = requestedEventParam.replace(/_/g, ' ');
+      eventInput.value = currentEventName;
+      eventInput.disabled = true;
+      if (btnTimerSubHint) btnTimerSubHint.textContent = "HISTORICAL RUNS ARCHIVE (READ ONLY)";
+    } else {
+      // Dynamic Cloud Active Event Listener:
+      // Whenever Control Tower or server activates an event, auto-sync without touching in-car phone!
+      db.child("activeEvent").on("value", (snap) => {
+        const activeData = snap.val();
+        if (activeData && activeData.id && activeData.status !== "ARCHIVED") {
+          const cloudName = activeData.name || activeData.id.replace(/_/g, ' ');
+          if (currentEventKey !== activeData.id) {
+            eventInput.value = cloudName;
+            bindEventSync(cloudName, activeData.id);
+          }
+        }
+      });
+    }
+
+    function bindEventSync(eventName, explicitKey = null) {
+      const eventKey = explicitKey || getEventKey(eventName);
       currentEventKey = eventKey;
       currentEventName = eventName;
-      localStorage.setItem("autox_event_name", eventName);
+      if (!isArchiveMode) {
+        localStorage.setItem("autox_event_name", eventName);
+      }
 
       const titleDisplay = document.getElementById("leaderboard-event-title");
       if (titleDisplay) titleDisplay.textContent = eventName;
 
       const eventStatusEl = document.getElementById("event-sync-status");
       if (eventStatusEl) {
-        eventStatusEl.textContent = "SYNCING...";
-        eventStatusEl.style.color = "#38bdf8";
+        eventStatusEl.textContent = isArchiveMode ? "ARCHIVE (READ ONLY)" : "SYNCING...";
+        eventStatusEl.style.color = isArchiveMode ? "#f59e0b" : "#38bdf8";
       }
 
       // Detach previous event listener if any
@@ -1460,6 +1739,7 @@
 
       calculateNextRuns();
       renderLeaderboard();
+      if (typeof updateF1CourseRibbon === 'function') updateF1CourseRibbon();
 
       // 2. Attach to Firebase under raceTelemetry/events/${eventKey}/runs
       currentEventRef = db.child("events").child(eventKey).child("runs");
@@ -1467,8 +1747,8 @@
       currentEventRef.on("value", (snap) => {
         const data = snap.val();
         if (eventStatusEl) {
-          eventStatusEl.textContent = "CLOUD SYNCED";
-          eventStatusEl.style.color = "#4ade80";
+          eventStatusEl.textContent = isArchiveMode ? "ARCHIVED SESSION" : "CLOUD SYNCED";
+          eventStatusEl.style.color = isArchiveMode ? "#f59e0b" : "#4ade80";
         }
 
         if (data) {
@@ -1489,20 +1769,26 @@
           }
           runsDatabase = runs;
           localStorage.setItem(`autox_runs_${eventKey}`, JSON.stringify(runsDatabase));
-          localStorage.setItem("autox_runs_db", JSON.stringify(runsDatabase));
-          calculateNextRuns();
-          renderLeaderboard();
-        } else {
-          // Remote runs for this event have been cleared or are empty
-          runsDatabase = [];
-          localStorage.removeItem(`autox_runs_${eventKey}`);
-          localStorage.removeItem("autox_runs_db");
-          DRIVERS.forEach(d => { driverNextRuns[d] = 1; });
-          if (activeDriver !== "In Pits") {
-            runInput.value = 1;
+          if (!isArchiveMode) {
+            localStorage.setItem("autox_runs_db", JSON.stringify(runsDatabase));
           }
           calculateNextRuns();
           renderLeaderboard();
+          if (typeof updateF1CourseRibbon === 'function') updateF1CourseRibbon();
+        } else {
+          // Remote runs for this event have been cleared or are empty
+          runsDatabase = [];
+          if (!isArchiveMode) {
+            localStorage.removeItem(`autox_runs_${eventKey}`);
+            localStorage.removeItem("autox_runs_db");
+            DRIVERS.forEach(d => { driverNextRuns[d] = 1; });
+            if (activeDriver !== "In Pits") {
+              runInput.value = 1;
+            }
+          }
+          calculateNextRuns();
+          renderLeaderboard();
+          if (typeof updateF1CourseRibbon === 'function') updateF1CourseRibbon();
         }
       }, (err) => {
         console.warn("Event Firebase sync error:", err);
@@ -1512,26 +1798,44 @@
         }
       });
 
-      // Save metadata & broadcast active event name to overlays
-      db.child("events").child(eventKey).child("title").set(currentEventName).catch(() => {});
-      db.child("autox").child("eventName").set(currentEventName).catch(() => {});
+      if (!isArchiveMode) {
+        // Save metadata & broadcast active event name to overlays
+        db.child("events").child(eventKey).child("title").set(currentEventName).catch(() => {});
+        db.child("autox").child("eventName").set(currentEventName).catch(() => {});
+      }
     }
 
     eventInput.addEventListener("input", (e) => {
+      if (isArchiveMode) return;
       const val = e.target.value.trim();
       clearTimeout(eventDebounceTimer);
       if (!val) return; // Don't interrupt user with auto-revert while typing or clearing
       eventDebounceTimer = setTimeout(() => {
-        bindEventSync(val);
+        const key = getEventKey(val);
+        bindEventSync(val, key);
+        db.child("activeEvent").set({
+          id: key,
+          name: val,
+          status: "LIVE",
+          startedAt: Date.now()
+        }).catch(() => {});
         broadcastAutoxState("READY");
       }, 600);
     });
 
     eventInput.addEventListener("change", (e) => {
+      if (isArchiveMode) return;
       clearTimeout(eventDebounceTimer);
       const val = e.target.value.trim() || "Sunday Autocross";
       e.target.value = val;
-      bindEventSync(val);
+      const key = getEventKey(val);
+      bindEventSync(val, key);
+      db.child("activeEvent").set({
+        id: key,
+        name: val,
+        status: "LIVE",
+        startedAt: Date.now()
+      }).catch(() => {});
       broadcastAutoxState("READY");
     });
 
@@ -1549,6 +1853,15 @@
           heroStateLabel.textContent = "READY AT START LINE";
           heroStateLabel.style.color = "#94a3b8";
         }
+      }
+      const f1DriverPill = document.getElementById("f1-driver-pill");
+      if (f1DriverPill) {
+        const runText = (activeDriver === "In Pits") ? "IN PITS" : `RUN #${runInput.value || 1}`;
+        f1DriverPill.textContent = `🏎️ DRIVER: ${activeDriver.toUpperCase()} (${runText})`;
+      }
+      const f1Subtext = document.getElementById("f1-status-subtext");
+      if (f1Subtext && !isRunning) {
+        f1Subtext.textContent = (activeDriver === "In Pits") ? "CAR IN PITS - STANDBY" : "STANDBY AT START LINE";
       }
     }
 
@@ -1617,10 +1930,15 @@
       timerInterval = setInterval(() => {
         const elapsed = Math.max(0, Date.now() - runStartTime);
         stopwatchClock.textContent = formatTimeMs(elapsed);
+        if (typeof updateF1LiveTick === 'function') updateF1LiveTick(elapsed);
       }, 30);
     }
 
     function startTimer() {
+      if (isArchiveMode) {
+        alert("This pit wall is currently viewing a historical archived event in Read-Only mode.\n\nTo record new runs, click 'Switch to Live Session' in the top banner.");
+        return;
+      }
       if (activeDriver === "In Pits") {
         alert("Please select an active driver (Jeff, Liam, Ryan, or Matt) before starting the run!");
         return;
@@ -1645,6 +1963,7 @@
       clearInterval(timerInterval);
       lastElapsedMs = Number(timeMs) || (runStartTime > 0 ? (Date.now() - runStartTime) : 0);
       stopwatchClock.textContent = formattedStr || formatTimeMs(lastElapsedMs);
+      if (typeof updateF1Stop === 'function') updateF1Stop(lastElapsedMs, formattedStr);
 
       playChime(1046.5, 0.25); // C6 finish chime
 
@@ -1858,6 +2177,9 @@
 
       if (tab === "leaderboard") {
         renderLeaderboard();
+        setTimeout(() => {
+          if (f1Map) f1Map.invalidateSize();
+        }, 60);
       }
     }
 
@@ -1878,6 +2200,7 @@
               telemetryCoordsMap[`${r.driver}-${r.runNum}`] = r.coords;
             }
           });
+          if (typeof updateF1CourseRibbon === 'function') updateF1CourseRibbon();
         }
       })
       .catch(() => {});
@@ -2151,6 +2474,372 @@
       const latlngs = runCoords.map(p => [p.lat, p.lon]);
       map.fitBounds(latlngs, { padding: [20, 20] });
       map.invalidateSize();
+    }
+
+    // ================= F1 BROADCAST LIVE TRACKER & VISUALIZER =================
+    let f1Map = null;
+    let f1CoursePolyline = null;
+    let f1CourseGlowPolyline = null;
+    let f1StartMarker = null;
+    let f1FinishMarker = null;
+    let f1CarMarker = null;
+    let f1CoursePoints = [];
+    let f1CourseCumDist = [];
+    let f1TotalCourseDist = 0;
+    let f1BenchmarkRun = null;
+    let lastCarLat = null;
+    let lastCarLon = null;
+
+    function initF1CourseMap() {
+      const mapContainer = document.getElementById("f1-course-map");
+      if (!mapContainer || f1Map) return;
+
+      try {
+        f1Map = L.map("f1-course-map", {
+          zoomControl: false,
+          attributionControl: false,
+          scrollWheelZoom: false,
+          doubleClickZoom: false,
+          boxZoom: false,
+          touchZoom: false,
+          dragging: false
+        });
+
+        // Satellite Basemap
+        L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+          maxZoom: 21,
+          maxNativeZoom: 19
+        }).addTo(f1Map);
+
+        // Fallback default coordinates (Sacramento/Thunderhill autox default)
+        f1Map.setView([38.5372, -121.7845], 16);
+
+        // Create Custom Animated Car Marker
+        const carIcon = L.divIcon({
+          className: 'f1-car-marker',
+          html: `<div class="f1-car-dot"></div><div class="f1-car-tag" id="f1-car-marker-tag">STANDBY</div>`,
+          iconSize: [14, 14],
+          iconAnchor: [7, 7]
+        });
+        f1CarMarker = L.marker([38.5372, -121.7845], { icon: carIcon, zIndexOffset: 1000 }).addTo(f1Map);
+
+        updateF1CourseRibbon();
+      } catch (err) {
+        console.warn("F1 course map init error:", err);
+      }
+    }
+
+    function haversineMeters(lat1, lon1, lat2, lon2) {
+      const R = 6371000;
+      const dLat = (lat2 - lat1) * Math.PI / 180;
+      const dLon = (lon2 - lon1) * Math.PI / 180;
+      const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                Math.sin(dLon / 2) * Math.sin(dLon / 2);
+      return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    }
+
+    function updateF1CourseRibbon() {
+      if (!f1Map) return;
+
+      // 1. Find benchmark run (fastest clean run with GPS coords)
+      const cleanRuns = runsDatabase.filter(r => !r.isDnf);
+      cleanRuns.sort((a, b) => a.finalTimeMs - b.finalTimeMs);
+
+      let candidateRun = null;
+      let coords = null;
+
+      for (const r of cleanRuns) {
+        const c = getCoordsForRun(r);
+        if (c && c.length > 5) {
+          candidateRun = r;
+          coords = c;
+          break;
+        }
+      }
+
+      // Fallback: any run with coords
+      if (!coords) {
+        for (const r of runsDatabase) {
+          const c = getCoordsForRun(r);
+          if (c && c.length > 5) {
+            candidateRun = r;
+            coords = c;
+            break;
+          }
+        }
+      }
+
+      // Fallback 2: check first key of telemetryCoordsMap
+      if (!coords) {
+        const mapKeys = Object.keys(telemetryCoordsMap);
+        if (mapKeys.length > 0 && telemetryCoordsMap[mapKeys[0]]) {
+          coords = telemetryCoordsMap[mapKeys[0]];
+        }
+      }
+
+      if (!coords || coords.length < 2) return;
+
+      f1BenchmarkRun = candidateRun;
+      f1CoursePoints = coords;
+
+      // Calculate cumulative distances along the course ribbon
+      f1CourseCumDist = [0];
+      let totalDist = 0;
+      for (let i = 0; i < coords.length - 1; i++) {
+        const d = haversineMeters(coords[i].lat, coords[i].lon, coords[i+1].lat, coords[i+1].lon);
+        totalDist += d;
+        f1CourseCumDist.push(totalDist);
+      }
+      f1TotalCourseDist = totalDist;
+
+      // Clean up existing course layers
+      if (f1CourseGlowPolyline) {
+        try { f1Map.removeLayer(f1CourseGlowPolyline); } catch (e) {}
+      }
+      if (f1CoursePolyline) {
+        try { f1Map.removeLayer(f1CoursePolyline); } catch (e) {}
+      }
+      if (f1StartMarker) {
+        try { f1Map.removeLayer(f1StartMarker); } catch (e) {}
+      }
+      if (f1FinishMarker) {
+        try { f1Map.removeLayer(f1FinishMarker); } catch (e) {}
+      }
+
+      const latlngs = coords.map(p => [p.lat, p.lon]);
+
+      // Outer track border / dark halo
+      f1CourseGlowPolyline = L.polyline(latlngs, {
+        color: '#020617',
+        weight: 9,
+        opacity: 0.85,
+        lineCap: 'round',
+        lineJoin: 'round'
+      }).addTo(f1Map);
+
+      // F1 Neutral Slate Track Ribbon
+      f1CoursePolyline = L.polyline(latlngs, {
+        color: '#94a3b8',
+        weight: 4,
+        opacity: 0.9,
+        lineCap: 'round',
+        lineJoin: 'round'
+      }).addTo(f1Map);
+
+      // Start Gate Pill (Neon Green)
+      const startPt = coords[0];
+      const startIcon = L.divIcon({
+        className: 'f1-gate-icon',
+        html: `<div style="background:#22c55e; color:#000; font-size:8px; font-weight:900; padding:2px 5px; border-radius:3px; border:1px solid #fff; box-shadow:0 0 8px #22c55e; font-family:ui-monospace, monospace;">START</div>`,
+        iconSize: [38, 16],
+        iconAnchor: [19, 8]
+      });
+      f1StartMarker = L.marker([startPt.lat, startPt.lon], { icon: startIcon }).addTo(f1Map);
+
+      // Finish Gate Pill (Bright Checkered Red)
+      const finishPt = coords[coords.length - 1];
+      const finishIcon = L.divIcon({
+        className: 'f1-gate-icon',
+        html: `<div style="background:#ef4444; color:#fff; font-size:8px; font-weight:900; padding:2px 5px; border-radius:3px; border:1px solid #fff; box-shadow:0 0 8px #ef4444; font-family:ui-monospace, monospace;">FINISH</div>`,
+        iconSize: [40, 16],
+        iconAnchor: [20, 8]
+      });
+      f1FinishMarker = L.marker([finishPt.lat, finishPt.lon], { icon: finishIcon }).addTo(f1Map);
+
+      // Fit bounds to whole course with clean padding
+      f1Map.fitBounds(latlngs, { padding: [16, 16] });
+
+      // Place car marker at start line if not moving
+      if (f1CarMarker && (!lastCarLat || !lastCarLon)) {
+        f1CarMarker.setLatLng([startPt.lat, startPt.lon]);
+      }
+    }
+
+    // Snapping Car coordinates to closest course segment (eliminating GPS wobble)
+    function projectOntoCourse(lat, lon) {
+      if (!f1CoursePoints || f1CoursePoints.length < 2) {
+        return { lat, lon, fraction: 0, distMeters: 0 };
+      }
+
+      let bestDistSq = Infinity;
+      let bestProjLat = f1CoursePoints[0].lat;
+      let bestProjLon = f1CoursePoints[0].lon;
+      let bestDistAlong = 0;
+
+      const cosLat = Math.cos(lat * Math.PI / 180);
+
+      for (let i = 0; i < f1CoursePoints.length - 1; i++) {
+        const p1 = f1CoursePoints[i];
+        const p2 = f1CoursePoints[i + 1];
+
+        const dx = (p2.lon - p1.lon) * cosLat;
+        const dy = p2.lat - p1.lat;
+        const segLenSq = dx * dx + dy * dy;
+
+        let t = 0;
+        if (segLenSq > 0) {
+          const px = (lon - p1.lon) * cosLat;
+          const py = lat - p1.lat;
+          t = Math.max(0, Math.min(1, (px * dx + py * dy) / segLenSq));
+        }
+
+        const projLat = p1.lat + t * (p2.lat - p1.lat);
+        const projLon = p1.lon + t * (p2.lon - p1.lon);
+
+        const dLat = lat - projLat;
+        const dLon = (lon - projLon) * cosLat;
+        const distSq = dLat * dLat + dLon * dLon;
+
+        if (distSq < bestDistSq) {
+          bestDistSq = distSq;
+          bestProjLat = projLat;
+          bestProjLon = projLon;
+          const segDist = f1CourseCumDist[i + 1] - f1CourseCumDist[i];
+          bestDistAlong = f1CourseCumDist[i] + t * segDist;
+        }
+      }
+
+      const fraction = f1TotalCourseDist > 0 ? Math.max(0, Math.min(1, bestDistAlong / f1TotalCourseDist)) : 0;
+      return { lat: bestProjLat, lon: bestProjLon, fraction, distMeters: bestDistAlong };
+    }
+
+    function updateF1LiveTick(elapsedMs) {
+      const clockEl = document.getElementById("f1-digital-clock");
+      if (clockEl) clockEl.textContent = formatTimeMs(elapsedMs);
+
+      const statusBadge = document.getElementById("f1-live-badge");
+      if (statusBadge) {
+        statusBadge.innerHTML = `<span class="status-dot live" style="width:7px; height:7px;"></span><span>LIVE RUNNING</span>`;
+      }
+    }
+
+    function updateF1Stop(finalMs, formattedStr) {
+      const clockEl = document.getElementById("f1-digital-clock");
+      if (clockEl) clockEl.textContent = formattedStr || formatTimeMs(finalMs);
+
+      const statusBadge = document.getElementById("f1-live-badge");
+      if (statusBadge) {
+        statusBadge.innerHTML = `<span class="status-dot" style="background:#4ade80; width:7px; height:7px;"></span><span>RUN FINISHED</span>`;
+      }
+
+      const progressBar = document.getElementById("f1-progress-bar");
+      const progressPct = document.getElementById("f1-progress-pct");
+      if (progressBar) progressBar.style.width = "100%";
+      if (progressPct) progressPct.textContent = "100%";
+
+      const statusSubtext = document.getElementById("f1-status-subtext");
+      if (statusSubtext) statusSubtext.textContent = "🏁 CROSSED FINISH LINE";
+
+      if (f1CarMarker && f1CoursePoints.length > 0) {
+        const finishPt = f1CoursePoints[f1CoursePoints.length - 1];
+        f1CarMarker.setLatLng([finishPt.lat, finishPt.lon]);
+        const tag = document.getElementById("f1-car-marker-tag");
+        if (tag) tag.textContent = `${activeDriver.toUpperCase()} 🏁`;
+      }
+    }
+
+    function updateF1ResetState() {
+      const clockEl = document.getElementById("f1-digital-clock");
+      if (clockEl && !isRunning) clockEl.textContent = "00:00.00";
+
+      const statusBadge = document.getElementById("f1-live-badge");
+      if (statusBadge && !isRunning) {
+        statusBadge.innerHTML = `<span class="status-dot ${activeDriver === 'In Pits' ? 'yellow' : 'live'}" style="width:7px; height:7px;"></span><span>${activeDriver === 'In Pits' ? 'STANDBY' : 'READY'}</span>`;
+      }
+
+      const progressBar = document.getElementById("f1-progress-bar");
+      const progressPct = document.getElementById("f1-progress-pct");
+      if (progressBar && !isRunning) progressBar.style.width = "0%";
+      if (progressPct && !isRunning) progressPct.textContent = "0%";
+
+      const deltaEl = document.getElementById("f1-delta-val");
+      if (deltaEl && !isRunning) {
+        deltaEl.textContent = "--:--";
+        deltaEl.style.color = "#94a3b8";
+      }
+
+      const statusSubtext = document.getElementById("f1-status-subtext");
+      if (statusSubtext && !isRunning) {
+        statusSubtext.textContent = (activeDriver === "In Pits") ? "CAR IN PITS - STANDBY" : "STANDBY AT START LINE";
+      }
+
+      if (f1CarMarker && f1CoursePoints.length > 0 && !isRunning) {
+        const startPt = f1CoursePoints[0];
+        f1CarMarker.setLatLng([startPt.lat, startPt.lon]);
+        const tag = document.getElementById("f1-car-marker-tag");
+        if (tag) tag.textContent = (activeDriver === "In Pits") ? "IN PITS" : "READY";
+      }
+    }
+
+    function updateF1CarTelemetry(rawLat, rawLon, speedMph) {
+      lastCarLat = rawLat;
+      lastCarLon = rawLon;
+
+      const speedChip = document.getElementById("f1-speed-chip");
+      if (speedChip) speedChip.innerHTML = `SPEED: <strong>${Math.round(speedMph)} MPH</strong>`;
+
+      const driverPill = document.getElementById("f1-driver-pill");
+      if (driverPill) {
+        const runText = (activeDriver === "In Pits") ? "IN PITS" : `RUN #${runInput.value || 1}`;
+        driverPill.textContent = `🏎️ DRIVER: ${activeDriver.toUpperCase()} (${runText})`;
+      }
+
+      if (!f1Map || !rawLat || !rawLon) return;
+
+      // Snapped projection onto course ribbon
+      const projection = projectOntoCourse(rawLat, rawLon);
+      const pct = Math.round(projection.fraction * 100);
+
+      // Smooth progress bar update
+      const progressBar = document.getElementById("f1-progress-bar");
+      const progressPct = document.getElementById("f1-progress-pct");
+      if (progressBar) progressBar.style.width = `${pct}%`;
+      if (progressPct) progressPct.textContent = `${pct}%`;
+
+      // Animated car marker
+      if (f1CarMarker) {
+        f1CarMarker.setLatLng([projection.lat, projection.lon]);
+        const tag = document.getElementById("f1-car-marker-tag");
+        if (tag) tag.textContent = `${Math.round(speedMph)} MPH`;
+      }
+
+      // Sector indicator
+      const statusSubtext = document.getElementById("f1-status-subtext");
+      if (statusSubtext) {
+        if (!isRunning) {
+          statusSubtext.textContent = (activeDriver === "In Pits") ? "CAR IN PITS - STANDBY" : "STANDBY AT START LINE";
+        } else if (projection.fraction < 0.25) {
+          statusSubtext.textContent = "⚡ SECTOR 1 • LAUNCH & SLALOM";
+        } else if (projection.fraction < 0.65) {
+          statusSubtext.textContent = "⚡ SECTOR 2 • SWEEPER & TRANSITIONS";
+        } else if (projection.fraction < 0.92) {
+          statusSubtext.textContent = "⚡ SECTOR 3 • ACCELERATION & CHUTE";
+        } else {
+          statusSubtext.textContent = "🏁 APPROACHING FINISH BEAM";
+        }
+      }
+
+      // F1-Style Real-time Delta vs Day's Best Lap
+      const deltaEl = document.getElementById("f1-delta-val");
+      if (deltaEl) {
+        if (isRunning && f1BenchmarkRun && f1BenchmarkRun.finalTimeMs && projection.fraction > 0.05) {
+          const currentElapsed = Math.max(0, Date.now() - runStartTime);
+          const benchmarkTimeAtFraction = projection.fraction * f1BenchmarkRun.finalTimeMs;
+          const deltaSec = (currentElapsed - benchmarkTimeAtFraction) / 1000;
+
+          if (deltaSec <= 0) {
+            deltaEl.textContent = `${deltaSec.toFixed(2)}s`;
+            deltaEl.style.color = "#4ade80"; // Faster (Green)
+          } else {
+            deltaEl.textContent = `+${deltaSec.toFixed(2)}s`;
+            deltaEl.style.color = "#f87171"; // Slower (Red)
+          }
+        } else if (!isRunning) {
+          deltaEl.textContent = "--:--";
+          deltaEl.style.color = "#94a3b8";
+        }
+      }
     }
 
     // --- INLINE QUICK EDITS (AUTO-SAVING DIRECTLY TO FIREBASE) ---
@@ -2485,6 +3174,7 @@
         btnTimerText.textContent = "START RUN";
         if (btnTimerSubHint) btnTimerSubHint.textContent = "PRESS SPACEBAR OR TAP";
         updateHeroBadge();
+        if (typeof updateF1Stop === 'function') updateF1Stop(autox.rawTimeMs, autox.rawFormatted);
       } else if (remoteState === "READY" || remoteState === "IN PITS") {
         if (isRunning) {
           clearInterval(timerInterval);
@@ -2498,6 +3188,7 @@
         if (btnTimerSubHint) btnTimerSubHint.textContent = "PRESS SPACEBAR OR TAP";
         stopwatchClock.textContent = "00:00.00";
         updateHeroBadge();
+        if (typeof updateF1ResetState === 'function') updateF1ResetState();
       }
 
       // Filter out non-telemetry keys (autox, laps, etc.)
@@ -2535,6 +3226,10 @@
         else if (telem.vel !== undefined && telem.vel !== null) calcMph = Number(telem.vel) * 0.621371;
         if (calcMph < 2.0 || isNaN(calcMph)) calcMph = 0;
         latestSpeed = calcMph;
+
+        if (rawLat !== undefined && rawLon !== undefined && typeof updateF1CarTelemetry === 'function') {
+          updateF1CarTelemetry(Number(rawLat), Number(rawLon), latestSpeed);
+        }
       }
 
       evaluateWatchdog();
@@ -2665,8 +3360,14 @@
       setTimeout(fitOverlayPreview, 30);
     }
 
-    window.addEventListener("resize", fitOverlayPreview);
-    window.addEventListener("orientationchange", fitOverlayPreview);
+    window.addEventListener("resize", () => {
+      fitOverlayPreview();
+      if (f1Map) f1Map.invalidateSize();
+    });
+    window.addEventListener("orientationchange", () => {
+      fitOverlayPreview();
+      if (f1Map) f1Map.invalidateSize();
+    });
 
     const prevIframe = document.getElementById("preview-iframe");
     if (prevIframe) {
@@ -2685,11 +3386,19 @@
     }
 
     // Init
-    bindEventSync(currentEventName);
+    initF1CourseMap();
+    if (isArchiveMode) {
+      bindEventSync(currentEventName, requestedEventParam);
+    } else {
+      bindEventSync(currentEventName);
+    }
     setDriverLocal(activeDriver);
     switchView('leaderboard');
     renderLeaderboard();
     setTimeout(fitOverlayPreview, 100);
+    setTimeout(() => {
+      if (f1Map) f1Map.invalidateSize();
+    }, 150);
   </script>
 </body>
 </html>

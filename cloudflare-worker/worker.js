@@ -64,6 +64,15 @@ export default {
         }
         return await handleGetGates(url, env);
       }
+      if (path === "/api/events/active") {
+        if (request.method === "POST" || request.method === "PUT") {
+          return await handleSetActiveEvent(request, env);
+        }
+        return await handleGetActiveEvent(env);
+      }
+      if (path === "/api/events") {
+        return await handleListEvents(env);
+      }
 
       // 4. TRACCAR & GPS INGESTION (CATCH-ALL)
       // Any other path (/, /traccar, /gps, /positions, etc.) is handled as telemetry ingestion.
@@ -179,7 +188,7 @@ async function handleTraccarIngestion(request, env, ctx) {
   const altitude = parseFloat(params.altitude || params.alt || 0);
   const accuracy = Math.round(parseFloat(params.accuracy || params.acc || 0));
   const battery = parseFloat(params.batt || params.battery || 100);
-  const eventId = env.EVENT_ID || DEFAULT_EVENT_ID;
+  const eventId = (cachedActiveEvent && cachedActiveEvent.id) || env.EVENT_ID || DEFAULT_EVENT_ID;
 
   // Use current arrival time for lastGpsTimestamp to guarantee real-time watchdog is LIVE
   const arrivalTime = Date.now();
@@ -488,6 +497,91 @@ async function handleAnalysisSummary(url, env) {
 
 /**
  * ==============================================================================
+ * EVENT MANAGEMENT: SINGLE ACTIVE EVENT & ARCHIVE VAULT
+ * ==============================================================================
+ */
+
+let cachedActiveEvent = {
+  id: "sunday_autocross",
+  name: "Sunday Autocross",
+  track: "Sonoma Raceway",
+  format: "autocross",
+  status: "LIVE",
+  startedAt: 1789310000000
+};
+
+async function handleGetActiveEvent(env) {
+  const firebaseUrl = env.FIREBASE_URL || DEFAULT_FIREBASE_URL;
+  try {
+    const res = await fetch(`${firebaseUrl.replace(/\.json$/, '')}/activeEvent.json`);
+    const data = await res.json();
+    if (data && data.id) {
+      cachedActiveEvent = data;
+    }
+  } catch (e) {}
+
+  return new Response(JSON.stringify(cachedActiveEvent), {
+    headers: { ...corsHeaders, "Content-Type": "application/json" }
+  });
+}
+
+async function handleSetActiveEvent(request, env) {
+  try {
+    const body = await request.json();
+    if (!body || !body.id) {
+      return new Response(JSON.stringify({ error: "Missing event id" }), { status: 400, headers: corsHeaders });
+    }
+
+    cachedActiveEvent = {
+      id: body.id,
+      name: body.name || body.id,
+      track: body.track || "Track",
+      format: body.format || "autocross",
+      status: body.status || "LIVE",
+      startedAt: body.startedAt || Date.now()
+    };
+
+    const firebaseUrl = env.FIREBASE_URL || DEFAULT_FIREBASE_URL;
+    // 1. Update activeEvent node
+    await fetch(`${firebaseUrl.replace(/\.json$/, '')}/activeEvent.json`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(cachedActiveEvent)
+    }).catch(() => {});
+
+    // 2. Ensure event metadata exists under /events/${id}/meta
+    await fetch(`${firebaseUrl.replace(/\.json$/, '')}/events/${cachedActiveEvent.id}/meta.json`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(cachedActiveEvent)
+    }).catch(() => {});
+
+    return new Response(JSON.stringify({ status: "ok", activeEvent: cachedActiveEvent }), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" }
+    });
+  } catch (err) {
+    return new Response(JSON.stringify({ error: err.message }), { status: 500, headers: corsHeaders });
+  }
+}
+
+async function handleListEvents(env) {
+  const firebaseUrl = env.FIREBASE_URL || DEFAULT_FIREBASE_URL;
+  try {
+    const res = await fetch(`${firebaseUrl.replace(/\.json$/, '')}/events.json?shallow=true`);
+    const data = await res.json();
+    const eventIds = data ? Object.keys(data) : ["sunday_autocross"];
+    return new Response(JSON.stringify({ events: eventIds, activeEvent: cachedActiveEvent }), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" }
+    });
+  } catch (err) {
+    return new Response(JSON.stringify({ events: ["sunday_autocross"], activeEvent: cachedActiveEvent }), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" }
+    });
+  }
+}
+
+/**
+ * ==============================================================================
  * AUTOCROSS COURSE GATES & AUTO-TIMING STATE ENGINE
  * ==============================================================================
  */
@@ -632,7 +726,7 @@ async function evaluateAutoTiming(packet, env, deviceId) {
         const rawTimeMs = Math.round(finishTs - tracker.runStartTs);
         if (rawTimeMs >= 20000 && rawTimeMs <= 180000) {
           const sec = (rawTimeMs / 1000).toFixed(2);
-          const eventId = env.EVENT_ID || DEFAULT_EVENT_ID;
+          const eventId = (cachedActiveEvent && cachedActiveEvent.id) || env.EVENT_ID || DEFAULT_EVENT_ID;
           const runId = `run-${Date.now()}`;
           const runRecord = {
             id: runId,
