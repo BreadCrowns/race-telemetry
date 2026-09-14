@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>🧪 Pre-Production Sandbox - Sonoma Race Telemetry</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    body { background: #070a13; color: #f8fafc; min-height: 100vh; display: flex; flex-direction: column; align-items: center; padding: 28px 16px; }
+    .container { max-width: 680px; width: 100%; display: flex; flex-direction: column; gap: 20px; }
+    .header-card { background: #0f172a; border: 1px solid #1e293b; border-radius: 16px; padding: 24px; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.5); position: relative; overflow: hidden; }
+    .header-card::before { content: ""; position: absolute; top: 0; left: 0; right: 0; height: 4px; background: linear-gradient(90deg, #a855f7, #ec4899, #f97316); }
+    .badge-prepro { display: inline-flex; align-items: center; gap: 6px; background: linear-gradient(135deg, #9333ea, #db2777); color: #fff; font-size: 11px; font-weight: 800; padding: 4px 10px; border-radius: 20px; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 12px; box-shadow: 0 0 15px rgba(219, 39, 119, 0.4); }
+    h1 { font-size: 24px; font-weight: 900; letter-spacing: -0.5px; margin-bottom: 8px; }
+    p.subtitle { color: #94a3b8; font-size: 14px; line-height: 1.5; }
+    .nav-grid { display: grid; grid-template-columns: 1fr; gap: 14px; }
+    @media (min-width: 540px) { .nav-grid { grid-template-columns: 1fr 1fr; } }
+    .nav-card { background: #0f172a; border: 1px solid #1e293b; border-radius: 14px; padding: 20px; text-decoration: none; color: #f8fafc; transition: all 0.2s ease; display: flex; flex-direction: column; gap: 8px; position: relative; }
+    .nav-card:hover { border-color: #a855f7; transform: translateY(-2px); box-shadow: 0 12px 24px rgba(168, 85, 247, 0.15); }
+    .nav-card-icon { font-size: 28px; margin-bottom: 4px; }
+    .nav-card-title { font-size: 16px; font-weight: 800; display: flex; align-items: center; justify-content: space-between; }
+    .nav-card-desc { font-size: 12px; color: #94a3b8; line-height: 1.4; }
+    .arrow { color: #a855f7; font-weight: bold; transition: transform 0.2s; }
+    .nav-card:hover .arrow { transform: translateX(4px); }
+    .prod-switch-card { background: rgba(15, 23, 42, 0.6); border: 1px dashed #334155; border-radius: 14px; padding: 16px 20px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; }
+    .prod-switch-text { font-size: 13px; color: #94a3b8; }
+    .prod-switch-btn { background: #1e293b; color: #38bdf8; border: 1px solid #334155; padding: 7px 14px; border-radius: 8px; font-size: 12px; font-weight: 700; text-decoration: none; transition: all 0.15s; }
+    .prod-switch-btn:hover { background: #38bdf8; color: #0f172a; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header-card">
+      <div class="badge-prepro">🧪 Pre-Production Sandbox</div>
+      <h1>Sonoma Race Telemetry (Prepro)</h1>
+      <p class="subtitle">
+        Isolated experimental staging environment. Test new algorithms, visualizations, and timing features here safely without altering the team's production pages.
+      </p>
+    </div>
+
+    <div class="nav-grid">
+      <a href="analysis.html" class="nav-card">
+        <div class="nav-card-icon">🗺️</div>
+        <div class="nav-card-title">
+          <span>GPS Racing Lines</span>
+          <span class="arrow">→</span>
+        </div>
+        <div class="nav-card-desc">
+          Interactive map visualizer with kinematic trajectory smoothing, playback scrubber, and heatmap consensus track line.
+        </div>
+      </a>
+
+      <a href="pitwall.html" class="nav-card">
+        <div class="nav-card-icon">⏱️</div>
+        <div class="nav-card-title">
+          <span>Pit Wall Stopwatch</span>
+          <span class="arrow">→</span>
+        </div>
+        <div class="nav-card-desc">
+          Live stopwatch, real-time telemetry watchdog, multi-device start/stop sync, and run logging.
+        </div>
+      </a>
+
+      <a href="leaderboard.html" class="nav-card">
+        <div class="nav-card-icon">🏆</div>
+        <div class="nav-card-title">
+          <span>Live Leaderboard</span>
+          <span class="arrow">→</span>
+        </div>
+        <div class="nav-card-desc">
+          Driver rankings, lap time deltas, top speeds, and cone penalty adjustments.
+        </div>
+      </a>
+
+      <a href="../admin.html" class="nav-card">
+        <div class="nav-card-icon">⚙️</div>
+        <div class="nav-card-title">
+          <span>Event Admin</span>
+          <span class="arrow">→</span>
+        </div>
+        <div class="nav-card-desc">
+          Session reset controls, event metadata, and driver roster configuration.
+        </div>
+      </a>
+    </div>
+
+    <div class="prod-switch-card">
+      <div class="prod-switch-text">
+        🔒 Looking for the official team production pages?
+      </div>
+      <a href="../analysis.html" class="prod-switch-btn">Go to Production →</a>
+    </div>
+  </div>
+</body>
+</html>

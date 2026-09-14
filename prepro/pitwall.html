@@ -1,0 +1,2280 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta http-equiv="Expires" content="0" />
+  <title>Autocross Pit Wall Stopwatch & Leaderboard</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    :root {
+      --bg: #070a13;
+      --card-bg: #0f172a;
+      --border: #1e293b;
+      --accent: #f97316;
+      --green: #22c55e;
+      --red: #ef4444;
+      --yellow: #eab308;
+      --blue: #38bdf8;
+    }
+
+    body {
+      background: var(--bg);
+      color: #f8fafc;
+      min-height: 100vh;
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      max-width: 860px;
+      margin: 0 auto;
+    }
+
+    /* Top Bar: Event Name & Telemetry Watchdog */
+    header {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    .event-section {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      flex: 1;
+      min-width: 200px;
+    }
+    .event-label {
+      font-size: 10px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      color: var(--accent);
+    }
+    .event-input {
+      background: #020617;
+      border: 1px solid #334155;
+      color: #fff;
+      font-size: 16px;
+      font-weight: 800;
+      padding: 6px 10px;
+      border-radius: 6px;
+      outline: none;
+      width: 100%;
+      max-width: 320px;
+    }
+    .event-input:focus { border-color: var(--accent); }
+
+    .telemetry-chip {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: #020617;
+      border: 1px solid #334155;
+      padding: 6px 12px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-family: ui-monospace, monospace;
+    }
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #ef4444;
+      transition: all 0.3s ease;
+      flex-shrink: 0;
+    }
+    .status-dot.live, .status-dot.green {
+      background: var(--green);
+      box-shadow: 0 0 10px var(--green);
+    }
+    .status-dot.yellow, .status-dot.warn {
+      background: var(--yellow);
+      box-shadow: 0 0 10px var(--yellow);
+    }
+    .status-dot.red, .status-dot.offline {
+      background: var(--red);
+      box-shadow: 0 0 10px var(--red);
+    }
+    #watchdog-status {
+      transition: color 0.3s ease;
+    }
+
+    /* Stream Overlay Preview Card */
+    .stream-preview-card {
+      background: #020617;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-top: 4px;
+    }
+    .stream-preview-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .preview-title-wrap {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .preview-title {
+      font-size: 11px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--accent);
+    }
+    .preview-status-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      background: rgba(34, 197, 94, 0.15);
+      border: 1px solid rgba(34, 197, 94, 0.4);
+      color: #4ade80;
+      font-size: 9px;
+      font-weight: 800;
+      padding: 2px 6px;
+      border-radius: 12px;
+      font-family: ui-monospace, monospace;
+    }
+    .preview-actions {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .preview-btn {
+      background: #1e293b;
+      border: 1px solid #334155;
+      color: #cbd5e1;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 4px 10px;
+      border-radius: 5px;
+      cursor: pointer;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      transition: all 0.15s ease;
+    }
+    .preview-btn:hover {
+      border-color: var(--accent);
+      color: #fff;
+    }
+    .stream-viewport-wrap {
+      background: radial-gradient(circle at center, #0f172a 0%, #020617 100%);
+      border: 1px solid #1e293b;
+      border-radius: 8px;
+      overflow: hidden;
+      position: relative;
+      padding: 20px 8px 10px 8px;
+      min-height: 100px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: inset 0 2px 8px rgba(0,0,0,0.6);
+      width: 100%;
+      box-sizing: border-box;
+      transition: height 0.2s ease;
+    }
+    .stream-viewport-tag {
+      position: absolute;
+      top: 5px;
+      right: 8px;
+      font-size: 8px;
+      font-weight: 800;
+      color: #475569;
+      letter-spacing: 1px;
+      font-family: ui-monospace, monospace;
+      pointer-events: none;
+      z-index: 2;
+    }
+    .stream-preview-stage {
+      position: relative;
+      overflow: hidden;
+      margin: 0 auto;
+      display: flex;
+      justify-content: flex-start;
+      align-items: flex-start;
+      flex-shrink: 0;
+    }
+    .stream-scaler-container {
+      position: absolute;
+      top: 0;
+      left: 0;
+      transform-origin: top left;
+      will-change: transform;
+    }
+    .stream-preview-iframe {
+      border: none;
+      pointer-events: none;
+      background: transparent;
+      overflow: hidden;
+      display: block;
+    }
+
+    /* Navigation Tabs: Stopwatch vs Leaderboard vs GPS Analysis */
+    .tab-bar {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+      background: #020617;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 4px;
+      gap: 4px;
+    }
+    .tab-btn {
+      background: transparent;
+      border: none;
+      color: #94a3b8;
+      font-size: 13px;
+      font-weight: 800;
+      padding: 10px;
+      border-radius: 6px;
+      cursor: pointer;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.2s ease;
+    }
+    .tab-btn.active {
+      background: var(--accent);
+      color: #fff;
+      box-shadow: 0 2px 10px rgba(249, 115, 22, 0.3);
+    }
+
+    /* Card Panels */
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    /* Driver Selection & Run Number */
+    .setup-row {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 12px;
+      align-items: flex-end;
+    }
+    @media (max-width: 540px) {
+      .setup-row { grid-template-columns: 1fr; }
+    }
+    .driver-selector {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .section-title {
+      font-size: 11px;
+      font-weight: 800;
+      text-transform: uppercase;
+      color: #94a3b8;
+      letter-spacing: 1px;
+    }
+    .driver-btn-group {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .driver-btn {
+      background: #020617;
+      border: 2px solid #334155;
+      color: #e2e8f0;
+      font-size: 14px;
+      font-weight: 800;
+      padding: 10px 18px;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+    .driver-btn:hover { border-color: var(--accent); }
+    .driver-btn.active {
+      border-color: var(--accent);
+      background: rgba(249, 115, 22, 0.15);
+      color: #fff;
+      box-shadow: 0 0 12px rgba(249, 115, 22, 0.25);
+    }
+    .driver-btn.driver-btn-standby {
+      border-color: #475569;
+      color: #94a3b8;
+    }
+    .driver-btn.driver-btn-standby:hover {
+      border-color: #f59e0b;
+      color: #f59e0b;
+    }
+    .driver-btn.driver-btn-standby.active {
+      border-color: #f59e0b;
+      background: rgba(245, 158, 11, 0.15);
+      color: #f59e0b;
+      box-shadow: 0 0 12px rgba(245, 158, 11, 0.3);
+    }
+
+    .run-number-stepper {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .stepper-controls {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .btn-step {
+      background: #1e293b;
+      border: 1px solid #334155;
+      color: #fff;
+      width: 38px;
+      height: 38px;
+      border-radius: 6px;
+      font-size: 18px;
+      font-weight: 800;
+      cursor: pointer;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+    .btn-step:active { background: var(--accent); }
+    .run-input {
+      width: 70px;
+      height: 38px;
+      text-align: center;
+      background: #020617;
+      border: 1px solid #334155;
+      color: #fff;
+      font-size: 18px;
+      font-weight: 900;
+      font-family: ui-monospace, monospace;
+      border-radius: 6px;
+      outline: none;
+    }
+
+    /* GIANT STOPWATCH CLOCK & START BUTTON */
+    .stopwatch-hero {
+      background: #050811;
+      border: 2px solid #1e293b;
+      border-radius: 12px;
+      padding: 24px 16px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+      text-align: center;
+    }
+    .clock-meta {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      font-family: ui-monospace, monospace;
+      font-size: 12px;
+      color: #94a3b8;
+    }
+    .active-badge {
+      background: rgba(249, 115, 22, 0.2);
+      color: var(--accent);
+      border: 1px solid var(--accent);
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-weight: 800;
+      letter-spacing: 1px;
+    }
+    .stopwatch-clock {
+      font-size: 88px;
+      font-weight: 900;
+      line-height: 1;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-variant-numeric: tabular-nums;
+      color: #ffffff;
+      letter-spacing: -2px;
+    }
+    @media (max-width: 500px) {
+      .stopwatch-clock { font-size: 64px; }
+    }
+
+    /* GIANT ACTION BUTTON */
+    .btn-main-timer {
+      width: 100%;
+      max-width: 480px;
+      padding: 26px 16px;
+      font-size: 24px;
+      font-weight: 900;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      border: none;
+      border-radius: 14px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+    }
+    .btn-main-timer.idle {
+      background: #16a34a;
+      color: #ffffff;
+      box-shadow: 0 8px 25px rgba(22, 163, 74, 0.4);
+    }
+    .btn-main-timer.idle:active {
+      transform: scale(0.98);
+      background: #15803d;
+    }
+    .btn-main-timer.running {
+      background: #dc2626;
+      color: #ffffff;
+      box-shadow: 0 8px 30px rgba(220, 38, 38, 0.5);
+      animation: pulse-red 1.5s infinite;
+    }
+    .btn-main-timer.running:active {
+      transform: scale(0.98);
+      background: #b91c1c;
+    }
+    .btn-main-timer.awaiting {
+      background: #1e293b;
+      color: #64748b;
+      border: 1px solid #334155;
+      box-shadow: 0 4px 14px rgba(0,0,0,0.3);
+      cursor: not-allowed;
+    }
+    .btn-main-timer.awaiting:active {
+      transform: none;
+    }
+    .btn-sub-hint {
+      font-size: 11px;
+      font-weight: 600;
+      opacity: 0.85;
+      letter-spacing: 0.5px;
+    }
+
+    @keyframes pulse-red {
+      0%, 100% { box-shadow: 0 0 20px rgba(220, 38, 38, 0.4); }
+      50% { box-shadow: 0 0 35px rgba(220, 38, 38, 0.7); }
+    }
+
+    /* POST-RUN PENALTY & NOTES REVIEW CARD */
+    .review-card {
+      background: #0f172a;
+      border: 2px solid var(--accent);
+      border-radius: 10px;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      animation: fadeIn 0.2s ease-out;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(-8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .review-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      border-bottom: 1px solid #1e293b;
+      padding-bottom: 8px;
+    }
+    .review-title {
+      font-size: 14px;
+      font-weight: 800;
+      color: var(--accent);
+      text-transform: uppercase;
+    }
+    .time-comparison {
+      display: flex;
+      align-items: baseline;
+      gap: 12px;
+    }
+    .raw-time-label {
+      font-size: 12px;
+      color: #94a3b8;
+      font-family: ui-monospace, monospace;
+    }
+    .final-time-label {
+      font-size: 24px;
+      font-weight: 900;
+      font-family: ui-monospace, monospace;
+      color: #4ade80;
+    }
+
+    .penalty-row {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    .btn-cone {
+      background: #1e293b;
+      border: 1px solid #334155;
+      color: #cbd5e1;
+      padding: 8px 14px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 800;
+      cursor: pointer;
+    }
+    .btn-cone:hover { border-color: var(--accent); }
+    .btn-cone.active {
+      background: #ea580c;
+      border-color: #ea580c;
+      color: white;
+    }
+
+    .dnf-toggle {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: #1e293b;
+      border: 1px solid #ef4444;
+      padding: 8px 14px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 800;
+      cursor: pointer;
+      color: #f87171;
+    }
+    .dnf-toggle.active {
+      background: #dc2626;
+      color: white;
+    }
+
+    .notes-input {
+      background: #020617;
+      border: 1px solid #334155;
+      color: #fff;
+      padding: 10px 12px;
+      border-radius: 6px;
+      font-size: 13px;
+      outline: none;
+      width: 100%;
+    }
+    .notes-input:focus { border-color: var(--accent); }
+
+    .review-action-btns {
+      display: flex;
+      gap: 10px;
+    }
+    .btn-save-run {
+      flex: 1;
+      background: #16a34a;
+      color: white;
+      border: none;
+      padding: 14px;
+      font-size: 15px;
+      font-weight: 800;
+      border-radius: 8px;
+      cursor: pointer;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+    .btn-save-run:hover { background: #15803d; }
+    .btn-discard-run {
+      background: #334155;
+      color: #cbd5e1;
+      border: none;
+      padding: 14px 18px;
+      font-size: 13px;
+      font-weight: 700;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+
+    /* AWAITING REMOTE REVIEW CARD */
+    .awaiting-review-card {
+      background: #0f172a;
+      border: 1px solid rgba(56, 189, 248, 0.4);
+      border-radius: 10px;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      animation: fadeIn 0.2s ease-out;
+    }
+    .awaiting-review-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .awaiting-review-title {
+      font-size: 14px;
+      font-weight: 800;
+      color: #38bdf8;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .awaiting-review-desc {
+      font-size: 13px;
+      color: #94a3b8;
+      line-height: 1.4;
+    }
+    .btn-takeover-review {
+      align-self: flex-start;
+      background: transparent;
+      border: 1px solid #334155;
+      color: #64748b;
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .btn-takeover-review:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    /* LEADERBOARD & RUN HISTORY VIEW */
+    .driver-standings-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+    .driver-rank-card {
+      background: #050811;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      position: relative;
+      overflow: hidden;
+    }
+    .driver-rank-card.leader {
+      border-color: #22c55e;
+      background: rgba(34, 197, 94, 0.05);
+    }
+    .rank-number {
+      position: absolute;
+      right: 8px;
+      top: 6px;
+      font-size: 20px;
+      font-weight: 900;
+      color: #334155;
+      font-family: ui-monospace, monospace;
+    }
+    .driver-rank-name {
+      font-size: 15px;
+      font-weight: 800;
+      color: #fff;
+    }
+    .driver-best-time {
+      font-size: 22px;
+      font-weight: 900;
+      font-family: ui-monospace, monospace;
+      color: #38bdf8;
+    }
+    .driver-rank-card.leader .driver-best-time {
+      color: #4ade80;
+    }
+    .driver-runs-meta {
+      font-size: 10px;
+      color: #64748b;
+    }
+
+    /* Runs Table */
+    .table-container {
+      overflow-x: auto;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: #020617;
+    }
+    table.history-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+      font-family: ui-monospace, monospace;
+      text-align: left;
+    }
+    table.history-table th {
+      background: #0f172a;
+      color: #64748b;
+      padding: 8px 10px;
+      border-bottom: 1px solid var(--border);
+      font-size: 10px;
+      text-transform: uppercase;
+    }
+    table.history-table td {
+      padding: 8px 10px;
+      border-bottom: 1px solid #0f172a;
+      color: #cbd5e1;
+    }
+    table.history-table tr:hover { background: rgba(255,255,255,0.03); }
+    .best-run { color: #4ade80 !important; font-weight: 800; }
+    .dnf-run { color: #f87171 !important; text-decoration: line-through; }
+    .btn-table-action {
+      background: #1e293b;
+      border: 1px solid #334155;
+      color: #94a3b8;
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-size: 10px;
+      cursor: pointer;
+    }
+    .btn-table-action:hover { color: #fff; border-color: var(--accent); }
+
+    .history-controls-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 10px;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    /* EDIT RUN MODAL */
+    .modal-backdrop {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.8);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      z-index: 9999;
+      padding: 16px;
+    }
+    .modal-box {
+      background: #0f172a;
+      border: 1px solid #334155;
+      border-radius: 12px;
+      padding: 20px;
+      width: 100%;
+      max-width: 440px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Header -->
+  <header>
+      <div style="width:100%; display:flex; justify-content:space-between; align-items:center; background:#1e1b4b; border:1px solid #6366f1; border-radius:6px; padding:6px 12px; margin-bottom:8px; font-size:12px;">
+        <span style="color:#c7d2fe;">🧪 <strong>PREPRO ENVIRONMENT</strong> &mdash; Experimental Pit Wall Sandbox</span>
+        <a href="analysis.html" style="color:#38bdf8; font-weight:700; text-decoration:none; margin-right:12px;">🗺️ Prepro GPS Lines &rarr;</a>
+        <a href="../pitwall.html" style="color:#94a3b8; text-decoration:none;">Go to Production &rarr;</a>
+      </div>
+    <div class="event-section">
+      <div style="display:flex; justify-content:space-between; align-items:baseline; max-width:320px;">
+        <span class="event-label">🏁 Event Title</span>
+        <span id="event-sync-status" style="font-size:9px; font-weight:800; font-family:ui-monospace, monospace; color:#4ade80;">CLOUD SYNCED</span>
+      </div>
+      <input type="text" id="event-input" class="event-input" value="Sunday Autocross" placeholder="Event Name..." />
+    </div>
+
+    <!-- Live Telemetry Heartbeat from Cockpit / Traccar -->
+    <div class="telemetry-chip">
+      <div class="status-dot" id="watchdog-dot"></div>
+      <span id="watchdog-status">COCKPIT OFFLINE</span>
+      <span id="live-speed" style="color:var(--accent); font-weight:800; margin-left:4px;">0 MPH</span>
+    </div>
+  </header>
+
+  <!-- View Mode Tabs -->
+  <div class="tab-bar">
+    <button type="button" class="tab-btn active" id="tab-btn-timing" onclick="switchView('timing')">
+      ⏱️ Timing & Stage
+    </button>
+    <button type="button" class="tab-btn" id="tab-btn-leaderboard" onclick="switchView('leaderboard')">
+      🏆 Leaderboard (<span id="count-runs">0</span>)
+    </button>
+    <a href="analysis.html" class="tab-btn" style="text-decoration: none; color: #38bdf8;" target="_blank">
+      🗺️ GPS Lines ↗
+    </a>
+  </div>
+
+  <!-- ================= VIEW 1: STOPWATCH & STAGE ================= -->
+  <div id="view-timing" class="card">
+    
+    <!-- Driver Quick Select & Run Stepper -->
+    <div class="setup-row">
+      <div class="driver-selector">
+        <span class="section-title">Select Active Driver</span>
+        <div class="driver-btn-group" id="driver-btn-group">
+          <button type="button" class="driver-btn" onclick="selectDriver('Jeff')">Jeff</button>
+          <button type="button" class="driver-btn" onclick="selectDriver('Liam')">Liam</button>
+          <button type="button" class="driver-btn" onclick="selectDriver('Ryan')">Ryan</button>
+          <button type="button" class="driver-btn" onclick="selectDriver('Matt')">Matt</button>
+          <button type="button" class="driver-btn driver-btn-standby active" onclick="selectDriver('In Pits')" title="Car in pit lane / no driver active">In Pits</button>
+        </div>
+      </div>
+
+      <div class="run-number-stepper">
+        <span class="section-title">Run #</span>
+        <div class="stepper-controls">
+          <button type="button" class="btn-step" onclick="changeRunNum(-1)">&minus;</button>
+          <input type="text" id="run-input" class="run-input" value="-" disabled inputmode="numeric" />
+          <button type="button" class="btn-step" onclick="changeRunNum(1)">&#43;</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- GIANT STOPWATCH HERO -->
+    <div class="stopwatch-hero">
+      <div class="clock-meta">
+        <span class="active-badge" id="hero-driver-badge">JEFF - RUN #1</span>
+        <span id="hero-state-label">READY AT START LINE</span>
+        <button type="button" class="btn-step" onclick="cueReadyForOverlay()" title="Reset stream overlay timer to READY" style="font-size:11px; width:auto; padding:2px 8px; height:24px; border-radius:4px; margin-left:6px; cursor:pointer;">Set Ready 🏁</button>
+      </div>
+
+      <div class="stopwatch-clock" id="stopwatch-clock">00:00.00</div>
+
+      <!-- THE MAIN ACTION BUTTON -->
+      <button type="button" class="btn-main-timer idle" id="btn-timer" onclick="toggleTimer()">
+        <span id="btn-timer-text">START RUN</span>
+        <span class="btn-sub-hint" id="btn-timer-subhint">PRESS SPACEBAR OR TAP</span>
+      </button>
+    </div>
+
+    <!-- AWAITING REMOTE REVIEW NOTICE (SHOWN WHEN ANOTHER OPERATOR STOPPED THE RUN) -->
+    <div class="awaiting-review-card" id="awaiting-review-card" style="display: none;">
+      <div class="awaiting-review-header">
+        <span style="font-size: 18px;">⏱️</span>
+        <span class="awaiting-review-title">Finish Line Review in Progress</span>
+      </div>
+      <div class="awaiting-review-desc">
+        The finish line operator stopped this run and is currently entering cone penalties, notes, and saving or discarding.
+      </div>
+      <button type="button" class="btn-takeover-review" onclick="takeoverReview()" title="Click only if finish line device is unavailable">
+        ⚡ Take Over Review on This Device
+      </button>
+    </div>
+
+    <!-- POST-RUN PENALTY & NOTES REVIEW (APPEARS UPON STOPPING) -->
+    <div class="review-card" id="review-card" style="display: none;">
+      <div class="review-header">
+        <span class="review-title">⏱️ Review Completed Run</span>
+        <div class="time-comparison">
+          <span class="raw-time-label">Raw: <strong id="review-raw-time">00:00.00</strong></span>
+          <span class="final-time-label" id="review-final-time">00:00.00</span>
+        </div>
+      </div>
+
+      <!-- Cone Penalties (Direct Number Entry & Stepper) -->
+      <div style="display: flex; flex-direction: column; gap: 6px;">
+        <span class="section-title">Cones Hit (+2s each)</span>
+        <div class="penalty-row" style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+          <div class="stepper-controls">
+            <button type="button" class="btn-step" onclick="changeReviewCones(-1)">&minus;</button>
+            <input type="number" id="review-cones-input" class="run-input" value="0" min="0" max="99" style="width: 75px; font-size: 18px;" oninput="onReviewConesChanged()" />
+            <button type="button" class="btn-step" onclick="changeReviewCones(1)">&#43;</button>
+          </div>
+          <button type="button" class="btn-cone active" id="btn-cone-clean" onclick="setReviewCones(0)">
+            Clean (0)
+          </button>
+          <button type="button" class="dnf-toggle" id="btn-dnf-toggle" onclick="toggleRunDnf()">
+            ❌ Flag DNF
+          </button>
+          <span id="review-cone-penalty-text" style="font-size: 13px; font-weight: 800; font-family: ui-monospace, monospace; color: #94a3b8;">
+            +0s (Clean)
+          </span>
+        </div>
+      </div>
+
+      <!-- Notes Input -->
+      <div style="display: flex; flex-direction: column; gap: 6px;">
+        <span class="section-title">Driver Run Notes</span>
+        <input type="text" id="review-notes" class="notes-input" placeholder="e.g. Clean slalom, locked up in turnaround..." />
+      </div>
+
+      <!-- Actions -->
+      <div class="review-action-btns">
+        <button type="button" class="btn-save-run" onclick="saveCompletedRun()">
+          💾 Save Run & Next
+        </button>
+        <button type="button" class="btn-discard-run" onclick="discardRun()">
+          Discard
+        </button>
+      </div>
+    </div>
+
+    <!-- ================= PRISM STREAM OVERLAY LIVE MONITOR ================= -->
+    <div class="stream-preview-card">
+      <div class="stream-preview-header">
+        <div class="preview-title-wrap">
+          <span class="preview-title">📺 Live Stream Overlay Monitor (PRISM / OBS)</span>
+          <span class="preview-status-chip">
+            <span class="status-dot live" style="width:6px; height:6px;"></span>
+            LIVE SYNC
+          </span>
+        </div>
+        <div class="preview-actions">
+          <button type="button" class="preview-btn" onclick="switchPreviewSource('overlay.html')" id="btn-prev-hud" style="background: var(--accent); color:#fff;">Stage HUD</button>
+          <button type="button" class="preview-btn" onclick="switchPreviewSource('leaderboard.html')" id="btn-prev-board">Leaderboard</button>
+          <a href="overlay.html" target="_blank" class="preview-btn" id="link-popout-preview" title="Open overlay in dedicated window">↗ Pop Out</a>
+          <button type="button" class="preview-btn" id="btn-toggle-overlay-preview" onclick="toggleOverlayPreview()">Hide</button>
+        </div>
+      </div>
+
+      <div class="stream-viewport-wrap" id="stream-viewport-wrap">
+        <div class="stream-viewport-tag">BROADCAST OUTPUT PREVIEW</div>
+        <div class="stream-preview-stage" id="stream-preview-stage">
+          <div class="stream-scaler-container" id="stream-scaler-container">
+            <iframe src="overlay.html" id="preview-iframe" class="stream-preview-iframe" scrolling="no"></iframe>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ================= VIEW 2: LEADERBOARD & HISTORY ================= -->
+  <div id="view-leaderboard" class="card" style="display: none;">
+    <div style="display: flex; justify-content: space-between; align-items: center;">
+      <span class="section-title" style="font-size: 13px;">🏆 Fastest Times Ranking</span>
+      <span style="font-size: 11px; color: #64748b; font-family: ui-monospace, monospace;" id="leaderboard-event-title">Sunday Autocross</span>
+    </div>
+
+    <!-- Ranked Cards for the 4 Drivers -->
+    <div class="driver-standings-grid" id="driver-standings-grid"></div>
+
+    <!-- Full Run History Table -->
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 8px;">
+      <span class="section-title">All Timed Runs</span>
+    </div>
+
+    <div class="table-container">
+      <table class="history-table">
+        <thead>
+          <tr>
+            <th>RUN #</th>
+            <th>DRIVER</th>
+            <th>RAW</th>
+            <th>PENALTY</th>
+            <th>FINAL TIME</th>
+            <th>STATUS</th>
+            <th>NOTES</th>
+            <th>ACTION</th>
+          </tr>
+        </thead>
+        <tbody id="history-table-body">
+          <tr><td colspan="8" style="text-align:center; color:#64748b; padding:18px;">No recorded runs yet.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="history-controls-bar">
+      <button type="button" class="btn-cone" onclick="exportRunsCsv()">💾 Download CSV</button>
+      <button type="button" id="btn-clear-runs" class="btn-cone" onclick="clearAllRuns()" style="color:#f87171;">🗑️ Clear Event Runs</button>
+      <button type="button" id="btn-reset-events" class="btn-cone" onclick="resetAllEvents()" style="color:#ef4444; border-color: rgba(239, 68, 68, 0.4);" title="Permanently erase all sessions and runs across all events">💥 Reset All Events</button>
+    </div>
+  </div>
+
+  <!-- ================= EDIT RUN MODAL ================= -->
+  <div class="modal-backdrop" id="edit-modal">
+    <div class="modal-box">
+      <div style="display: flex; justify-content: space-between; align-items: center;">
+        <span class="review-title" id="edit-modal-title">Edit Run #1</span>
+        <button type="button" class="btn-step" onclick="closeEditModal()">&times;</button>
+      </div>
+
+      <div style="font-size: 12px; color: #94a3b8; font-family: ui-monospace, monospace;">
+        Raw Stopwatch Time: <strong id="edit-raw-display" style="color:#fff;">00:00.00</strong>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 6px;">
+        <span class="section-title">Adjust Cones (+2s each)</span>
+        <div class="penalty-row" style="display: flex; align-items: center; gap: 8px;">
+          <div class="stepper-controls">
+            <button type="button" class="btn-step" onclick="changeEditCones(-1)">&minus;</button>
+            <input type="number" id="edit-cones-input" class="run-input" min="0" max="99" style="width: 75px; font-size: 18px;" oninput="recalcEditTime()" />
+            <button type="button" class="btn-step" onclick="changeEditCones(1)">&#43;</button>
+          </div>
+          <button type="button" class="dnf-toggle" id="edit-dnf-toggle" onclick="toggleEditDnf()">
+            ❌ Toggle DNF
+          </button>
+        </div>
+      </div>
+
+      <div style="font-size: 14px; font-family: ui-monospace, monospace;">
+        New Final Time: <strong id="edit-final-display" style="color:#4ade80;">00:00.00</strong>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 6px;">
+        <span class="section-title">Notes</span>
+        <input type="text" id="edit-notes-input" class="notes-input" />
+      </div>
+
+      <div class="review-action-btns" style="margin-top: 8px;">
+        <button type="button" class="btn-save-run" onclick="saveEditedRun()">Save Changes</button>
+        <button type="button" class="btn-discard-run" onclick="closeEditModal()">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Firebase SDKs for Live Overlay Sync -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+
+  <script>
+    // --- FIREBASE CONFIG (Syncs active driver & speed to broadcast overlay) ---
+    const firebaseConfig = {
+      apiKey: "AIzaSyCC4JUzjr5lk9zaT78wwZ1RcjUguP5Q70s",
+      authDomain: "fiero-telemetry.firebaseapp.com",
+      databaseURL: "https://fiero-telemetry-default-rtdb.firebaseio.com",
+      projectId: "fiero-telemetry",
+      storageBucket: "fiero-telemetry.firebasestorage.app",
+      messagingSenderId: "183922450878",
+      appId: "1:183922450878:web:5faabfd6d163f1c6c119ef"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database().ref("raceTelemetry");
+
+    // UI DOM Elements
+    const eventInput = document.getElementById("event-input");
+    const runInput = document.getElementById("run-input");
+    const stopwatchClock = document.getElementById("stopwatch-clock");
+    const btnTimer = document.getElementById("btn-timer");
+    const btnTimerText = document.getElementById("btn-timer-text");
+    const btnTimerSubHint = document.getElementById("btn-timer-subhint");
+    const heroDriverBadge = document.getElementById("hero-driver-badge");
+    const heroStateLabel = document.getElementById("hero-state-label");
+    const reviewCard = document.getElementById("review-card");
+    const awaitingReviewCard = document.getElementById("awaiting-review-card");
+    const reviewRawTime = document.getElementById("review-raw-time");
+    const reviewFinalTime = document.getElementById("review-final-time");
+    const reviewNotes = document.getElementById("review-notes");
+    const btnDnfToggle = document.getElementById("btn-dnf-toggle");
+    const countRunsEl = document.getElementById("count-runs");
+
+    const watchdogDot = document.getElementById("watchdog-dot");
+    const watchdogStatus = document.getElementById("watchdog-status");
+    const liveSpeed = document.getElementById("live-speed");
+
+    // Client Session Identification & Review Ownership
+    let myClientId = sessionStorage.getItem("pitwall_client_id");
+    if (!myClientId) {
+      myClientId = "pitwall_" + Math.random().toString(36).substring(2, 9) + "_" + Date.now();
+      sessionStorage.setItem("pitwall_client_id", myClientId);
+    }
+    let isAwaitingRemoteReview = false;
+
+    function showAwaitingReviewBanner() {
+      if (awaitingReviewCard) awaitingReviewCard.style.display = "flex";
+      if (reviewCard) reviewCard.style.display = "none";
+    }
+
+    function hideAwaitingReviewBanner() {
+      if (awaitingReviewCard) awaitingReviewCard.style.display = "none";
+    }
+
+    function takeoverReview() {
+      let confirmed = false;
+      try {
+        confirmed = window.confirm("Take over review on this device?\n\nYou will be able to score cones and save or discard this run.");
+      } catch (e) {
+        confirmed = true;
+      }
+      if (confirmed) {
+        isAwaitingRemoteReview = false;
+        hideAwaitingReviewBanner();
+        btnTimer.className = "btn-main-timer idle";
+        btnTimerText.textContent = "START RUN";
+        if (btnTimerSubHint) btnTimerSubHint.textContent = "PRESS SPACEBAR OR TAP";
+        heroStateLabel.textContent = "🏁 RUN FINISHED";
+        heroStateLabel.style.color = "#4ade80";
+
+        // Claim review ownership by broadcasting our client ID as stoppedBy
+        broadcastAutoxState("STOPPED", {
+          rawTimeMs: lastElapsedMs,
+          rawFormatted: formatTimeMs(lastElapsedMs),
+          stoppedBy: myClientId
+        });
+
+        openReview(lastElapsedMs);
+      }
+    }
+
+    // App State
+    const DRIVERS = ["Jeff", "Liam", "Ryan", "Matt"];
+    let activeDriver = "In Pits";
+    localStorage.removeItem("autox_runs_db");
+    let runsDatabase = [];
+    let currentEventName = localStorage.getItem("autox_event_name") || "Sunday Autocross";
+    eventInput.value = currentEventName;
+
+    // Driver next run counter tracking
+    let driverNextRuns = { Jeff: 1, Liam: 1, Ryan: 1, Matt: 1 };
+
+    // Stopwatch State
+    let isRunning = false;
+    let runStartTime = 0;
+    let timerInterval = null;
+    let lastElapsedMs = 0;
+
+    // Review Temp State
+    let pendingRawMs = 0;
+    let pendingCones = 0;
+    let pendingDnf = false;
+
+    // Modal Edit State
+    let editingRunId = null;
+    let editingRawMs = 0;
+    let editingDnf = false;
+
+    // Web Audio Chimes
+    const audioCtx = (typeof AudioContext !== 'undefined' || typeof webkitAudioContext !== 'undefined')
+      ? new (window.AudioContext || window.webkitAudioContext)() : null;
+
+    function playChime(freq = 880, dur = 0.15) {
+      if (!audioCtx) return;
+      try {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.frequency.value = freq;
+        gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + dur);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(audioCtx.currentTime + dur);
+      } catch (e) {}
+    }
+
+    // --- FIREBASE BROADCAST FOR STREAM OVERLAY ---
+    function broadcastAutoxState(state, extra = {}) {
+      const currentRun = (activeDriver === "In Pits") ? 0 : parseInt(runInput.value || 1, 10);
+      const autoxData = {
+        state: state, // "READY", "RUNNING", "STOPPED", "SAVED", "IN PITS"
+        timerStatus: state.toLowerCase(),
+        driver: activeDriver,
+        runNum: currentRun,
+        runNumber: currentRun,
+        updatedAt: Date.now(),
+        ...extra
+      };
+
+      const payload = {
+        driver: activeDriver,
+        runNum: currentRun,
+        status: state === "RUNNING" ? "ON TRACK" : (state === "STOPPED" ? "FINISHED" : (state === "SAVED" ? "SAVED" : (activeDriver === "In Pits" ? "IN PITS" : "READY"))),
+        autox: autoxData
+      };
+
+      db.update(payload).catch(err => console.warn("Firebase broadcast err:", err));
+    }
+
+    function cueReadyForOverlay() {
+      broadcastAutoxState(activeDriver === "In Pits" ? "IN PITS" : "READY");
+      stopwatchClock.textContent = "00:00.00";
+      if (activeDriver === "In Pits") {
+        heroStateLabel.textContent = "CAR IN PITS - STANDBY";
+        heroStateLabel.style.color = "#f59e0b";
+      } else {
+        heroStateLabel.textContent = "READY AT START LINE";
+        heroStateLabel.style.color = "#94a3b8";
+      }
+    }
+
+    // --- SETUP: DRIVER & RUN CONTROLS ---
+    function setDriverLocal(name, runNum = null) {
+      if (!name) return;
+      const isStandby = name.toLowerCase().includes("in pits") || name.toLowerCase().includes("standby");
+      const normalizedName = isStandby ? "In Pits" : name;
+
+      activeDriver = normalizedName;
+      localStorage.setItem("autox_driver", normalizedName);
+
+      document.querySelectorAll(".driver-btn").forEach(btn => {
+        const btnText = btn.textContent.trim();
+        const matches = isStandby
+          ? (btnText.toLowerCase().includes("in pits") || btnText.toLowerCase().includes("standby"))
+          : (btnText.toLowerCase() === normalizedName.toLowerCase());
+        btn.classList.toggle("active", matches);
+      });
+
+      if (isStandby) {
+        runInput.value = "-";
+        runInput.disabled = true;
+      } else {
+        runInput.disabled = false;
+        if (runNum !== null && runNum !== undefined && !isNaN(parseInt(runNum, 10)) && parseInt(runNum, 10) > 0) {
+          runInput.value = parseInt(runNum, 10);
+        } else {
+          runInput.value = driverNextRuns[normalizedName] || 1;
+        }
+      }
+      updateHeroBadge();
+    }
+
+    function selectDriver(name) {
+      if (isRunning) {
+        alert("Cannot switch driver while a run is in progress!");
+        return;
+      }
+      if (isAwaitingRemoteReview) {
+        alert("Cannot switch driver while the completed run is being reviewed by the finish line operator.");
+        return;
+      }
+      if (reviewCard && reviewCard.style.display !== "none") {
+        alert("Please save or discard the completed run before switching drivers.");
+        return;
+      }
+      setDriverLocal(name);
+      // Sync active driver & ready state to Firebase for all pitwall instances & stream overlays
+      broadcastAutoxState(activeDriver === "In Pits" ? "IN PITS" : "READY");
+    }
+
+    function changeRunNum(delta) {
+      if (activeDriver === "In Pits") return;
+      if (isRunning || isAwaitingRemoteReview || (reviewCard && reviewCard.style.display !== "none")) return;
+      let val = parseInt(runInput.value || 1, 10) + delta;
+      if (val < 1) val = 1;
+      runInput.value = val;
+      updateHeroBadge();
+      broadcastAutoxState("READY");
+    }
+
+    runInput.addEventListener("input", () => {
+      if (isRunning || isAwaitingRemoteReview || (reviewCard && reviewCard.style.display !== "none")) return;
+      updateHeroBadge();
+      broadcastAutoxState("READY");
+    });
+
+    function getEventKey(name) {
+      return (name || "Sunday Autocross")
+        .trim()
+        .toLowerCase()
+        .replace(/[.$#[\]/]/g, "")
+        .replace(/\s+/g, "_")
+        .slice(0, 64) || "sunday_autocross";
+    }
+
+    let currentEventRef = null;
+    let currentEventKey = "";
+    let eventDebounceTimer = null;
+
+    function bindEventSync(eventName) {
+      const eventKey = getEventKey(eventName);
+      currentEventKey = eventKey;
+      currentEventName = eventName;
+      localStorage.setItem("autox_event_name", eventName);
+
+      const titleDisplay = document.getElementById("leaderboard-event-title");
+      if (titleDisplay) titleDisplay.textContent = eventName;
+
+      const eventStatusEl = document.getElementById("event-sync-status");
+      if (eventStatusEl) {
+        eventStatusEl.textContent = "SYNCING...";
+        eventStatusEl.style.color = "#38bdf8";
+      }
+
+      // Detach previous event listener if any
+      if (currentEventRef) {
+        currentEventRef.off();
+      }
+
+      // 1. Instant local load from cache for this event (supports offline usage)
+      const localCached = localStorage.getItem(`autox_runs_${eventKey}`);
+      if (localCached) {
+        try {
+          runsDatabase = JSON.parse(localCached);
+        } catch (e) {
+          runsDatabase = [];
+        }
+      } else {
+        runsDatabase = [];
+      }
+
+      calculateNextRuns();
+      renderLeaderboard();
+
+      // 2. Attach to Firebase under raceTelemetry/events/${eventKey}/runs
+      currentEventRef = db.child("events").child(eventKey).child("runs");
+
+      currentEventRef.on("value", (snap) => {
+        const data = snap.val();
+        if (eventStatusEl) {
+          eventStatusEl.textContent = "CLOUD SYNCED";
+          eventStatusEl.style.color = "#4ade80";
+        }
+
+        if (data) {
+          const runs = Object.values(data);
+          runs.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+          runsDatabase = runs;
+          localStorage.setItem(`autox_runs_${eventKey}`, JSON.stringify(runsDatabase));
+          localStorage.setItem("autox_runs_db", JSON.stringify(runsDatabase));
+          calculateNextRuns();
+          renderLeaderboard();
+        } else {
+          // Remote runs for this event have been cleared or are empty
+          runsDatabase = [];
+          localStorage.removeItem(`autox_runs_${eventKey}`);
+          localStorage.removeItem("autox_runs_db");
+          DRIVERS.forEach(d => { driverNextRuns[d] = 1; });
+          if (activeDriver !== "In Pits") {
+            runInput.value = 1;
+          }
+          calculateNextRuns();
+          renderLeaderboard();
+        }
+      }, (err) => {
+        console.warn("Event Firebase sync error:", err);
+        if (eventStatusEl) {
+          eventStatusEl.textContent = "OFFLINE MODE";
+          eventStatusEl.style.color = "#94a3b8";
+        }
+      });
+
+      // Save metadata & broadcast active event name to overlays
+      db.child("events").child(eventKey).child("title").set(currentEventName).catch(() => {});
+      db.child("autox").child("eventName").set(currentEventName).catch(() => {});
+    }
+
+    eventInput.addEventListener("input", (e) => {
+      const val = e.target.value.trim();
+      clearTimeout(eventDebounceTimer);
+      if (!val) return; // Don't interrupt user with auto-revert while typing or clearing
+      eventDebounceTimer = setTimeout(() => {
+        bindEventSync(val);
+        broadcastAutoxState("READY");
+      }, 600);
+    });
+
+    eventInput.addEventListener("change", (e) => {
+      clearTimeout(eventDebounceTimer);
+      const val = e.target.value.trim() || "Sunday Autocross";
+      e.target.value = val;
+      bindEventSync(val);
+      broadcastAutoxState("READY");
+    });
+
+    function updateHeroBadge() {
+      const isReviewing = reviewCard && reviewCard.style.display === "flex";
+      if (activeDriver === "In Pits") {
+        heroDriverBadge.textContent = "IN PITS - STANDBY";
+        if (!isRunning && !isReviewing && !isAwaitingRemoteReview) {
+          heroStateLabel.textContent = "CAR IN PITS - STANDBY";
+          heroStateLabel.style.color = "#f59e0b";
+        }
+      } else {
+        heroDriverBadge.textContent = `${activeDriver.toUpperCase()} - RUN #${runInput.value}`;
+        if (!isRunning && !isReviewing && !isAwaitingRemoteReview) {
+          heroStateLabel.textContent = "READY AT START LINE";
+          heroStateLabel.style.color = "#94a3b8";
+        }
+      }
+    }
+
+    function calculateNextRuns() {
+      DRIVERS.forEach(d => {
+        const driverRuns = runsDatabase.filter(r => r.driver === d);
+        if (driverRuns.length > 0) {
+          const maxNum = Math.max(...driverRuns.map(r => r.runNum));
+          driverNextRuns[d] = maxNum + 1;
+        } else {
+          driverNextRuns[d] = 1;
+        }
+      });
+      if (activeDriver === "In Pits") {
+        runInput.value = "-";
+        runInput.disabled = true;
+      } else {
+        runInput.disabled = false;
+        runInput.value = driverNextRuns[activeDriver] || 1;
+      }
+      updateHeroBadge();
+    }
+
+    // --- MAIN STOPWATCH ENGINE ---
+    function toggleTimer() {
+      if (!isRunning) {
+        if (isAwaitingRemoteReview) {
+          alert("The previous run has completed and is currently being reviewed and scored by the finish line operator.");
+          return;
+        }
+        if (reviewCard && reviewCard.style.display !== "none") {
+          alert("Please save or discard the completed run before starting a new run.");
+          return;
+        }
+        startTimer();
+      } else {
+        stopTimer();
+      }
+    }
+
+    // Keyboard Spacebar Shortcut
+    window.addEventListener("keydown", (e) => {
+      // Don't trigger if user is typing in notes or inputs
+      if (e.code === "Space" && e.target.tagName !== "INPUT" && e.target.tagName !== "TEXTAREA") {
+        e.preventDefault();
+        toggleTimer();
+      }
+    });
+
+    function startTimerLocal(startTime) {
+      isRunning = true;
+      isAwaitingRemoteReview = false;
+      hideAwaitingReviewBanner();
+      runStartTime = Number(startTime) || Date.now();
+      if (reviewCard) reviewCard.style.display = "none";
+
+      btnTimer.className = "btn-main-timer running";
+      btnTimerText.textContent = "STOP RUN - FINISH";
+      if (btnTimerSubHint) btnTimerSubHint.textContent = "PRESS SPACEBAR OR TAP TO FINISH";
+      heroStateLabel.textContent = "⚡ RUN IN PROGRESS";
+      heroStateLabel.style.color = "#38bdf8";
+
+      playChime(659.25, 0.2); // E5 start chime
+
+      clearInterval(timerInterval);
+      timerInterval = setInterval(() => {
+        const elapsed = Math.max(0, Date.now() - runStartTime);
+        stopwatchClock.textContent = formatTimeMs(elapsed);
+      }, 30);
+    }
+
+    function startTimer() {
+      if (activeDriver === "In Pits") {
+        alert("Please select an active driver (Jeff, Liam, Ryan, or Matt) before starting the run!");
+        return;
+      }
+      if (isAwaitingRemoteReview) {
+        alert("The previous run has completed and is currently being reviewed and scored by the finish line operator.");
+        return;
+      }
+      if (reviewCard && reviewCard.style.display !== "none") {
+        alert("Please save or discard the completed run before starting a new run.");
+        return;
+      }
+      const now = Date.now();
+      startTimerLocal(now);
+
+      // Broadcast running timer & start time to Firebase for all other pitwall instances and stream overlay
+      broadcastAutoxState("RUNNING", { startTime: now, startedBy: myClientId });
+    }
+
+    function stopTimerLocal(timeMs, formattedStr, isCurrentDeviceStopper = false) {
+      isRunning = false;
+      clearInterval(timerInterval);
+      lastElapsedMs = Number(timeMs) || (runStartTime > 0 ? (Date.now() - runStartTime) : 0);
+      stopwatchClock.textContent = formattedStr || formatTimeMs(lastElapsedMs);
+
+      playChime(1046.5, 0.25); // C6 finish chime
+
+      if (isCurrentDeviceStopper) {
+        // Stopper device: opens review card and can save or discard
+        isAwaitingRemoteReview = false;
+        hideAwaitingReviewBanner();
+
+        btnTimer.className = "btn-main-timer idle";
+        btnTimerText.textContent = "START RUN";
+        if (btnTimerSubHint) btnTimerSubHint.textContent = "PRESS SPACEBAR OR TAP";
+        heroStateLabel.textContent = "🏁 RUN FINISHED";
+        heroStateLabel.style.color = "#4ade80";
+
+        // Open Post-Run Review Card ONLY on the device that stopped the run
+        openReview(lastElapsedMs);
+      } else {
+        // Remote device: cannot review, save, or discard
+        if (reviewCard) reviewCard.style.display = "none";
+        isAwaitingRemoteReview = true;
+        showAwaitingReviewBanner();
+
+        btnTimer.className = "btn-main-timer awaiting";
+        btnTimerText.textContent = "AWAITING REVIEW...";
+        if (btnTimerSubHint) btnTimerSubHint.textContent = "FINISH LINE IS SCORING THIS RUN";
+        heroStateLabel.textContent = "🏁 RUN FINISHED - AWAITING REVIEW";
+        heroStateLabel.style.color = "#38bdf8";
+      }
+    }
+
+    function stopTimer() {
+      const elapsed = runStartTime > 0 ? (Date.now() - runStartTime) : 0;
+      const formatted = formatTimeMs(elapsed);
+
+      // Local stop with stopper flag = true
+      stopTimerLocal(elapsed, formatted, true);
+
+      // Broadcast stopped status and client ID of stopper to Firebase
+      broadcastAutoxState("STOPPED", {
+        rawTimeMs: elapsed,
+        rawFormatted: formatted,
+        stoppedBy: myClientId
+      });
+    }
+
+    function openReview(timeMs) {
+      pendingRawMs = timeMs;
+      pendingCones = 0;
+      pendingDnf = false;
+      reviewNotes.value = "";
+
+      const conesInput = document.getElementById("review-cones-input");
+      if (conesInput) conesInput.value = 0;
+      const cleanBtn = document.getElementById("btn-cone-clean");
+      if (cleanBtn) cleanBtn.classList.add("active");
+      btnDnfToggle.classList.remove("active");
+
+      reviewRawTime.textContent = formatTimeMs(timeMs);
+      updateReviewFinalTime();
+
+      reviewCard.style.display = "flex";
+      if (conesInput) conesInput.focus();
+    }
+
+    function setReviewCones(count) {
+      pendingCones = Math.max(0, parseInt(count || 0, 10));
+      const input = document.getElementById("review-cones-input");
+      if (input) input.value = pendingCones;
+      const cleanBtn = document.getElementById("btn-cone-clean");
+      if (cleanBtn) cleanBtn.classList.toggle("active", pendingCones === 0);
+      updateReviewFinalTime();
+    }
+
+    function changeReviewCones(delta) {
+      setReviewCones(pendingCones + delta);
+    }
+
+    function onReviewConesChanged() {
+      const input = document.getElementById("review-cones-input");
+      const val = parseInt(input.value || 0, 10);
+      pendingCones = Math.max(0, isNaN(val) ? 0 : val);
+      const cleanBtn = document.getElementById("btn-cone-clean");
+      if (cleanBtn) cleanBtn.classList.toggle("active", pendingCones === 0);
+      updateReviewFinalTime();
+    }
+
+    function toggleRunDnf() {
+      pendingDnf = !pendingDnf;
+      btnDnfToggle.classList.toggle("active", pendingDnf);
+      updateReviewFinalTime();
+    }
+
+    function updateReviewFinalTime() {
+      const penaltyLabel = document.getElementById("review-cone-penalty-text");
+      if (pendingDnf) {
+        reviewFinalTime.textContent = "DNF";
+        reviewFinalTime.style.color = "#f87171";
+        if (penaltyLabel) {
+          penaltyLabel.textContent = "DNF";
+          penaltyLabel.style.color = "#f87171";
+        }
+      } else {
+        const penaltySec = pendingCones * 2;
+        const adjustedMs = pendingRawMs + (penaltySec * 1000);
+        reviewFinalTime.textContent = formatTimeMs(adjustedMs);
+        reviewFinalTime.style.color = "#4ade80";
+        if (penaltyLabel) {
+          penaltyLabel.textContent = pendingCones > 0 ? `+${penaltySec}s (${pendingCones} cone${pendingCones > 1 ? 's' : ''})` : "+0s (Clean)";
+          penaltyLabel.style.color = pendingCones > 0 ? "var(--accent)" : "#94a3b8";
+        }
+      }
+    }
+
+    function saveCompletedRun() {
+      if (activeDriver === "In Pits") {
+        alert("Please select an active driver (Jeff, Liam, Ryan, or Matt) before logging this run.");
+        return;
+      }
+      const adjustedMs = pendingDnf ? 99999999 : pendingRawMs + (pendingCones * 2000);
+      const runNum = parseInt(runInput.value || 1, 10);
+
+      const runRecord = {
+        id: `run-${Date.now()}`,
+        runNum: runNum,
+        driver: activeDriver,
+        eventName: currentEventName,
+        rawTimeMs: pendingRawMs,
+        rawFormatted: formatTimeMs(pendingRawMs),
+        cones: pendingCones,
+        isDnf: pendingDnf,
+        finalTimeMs: adjustedMs,
+        finalFormatted: pendingDnf ? "DNF" : formatTimeMs(adjustedMs),
+        notes: reviewNotes.value.trim(),
+        timestamp: Date.now()
+      };
+
+      runsDatabase.unshift(runRecord);
+      const eventKey = getEventKey(currentEventName);
+      localStorage.setItem(`autox_runs_${eventKey}`, JSON.stringify(runsDatabase));
+      localStorage.setItem("autox_runs_db", JSON.stringify(runsDatabase));
+
+      // 1. Sync to Firebase under this specific event (so other devices pull it instantly!)
+      if (currentEventRef) {
+        currentEventRef.child(runRecord.id).set(runRecord).catch(e => console.warn("Firebase run push err:", e));
+      }
+
+      // 2. Sync to flat laps node for legacy / Cloudflare backup
+      db.child("laps").push(runRecord).catch(() => {});
+
+      // 3. Broadcast saved penalties and notes to stream overlay
+      broadcastAutoxState("SAVED", {
+        rawTimeMs: pendingRawMs,
+        rawFormatted: formatTimeMs(pendingRawMs),
+        cones: pendingCones,
+        isDnf: pendingDnf,
+        finalTimeMs: adjustedMs,
+        finalFormatted: pendingDnf ? "DNF" : formatTimeMs(adjustedMs),
+        notes: reviewNotes.value.trim(),
+        savedBy: myClientId
+      });
+
+      // 4. Increment run number for this driver
+      driverNextRuns[activeDriver] = runNum + 1;
+      runInput.value = driverNextRuns[activeDriver];
+
+      // Close review and update leaderboard
+      isAwaitingRemoteReview = false;
+      hideAwaitingReviewBanner();
+      reviewCard.style.display = "none";
+      updateHeroBadge();
+      renderLeaderboard();
+      playChime(880, 0.1);
+    }
+
+    function discardRun() {
+      let confirmed = false;
+      try {
+        confirmed = window.confirm("Discard this run without saving?");
+      } catch (e) {
+        confirmed = true;
+      }
+      if (confirmed) {
+        isAwaitingRemoteReview = false;
+        hideAwaitingReviewBanner();
+        reviewCard.style.display = "none";
+        stopwatchClock.textContent = "00:00.00";
+        heroStateLabel.textContent = activeDriver === "In Pits" ? "CAR IN PITS - STANDBY" : "READY AT START LINE";
+        heroStateLabel.style.color = activeDriver === "In Pits" ? "#f59e0b" : "#94a3b8";
+        broadcastAutoxState("READY", {
+          driver: activeDriver,
+          runNum: (activeDriver === "In Pits") ? 0 : parseInt(runInput.value || 1, 10)
+        });
+      }
+    }
+
+    function formatTimeMs(ms) {
+      if (ms >= 99999999) return "DNF";
+      const min = Math.floor(ms / 60000);
+      const sec = Math.floor((ms % 60000) / 1000);
+      const hundredths = Math.floor((ms % 1000) / 10);
+      return `${String(min).padStart(2, '0')}:${String(sec).padStart(2, '0')}.${String(hundredths).padStart(2, '0')}`;
+    }
+
+    // --- VIEW SWITCHING ---
+    function switchView(tab) {
+      document.getElementById("tab-btn-timing").classList.toggle("active", tab === "timing");
+      document.getElementById("tab-btn-leaderboard").classList.toggle("active", tab === "leaderboard");
+
+      document.getElementById("view-timing").style.display = tab === "timing" ? "flex" : "none";
+      document.getElementById("view-leaderboard").style.display = tab === "leaderboard" ? "flex" : "none";
+
+      if (tab === "leaderboard") {
+        renderLeaderboard();
+      }
+    }
+
+    // --- LEADERBOARD & HISTORY RENDERING ---
+    function renderLeaderboard() {
+      countRunsEl.textContent = runsDatabase.length;
+
+      // 1. Render Driver Standings Grid
+      const grid = document.getElementById("driver-standings-grid");
+      grid.innerHTML = "";
+
+      const driverStats = DRIVERS.map(driverName => {
+        const runs = runsDatabase.filter(r => r.driver === driverName && !r.isDnf);
+        const bestTimeMs = runs.length > 0 ? Math.min(...runs.map(r => r.finalTimeMs)) : Infinity;
+        const totalRuns = runsDatabase.filter(r => r.driver === driverName).length;
+        return { driver: driverName, bestTimeMs, totalRuns };
+      });
+
+      // Sort by fastest time
+      driverStats.sort((a, b) => a.bestTimeMs - b.bestTimeMs);
+
+      driverStats.forEach((st, idx) => {
+        const card = document.createElement("div");
+        card.className = `driver-rank-card ${idx === 0 && st.bestTimeMs !== Infinity ? 'leader' : ''}`;
+        card.innerHTML = `
+          <div class="rank-number">#${idx + 1}</div>
+          <div class="driver-rank-name">${st.driver}</div>
+          <div class="driver-best-time">${st.bestTimeMs === Infinity ? '--:--.--' : formatTimeMs(st.bestTimeMs)}</div>
+          <div class="driver-runs-meta">${st.totalRuns} total run${st.totalRuns === 1 ? '' : 's'}</div>
+        `;
+        grid.appendChild(card);
+      });
+
+      // 2. Render Full Run History Table
+      const tbody = document.getElementById("history-table-body");
+      if (runsDatabase.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; color:#64748b; padding:18px;">No recorded runs yet.</td></tr>`;
+        return;
+      }
+
+      // Find overall best clean time
+      const cleanTimes = runsDatabase.filter(r => !r.isDnf).map(r => r.finalTimeMs);
+      const overallBestMs = cleanTimes.length > 0 ? Math.min(...cleanTimes) : Infinity;
+
+      tbody.innerHTML = "";
+      runsDatabase.forEach(run => {
+        const tr = document.createElement("tr");
+        const isOverallBest = !run.isDnf && run.finalTimeMs === overallBestMs;
+
+        let statusDisplay = "";
+        if (run.isDnf) {
+          statusDisplay = '<span style="color:#f87171; font-weight:800;">❌ DNF</span>';
+        } else if (run.cones > 0) {
+          const coneLabel = run.cones === 1 ? "1 CONE" : `${run.cones} CONES`;
+          if (isOverallBest) {
+            statusDisplay = `<span style="color:#fb923c; font-weight:800;">⭐ FASTEST (+${run.cones * 2}s)</span>`;
+          } else {
+            statusDisplay = `<span style="color:#fb923c; font-weight:800;">⚠️ +${coneLabel}</span>`;
+          }
+        } else if (isOverallBest) {
+          statusDisplay = '<span style="color:#4ade80; font-weight:800;">⭐ FASTEST (CLEAN)</span>';
+        } else {
+          statusDisplay = '<span style="color:#94a3b8;">CLEAN</span>';
+        }
+
+        tr.innerHTML = `
+          <td>#${run.runNum}</td>
+          <td><strong>${run.driver}</strong></td>
+          <td>${run.rawFormatted}</td>
+          <td>${run.cones > 0 ? `+${run.cones} cone${run.cones > 1 ? 's' : ''} (+${run.cones * 2}s)` : 'Clean'}</td>
+          <td class="${run.isDnf ? 'dnf-run' : (isOverallBest ? 'best-run' : '')}">
+            <strong>${run.finalFormatted}</strong>
+          </td>
+          <td>${statusDisplay}</td>
+          <td style="color:#94a3b8; max-width:180px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
+            ${run.notes || '--'}
+          </td>
+          <td>
+            <button type="button" class="btn-table-action" onclick="openEditModal('${run.id}')">✏️ Edit</button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    // --- EDIT MODAL (FOR EDITING CONES & NOTES RETROACTIVELY) ---
+    function openEditModal(runId) {
+      const run = runsDatabase.find(r => r.id === runId);
+      if (!run) return;
+
+      editingRunId = runId;
+      editingRawMs = run.rawTimeMs;
+      editingDnf = !!run.isDnf;
+
+      document.getElementById("edit-modal-title").textContent = `Edit ${run.driver} - Run #${run.runNum}`;
+      document.getElementById("edit-raw-display").textContent = run.rawFormatted;
+      document.getElementById("edit-cones-input").value = run.cones || 0;
+      document.getElementById("edit-notes-input").value = run.notes || "";
+      document.getElementById("edit-dnf-toggle").classList.toggle("active", editingDnf);
+
+      recalcEditTime();
+      document.getElementById("edit-modal").style.display = "flex";
+    }
+
+    function toggleEditDnf() {
+      editingDnf = !editingDnf;
+      document.getElementById("edit-dnf-toggle").classList.toggle("active", editingDnf);
+      recalcEditTime();
+    }
+
+    function changeEditCones(delta) {
+      const input = document.getElementById("edit-cones-input");
+      let val = parseInt(input.value || 0, 10) + delta;
+      if (val < 0) val = 0;
+      input.value = val;
+      recalcEditTime();
+    }
+
+    function recalcEditTime() {
+      const cones = parseInt(document.getElementById("edit-cones-input").value || 0, 10);
+      const display = document.getElementById("edit-final-display");
+      if (editingDnf) {
+        display.textContent = "DNF";
+        display.style.color = "#f87171";
+      } else {
+        const adjustedMs = editingRawMs + (cones * 2000);
+        display.textContent = formatTimeMs(adjustedMs);
+        display.style.color = "#4ade80";
+      }
+    }
+
+    function saveEditedRun() {
+      const run = runsDatabase.find(r => r.id === editingRunId);
+      if (!run) return;
+
+      const cones = Math.max(0, parseInt(document.getElementById("edit-cones-input").value || 0, 10));
+      run.cones = cones;
+      run.isDnf = editingDnf;
+      run.finalTimeMs = editingDnf ? 99999999 : run.rawTimeMs + (cones * 2000);
+      run.finalFormatted = editingDnf ? "DNF" : formatTimeMs(run.finalTimeMs);
+      run.notes = document.getElementById("edit-notes-input").value.trim();
+
+      const eventKey = getEventKey(currentEventName);
+      localStorage.setItem(`autox_runs_${eventKey}`, JSON.stringify(runsDatabase));
+      localStorage.setItem("autox_runs_db", JSON.stringify(runsDatabase));
+
+      // Sync edited run to Firebase under this specific event
+      if (currentEventRef) {
+        currentEventRef.child(run.id).set(run).catch(e => console.warn("Firebase edit push err:", e));
+      }
+
+      closeEditModal();
+      renderLeaderboard();
+      playChime(880, 0.1);
+
+      // If editing the latest run, sync updated penalties/notes to stream overlay!
+      if (runsDatabase.length > 0 && runsDatabase[0].id === editingRunId) {
+        broadcastAutoxState("SAVED", {
+          driver: run.driver,
+          runNum: run.runNum,
+          rawTimeMs: run.rawTimeMs,
+          rawFormatted: run.rawFormatted,
+          cones: run.cones,
+          isDnf: run.isDnf,
+          finalTimeMs: run.finalTimeMs,
+          finalFormatted: run.finalFormatted,
+          notes: run.notes
+        });
+      }
+    }
+
+    function closeEditModal() {
+      document.getElementById("edit-modal").style.display = "none";
+    }
+
+    function exportRunsCsv() {
+      if (runsDatabase.length === 0) { alert("No runs to export."); return; }
+      let csv = "Run_Number,Driver,Raw_Time,Cones,Penalty_Seconds,Final_Time,Is_DNF,Notes,Timestamp_ISO\n";
+      runsDatabase.forEach(r => {
+        const iso = new Date(r.timestamp).toISOString();
+        csv += `${r.runNum},"${r.driver}",${r.rawFormatted},${r.cones},${r.cones * 2},${r.finalFormatted},${r.isDnf ? 'YES' : 'NO'},"${r.notes || ''}",${iso}\n`;
+      });
+      const blob = new Blob([csv], { type: "text/csv" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `autocross_runs_${Date.now()}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function clearAllRuns() {
+      let shouldClear = true;
+      try {
+        if (typeof window.confirm === "function") {
+          shouldClear = window.confirm(`Are you sure you want to clear all recorded runs for "${currentEventName}"?`);
+        }
+      } catch (e) {
+        shouldClear = true;
+      }
+      if (!shouldClear) return;
+
+      runsDatabase = [];
+      const eventKey = getEventKey(currentEventName);
+      localStorage.removeItem(`autox_runs_${eventKey}`);
+      localStorage.removeItem("autox_runs_db");
+      for (let i = localStorage.length - 1; i >= 0; i--) {
+        const k = localStorage.key(i);
+        if (k && (k.startsWith("autox_runs") || k === "autox_runs_db")) {
+          localStorage.removeItem(k);
+        }
+      }
+
+      // 1. Remove runs from Firebase under this specific event
+      if (currentEventRef) {
+        currentEventRef.remove().catch(e => console.warn("Firebase remove err:", e));
+      }
+      db.child("events").child(eventKey).child("runs").remove().catch(() => {});
+
+      // 2. Also clear legacy laps node so old runs don't linger
+      db.child("laps").remove().catch(() => {});
+
+      // 3. Reset driver next run numbers back to 1
+      DRIVERS.forEach(d => { driverNextRuns[d] = 1; });
+      if (activeDriver !== "In Pits") {
+        runInput.value = 1;
+      }
+
+      calculateNextRuns();
+      renderLeaderboard();
+      broadcastAutoxState("READY");
+
+      const btn = document.getElementById("btn-clear-runs");
+      if (btn) {
+        const orig = btn.textContent;
+        btn.textContent = "✅ Runs Cleared!";
+        btn.style.color = "#4ade80";
+        setTimeout(() => {
+          btn.textContent = orig;
+          btn.style.color = "#f87171";
+        }, 2500);
+      }
+    }
+
+    function resetAllEvents() {
+      let shouldReset = true;
+      try {
+        if (typeof window.confirm === "function") {
+          shouldReset = window.confirm("Are you sure you want to completely RESET all events and runs in the cloud? This will erase all event data across all sessions.");
+        }
+      } catch (e) {
+        shouldReset = true;
+      }
+      if (!shouldReset) return;
+
+      runsDatabase = [];
+      for (let i = localStorage.length - 1; i >= 0; i--) {
+        const k = localStorage.key(i);
+        if (k && (k.startsWith("autox_runs") || k === "autox_runs_db" || k === "autox_event_name")) {
+          localStorage.removeItem(k);
+        }
+      }
+
+      // Wipe all events & laps from Firebase
+      db.child("events").remove().catch(e => console.warn("Firebase remove events err:", e));
+      db.child("laps").remove().catch(() => {});
+      db.child("autox").update({
+        driver: "In Pits",
+        state: "IN PITS",
+        timerStatus: "in pits",
+        runNum: 0,
+        runNumber: 0,
+        eventName: "Sunday Autocross",
+        updatedAt: Date.now()
+      }).catch(() => {});
+
+      DRIVERS.forEach(d => { driverNextRuns[d] = 1; });
+      currentEventName = "Sunday Autocross";
+      eventInput.value = "Sunday Autocross";
+      setDriverLocal("In Pits");
+      bindEventSync(currentEventName);
+      calculateNextRuns();
+      renderLeaderboard();
+      broadcastAutoxState("IN PITS");
+
+      const btn = document.getElementById("btn-reset-events");
+      if (btn) {
+        const orig = btn.textContent;
+        btn.textContent = "✅ All Events Reset!";
+        btn.style.color = "#4ade80";
+        setTimeout(() => {
+          btn.textContent = orig;
+          btn.style.color = "#ef4444";
+        }, 2500);
+      }
+    }
+
+    // --- FIREBASE LIVE TELEMETRY WATCHDOG ENGINE ---
+    let lastGpsTimestamp = 0;
+    let lastPacketWallTime = 0;
+    let latestSpeed = 0;
+
+    db.on("value", (snap) => {
+      const root = snap.val();
+      if (!root) return;
+
+      // 1. Live Sync Driver & Run Number across all open Pitwall instances
+      const autox = root.autox || {};
+      const remoteDriver = autox.driver || root.driver;
+      const remoteRunNum = autox.runNum || root.runNum;
+      const remoteState = autox.state;
+
+      if (remoteDriver && (!isRunning || remoteState === "RUNNING")) {
+        const isRemoteStandby = String(remoteDriver).toLowerCase().includes("in pits") || 
+                                String(remoteDriver).toLowerCase().includes("standby") || 
+                                (remoteState && String(remoteState).toUpperCase() === "IN PITS");
+        const normalizedRemote = isRemoteStandby
+          ? "In Pits"
+          : (DRIVERS.find(d => d.toLowerCase() === String(remoteDriver).toLowerCase()) || remoteDriver);
+
+        if (normalizedRemote !== activeDriver) {
+          setDriverLocal(normalizedRemote, remoteRunNum);
+        } else if (normalizedRemote !== "In Pits" && remoteRunNum && parseInt(runInput.value, 10) !== parseInt(remoteRunNum, 10)) {
+          runInput.value = parseInt(remoteRunNum, 10);
+          updateHeroBadge();
+        }
+      }
+
+      // 2. Live Sync Stopwatch Timer State across all open Pitwall instances
+      if (remoteState === "RUNNING") {
+        isAwaitingRemoteReview = false;
+        hideAwaitingReviewBanner();
+        const remoteStartTime = Number(autox.startTime) || Date.now();
+        // If not running or running a different start time, start local timer synchronized to cloud start time
+        if (!isRunning || Math.abs(runStartTime - remoteStartTime) > 300) {
+          startTimerLocal(remoteStartTime);
+        }
+      } else if (remoteState === "STOPPED") {
+        const remoteRawMs = Number(autox.rawTimeMs) || (runStartTime > 0 ? (Date.now() - runStartTime) : 0);
+        const isMe = Boolean(autox.stoppedBy && autox.stoppedBy === myClientId);
+
+        if (isRunning) {
+          stopTimerLocal(remoteRawMs, autox.rawFormatted, isMe);
+        } else if (!isMe) {
+          // If we were not running and are not the stopper, show awaiting review
+          if (reviewCard) reviewCard.style.display = "none";
+          isAwaitingRemoteReview = true;
+          showAwaitingReviewBanner();
+          btnTimer.className = "btn-main-timer awaiting";
+          btnTimerText.textContent = "AWAITING REVIEW...";
+          if (btnTimerSubHint) btnTimerSubHint.textContent = "FINISH LINE IS SCORING THIS RUN";
+          if (autox.rawFormatted) stopwatchClock.textContent = autox.rawFormatted;
+          heroStateLabel.textContent = "🏁 RUN FINISHED - AWAITING REVIEW";
+          heroStateLabel.style.color = "#38bdf8";
+        } else if (isMe) {
+          // This client was the stopper
+          isAwaitingRemoteReview = false;
+          hideAwaitingReviewBanner();
+          btnTimer.className = "btn-main-timer idle";
+          btnTimerText.textContent = "START RUN";
+          if (btnTimerSubHint) btnTimerSubHint.textContent = "PRESS SPACEBAR OR TAP";
+          if (reviewCard && reviewCard.style.display === "none") {
+            openReview(remoteRawMs);
+          }
+        }
+      } else if (remoteState === "SAVED") {
+        if (isRunning) {
+          clearInterval(timerInterval);
+          isRunning = false;
+        }
+        isAwaitingRemoteReview = false;
+        hideAwaitingReviewBanner();
+        if (reviewCard) reviewCard.style.display = "none";
+        btnTimer.className = "btn-main-timer idle";
+        btnTimerText.textContent = "START RUN";
+        if (btnTimerSubHint) btnTimerSubHint.textContent = "PRESS SPACEBAR OR TAP";
+        updateHeroBadge();
+      } else if (remoteState === "READY" || remoteState === "IN PITS") {
+        if (isRunning) {
+          clearInterval(timerInterval);
+          isRunning = false;
+        }
+        isAwaitingRemoteReview = false;
+        hideAwaitingReviewBanner();
+        if (reviewCard) reviewCard.style.display = "none";
+        btnTimer.className = "btn-main-timer idle";
+        btnTimerText.textContent = "START RUN";
+        if (btnTimerSubHint) btnTimerSubHint.textContent = "PRESS SPACEBAR OR TAP";
+        stopwatchClock.textContent = "00:00.00";
+        updateHeroBadge();
+      }
+
+      // Filter out non-telemetry keys (autox, laps, etc.)
+      let telem = root;
+      if (root.lat === undefined && root.latitude === undefined) {
+        const keys = Object.keys(root).filter(k => 
+          typeof root[k] === 'object' && 
+          root[k] !== null && 
+          k !== 'autox' && 
+          k !== 'laps'
+        );
+        if (keys.length > 0) {
+          keys.sort((a, b) => {
+            const timeA = Number(root[a].lastGpsTimestamp || root[a].deviceTimestamp || (root[a].tst ? root[a].tst * 1000 : 0));
+            const timeB = Number(root[b].lastGpsTimestamp || root[b].deviceTimestamp || (root[b].tst ? root[b].tst * 1000 : 0));
+            return timeA - timeB;
+          });
+          telem = root[keys[keys.length - 1]];
+        }
+      }
+
+      // Check for GPS timestamp & coordinates/speed
+      const rawLat = telem.latitude !== undefined ? telem.latitude : telem.lat;
+      const rawLon = telem.longitude !== undefined ? telem.longitude : telem.lon;
+      const rawSpeed = telem.speed !== undefined ? telem.speed : telem.vel;
+      const ts = Number(telem.lastGpsTimestamp || telem.deviceTimestamp || (telem.tst ? telem.tst * 1000 : 0));
+
+      if (ts && ts > 0 && (rawLat !== undefined || rawSpeed !== undefined)) {
+        lastGpsTimestamp = ts;
+        lastPacketWallTime = Date.now();
+
+        // Speed conversion
+        let calcMph = 0;
+        if (telem.speed !== undefined && telem.speed !== null) calcMph = Number(telem.speed);
+        else if (telem.vel !== undefined && telem.vel !== null) calcMph = Number(telem.vel) * 0.621371;
+        if (calcMph < 2.0 || isNaN(calcMph)) calcMph = 0;
+        latestSpeed = calcMph;
+      }
+
+      evaluateWatchdog();
+    });
+
+    function evaluateWatchdog() {
+      const now = Date.now();
+
+      // If no GPS fix has ever been received
+      if (!lastGpsTimestamp && !lastPacketWallTime) {
+        watchdogDot.className = "status-dot red";
+        watchdogStatus.textContent = "COCKPIT OFFLINE";
+        watchdogStatus.style.color = "#f87171";
+        liveSpeed.textContent = "0 MPH";
+        return;
+      }
+
+      // Elapsed time since last GPS point
+      const ageSincePacket = now - lastPacketWallTime;
+      const ageSinceFix = now - lastGpsTimestamp;
+      const effectiveAge = Math.min(ageSincePacket, ageSinceFix);
+
+      if (effectiveAge < 3500) {
+        // GREEN: Active GPS (< 3.5s)
+        watchdogDot.className = "status-dot live";
+        watchdogStatus.textContent = "COCKPIT LIVE";
+        watchdogStatus.style.color = "#4ade80";
+        liveSpeed.textContent = `${Math.round(latestSpeed)} MPH`;
+      } else if (effectiveAge < 7500) {
+        // YELLOW: Delayed / Interrupted (3.5s - 7.5s)
+        const lagSec = Math.round(effectiveAge / 1000);
+        watchdogDot.className = "status-dot yellow";
+        watchdogStatus.textContent = `SIGNAL DELAY (${lagSec}s)`;
+        watchdogStatus.style.color = "#facc15";
+        liveSpeed.textContent = `${Math.round(latestSpeed)} MPH`;
+      } else {
+        // RED: Offline (> 7.5s)
+        watchdogDot.className = "status-dot red";
+        watchdogStatus.textContent = "COCKPIT OFFLINE";
+        watchdogStatus.style.color = "#f87171";
+        liveSpeed.textContent = "0 MPH";
+      }
+    }
+
+    // Run watchdog heartbeat every 500ms so that when GPS is turned off,
+    // it visibly transitions GREEN -> YELLOW -> RED in real time!
+    setInterval(evaluateWatchdog, 500);
+
+    function fitOverlayPreview() {
+      const wrap = document.getElementById("stream-viewport-wrap");
+      const stage = document.getElementById("stream-preview-stage");
+      const scaler = document.getElementById("stream-scaler-container");
+      const iframe = document.getElementById("preview-iframe");
+      if (!wrap || !stage || !scaler || !iframe) return;
+      if (wrap.style.display === "none") return;
+
+      const currentSrc = iframe.getAttribute("src") || iframe.src || "";
+      const isLeaderboard = currentSrc.includes("leaderboard.html");
+
+      const baseWidth = isLeaderboard ? 320 : 490;
+      let baseHeight = isLeaderboard ? 245 : 180;
+
+      try {
+        if (iframe.contentDocument && iframe.contentDocument.body) {
+          const card = iframe.contentDocument.querySelector(".hud-card, .leaderboard-card");
+          if (card) {
+            const cardRect = card.getBoundingClientRect();
+            if (cardRect.height > 60 && cardRect.height < 400) {
+              baseHeight = Math.ceil(cardRect.height + 20);
+            }
+          }
+        }
+      } catch (e) {
+        // Safe cross-origin fallback
+      }
+
+      const wrapWidth = wrap.clientWidth;
+      if (wrapWidth <= 0) return;
+
+      const availableWidth = Math.max(80, wrapWidth - 16);
+      const scale = Math.min(1, availableWidth / baseWidth);
+
+      const scaledWidth = Math.round(baseWidth * scale);
+      const scaledHeight = Math.round(baseHeight * scale);
+
+      stage.style.width = scaledWidth + "px";
+      stage.style.height = scaledHeight + "px";
+
+      scaler.style.width = baseWidth + "px";
+      scaler.style.height = baseHeight + "px";
+      scaler.style.transform = "scale(" + scale + ")";
+
+      iframe.style.width = baseWidth + "px";
+      iframe.style.height = baseHeight + "px";
+    }
+
+    function toggleOverlayPreview() {
+      const wrap = document.getElementById("stream-viewport-wrap");
+      const btn = document.getElementById("btn-toggle-overlay-preview");
+      if (wrap.style.display === "none") {
+        wrap.style.display = "flex";
+        btn.textContent = "Hide";
+        setTimeout(fitOverlayPreview, 30);
+      } else {
+        wrap.style.display = "none";
+        btn.textContent = "Show Preview";
+      }
+    }
+
+    function switchPreviewSource(src) {
+      const iframe = document.getElementById("preview-iframe");
+      if (iframe) iframe.src = src;
+      const btnHud = document.getElementById("btn-prev-hud");
+      const btnBoard = document.getElementById("btn-prev-board");
+      const linkPop = document.getElementById("link-popout-preview");
+      if (btnHud) {
+        btnHud.style.background = (src === 'overlay.html') ? 'var(--accent)' : '#1e293b';
+        btnHud.style.color = (src === 'overlay.html') ? '#ffffff' : '#94a3b8';
+      }
+      if (btnBoard) {
+        btnBoard.style.background = (src === 'leaderboard.html') ? 'var(--accent)' : '#1e293b';
+        btnBoard.style.color = (src === 'leaderboard.html') ? '#ffffff' : '#94a3b8';
+      }
+      if (linkPop) {
+        linkPop.href = src;
+        linkPop.title = "Open " + (src === 'overlay.html' ? 'HUD' : 'Leaderboard') + " in dedicated window";
+      }
+      setTimeout(fitOverlayPreview, 30);
+    }
+
+    window.addEventListener("resize", fitOverlayPreview);
+    window.addEventListener("orientationchange", fitOverlayPreview);
+
+    const prevIframe = document.getElementById("preview-iframe");
+    if (prevIframe) {
+      prevIframe.addEventListener("load", () => {
+        setTimeout(fitOverlayPreview, 60);
+      });
+    }
+
+    if (window.ResizeObserver) {
+      const wrapEl = document.getElementById("stream-viewport-wrap");
+      if (wrapEl) {
+        new ResizeObserver(() => {
+          fitOverlayPreview();
+        }).observe(wrapEl);
+      }
+    }
+
+    // Init
+    bindEventSync(currentEventName);
+    setDriverLocal(activeDriver);
+    renderLeaderboard();
+    setTimeout(fitOverlayPreview, 100);
+  </script>
+</body>
+</html>

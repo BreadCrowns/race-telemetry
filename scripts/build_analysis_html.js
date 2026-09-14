@@ -2147,6 +2147,50 @@ ${bundledData}
 </html>
 `;
 
-const outputPath = path.join(__dirname, '..', 'analysis.html');
-fs.writeFileSync(outputPath, htmlContent, 'utf8');
-console.log(`Generated ${outputPath} (${(fs.statSync(outputPath).size / 1024).toFixed(1)} KB) with all 47 runs embedded!`);
+const targetArg = (process.argv[2] || '--all').toLowerCase();
+const rootDir = path.join(__dirname, '..');
+const preproDir = path.join(rootDir, 'prepro');
+
+if (!fs.existsSync(preproDir)) {
+  fs.mkdirSync(preproDir, { recursive: true });
+}
+
+if (targetArg === '--all' || targetArg === '--prod' || targetArg === 'prod') {
+  const outputPath = path.join(rootDir, 'analysis.html');
+  fs.writeFileSync(outputPath, htmlContent, 'utf8');
+  console.log(`Generated Production: ${outputPath} (${(fs.statSync(outputPath).size / 1024).toFixed(1)} KB)`);
+}
+
+if (targetArg === '--all' || targetArg === '--prepro' || targetArg === 'prepro') {
+  let preproHtml = htmlContent
+    .replace(
+      '<span class="title-full">🏁 SONOMA RACEWAY</span>',
+      '<span class="title-full">🏁 SONOMA RACEWAY <span class="badge-prepro-tag">🧪 PREPRO</span></span>'
+    )
+    .replace(
+      '<span class="title-short">🏁 SONOMA</span>',
+      '<span class="title-short">🏁 SONOMA <span class="badge-prepro-tag">🧪 PREPRO</span></span>'
+    )
+    .replace(
+      '</style>',
+      `
+    .badge-prepro-tag {
+      background: linear-gradient(135deg, #a855f7, #ec4899);
+      color: #fff;
+      font-size: 9px;
+      font-weight: 900;
+      padding: 2px 6px;
+      border-radius: 4px;
+      letter-spacing: 0.5px;
+      margin-left: 4px;
+      text-transform: uppercase;
+      box-shadow: 0 0 10px rgba(168, 85, 247, 0.4);
+      display: inline-flex;
+      align-items: center;
+    }
+  </style>`
+    );
+  const preproPath = path.join(preproDir, 'analysis.html');
+  fs.writeFileSync(preproPath, preproHtml, 'utf8');
+  console.log(`Generated Pre-Production: ${preproPath} (${(fs.statSync(preproPath).size / 1024).toFixed(1)} KB)`);
+}
