@@ -916,6 +916,9 @@
       <button type="button" class="ctrl-btn active" id="btn-color-driver" onclick="setColorMode('driver')">🎨 Driver Color</button>
       <button type="button" class="ctrl-btn" id="btn-color-heat" onclick="setColorMode('heatmap')">🔥 Speed Heatmap</button>
 
+      <!-- LINE SMOOTHING SWITCHER -->
+      <button type="button" class="ctrl-btn active" id="btn-smooth-lines" onclick="toggleLineSmoothing()" title="Toggle Heading-Guided Kinematic Racing Line Smoothing">🏎️ Smooth Lines</button>
+
       <button type="button" class="ctrl-btn" onclick="fitTrackBounds()" title="Center view on track">🎯 Center</button>
     </div>
   </header>
@@ -31201,6 +31204,7 @@
     let runPolylines = new Map(); // runId -> [L.Polyline]
     let mapMarkers = [];
     let carAnimMarker = null;
+    let activeLineSmoothing = true; // Heading-guided Hermite kinematic smoothing
 
     // Playback state
     let isPlaying = false;
@@ -31325,6 +31329,116 @@
       return "#ef4444"; // full throttle
     }
 
+    // --- HEADING-GUIDED KINEMATIC RACING LINE SMOOTHING ---
+    const TRACK_CENTER_LAT = 38.1598, TRACK_CENTER_LON = -122.4551;
+    const METERS_PER_LAT = 111030;
+    const METERS_PER_LON = 111030 * Math.cos(TRACK_CENTER_LAT * Math.PI / 180);
+
+    function toTrackXY(lat, lon) {
+      return { x: (lon - TRACK_CENTER_LON) * METERS_PER_LON, y: (lat - TRACK_CENTER_LAT) * METERS_PER_LAT };
+    }
+    function toTrackLatLon(x, y) {
+      return { lat: TRACK_CENTER_LAT + y / METERS_PER_LAT, lon: TRACK_CENTER_LON + x / METERS_PER_LON };
+    }
+
+    function hermiteBasis(p0, p1, t0, t1, t) {
+      const t2 = t * t;
+      const t3 = t2 * t;
+      const h00 = 2 * t3 - 3 * t2 + 1;
+      const h10 = t3 - 2 * t2 + t;
+      const h01 = -2 * t3 + 3 * t2;
+      const h11 = t3 - t2;
+      return {
+        x: h00 * p0.x + h10 * t0.x + h01 * p1.x + h11 * t1.x,
+        y: h00 * p0.y + h10 * t0.y + h01 * p1.y + h11 * t1.y
+      };
+    }
+
+    function getSmoothedCoords(run) {
+      if (run._smoothedCoords) return run._smoothedCoords;
+      if (!run.coords || run.coords.length < 2) return run.coords;
+
+      const coords = run.coords;
+      const xyPts = coords.map((c, i) => {
+        const xy = toTrackXY(c.lat, c.lon);
+        const spdMs = Math.max(1.5, (c.speed || 0) * 0.44704);
+        
+        let hdg = c.heading;
+        if (!hdg && hdg !== 0) {
+          if (i < coords.length - 1) {
+            const nextXY = toTrackXY(coords[i+1].lat, coords[i+1].lon);
+            hdg = (Math.atan2(nextXY.x - xy.x, nextXY.y - xy.y) * 180 / Math.PI + 360) % 360;
+          } else if (i > 0) {
+            const prevXY = toTrackXY(coords[i-1].lat, coords[i-1].lon);
+            hdg = (Math.atan2(xy.x - prevXY.x, xy.y - prevXY.y) * 180 / Math.PI + 360) % 360;
+          } else {
+            hdg = 0;
+          }
+        }
+        const rad = (hdg || 0) * Math.PI / 180;
+        return {
+          ...c,
+          x: xy.x,
+          y: xy.y,
+          vx: spdMs * Math.sin(rad),
+          vy: spdMs * Math.cos(rad)
+        };
+      });
+
+      const smoothed = [];
+      const steps = 5;
+      for (let i = 0; i < xyPts.length - 1; i++) {
+        const p0 = xyPts[i];
+        const p1 = xyPts[i + 1];
+        let dt = (p1.ts - p0.ts) / 1000;
+        if (isNaN(dt) || dt <= 0 || dt > 5) dt = 1.0;
+
+        const chordDist = Math.hypot(p1.x - p0.x, p1.y - p0.y);
+        let scale0 = dt;
+        let scale1 = dt;
+        const t0Mag = Math.hypot(p0.vx, p0.vy) * dt;
+        const t1Mag = Math.hypot(p1.vx, p1.vy) * dt;
+
+        const maxTan = 1.25 * chordDist;
+        if (t0Mag > maxTan && chordDist > 0) scale0 = maxTan / Math.hypot(p0.vx, p0.vy);
+        if (t1Mag > maxTan && chordDist > 0) scale1 = maxTan / Math.hypot(p1.vx, p1.vy);
+
+        const t0 = { x: p0.vx * scale0, y: p0.vy * scale0 };
+        const t1 = { x: p1.vx * scale1, y: p1.vy * scale1 };
+
+        for (let s = 0; s < steps; s++) {
+          const t = s / steps;
+          const interXY = hermiteBasis(p0, p1, t0, t1, t);
+          const ll = toTrackLatLon(interXY.x, interXY.y);
+          const speed = p0.speed + t * (p1.speed - p0.speed);
+          const relMs = p0.relMs !== undefined ? p0.relMs + t * (p1.relMs - p0.relMs) : 0;
+          const distM = p0.distM !== undefined ? p0.distM + t * (p1.distM - p0.distM) : 0;
+
+          smoothed.push({
+            lat: Number(ll.lat.toFixed(7)),
+            lon: Number(ll.lon.toFixed(7)),
+            speed: Number(speed.toFixed(1)),
+            relMs: Math.round(relMs),
+            distM: Number(distM.toFixed(1)),
+            heading: p0.heading
+          });
+        }
+      }
+      smoothed.push({ ...coords[coords.length - 1] });
+      run._smoothedCoords = smoothed;
+      return smoothed;
+    }
+
+    function toggleLineSmoothing() {
+      activeLineSmoothing = !activeLineSmoothing;
+      const btn = document.getElementById("btn-smooth-lines");
+      if (btn) {
+        btn.classList.toggle("active", activeLineSmoothing);
+        btn.innerHTML = activeLineSmoothing ? "🏎️ Smooth Lines" : "📍 Raw 1Hz GPS";
+      }
+      updateMapPolylines();
+    }
+
     // --- RENDER RUN POLYLINES ON MAP ---
     function updateMapPolylines() {
       // Clear existing
@@ -31345,10 +31459,11 @@
         const isPrimary = run.id === primaryRunId;
         const driverColor = DRIVER_COLORS[run.driver] || "#f97316";
         const layers = [];
+        const renderCoords = activeLineSmoothing ? getSmoothedCoords(run) : run.coords;
 
         if (activeColorMode === "driver") {
           // Single solid colored line with glow
-          const latlngs = run.coords.map(c => [c.lat, c.lon]);
+          const latlngs = renderCoords.map(c => [c.lat, c.lon]);
 
           // Glow backdrop
           const glow = L.polyline(latlngs, {
@@ -31380,9 +31495,9 @@
           layers.push(line);
         } else {
           // Speed Heatmap Mode: segmented polylines
-          for (let i = 0; i < run.coords.length - 1; i++) {
-            const p1 = run.coords[i];
-            const p2 = run.coords[i + 1];
+          for (let i = 0; i < renderCoords.length - 1; i++) {
+            const p1 = renderCoords[i];
+            const p2 = renderCoords[i + 1];
             const segColor = getSpeedColor((p1.speed + p2.speed) / 2);
 
             const seg = L.polyline([[p1.lat, p1.lon], [p2.lat, p2.lon]], {
@@ -31443,9 +31558,10 @@
       const run = telemetryData.runs.find(r => r.id === primaryRunId);
       if (!run || !run.coords || run.coords.length < 2) return;
 
-      const totalPoints = run.coords.length;
+      const activeCoords = activeLineSmoothing ? getSmoothedCoords(run) : run.coords;
+      const totalPoints = activeCoords.length;
       const idx = Math.min(totalPoints - 1, Math.floor(animFraction * (totalPoints - 1)));
-      const pt = run.coords[idx];
+      const pt = activeCoords[idx];
 
       if (!carAnimMarker) {
         carAnimMarker = L.circleMarker([pt.lat, pt.lon], {
@@ -31598,13 +31714,14 @@
 
         const isPrimary = r.id === primaryRunId;
         const color = DRIVER_COLORS[r.driver] || "#f97316";
+        const coords = activeLineSmoothing ? getSmoothedCoords(r) : r.coords;
 
         ctx.strokeStyle = color;
         ctx.lineWidth = isPrimary ? 2.5 : 1.5;
         ctx.globalAlpha = isPrimary ? 1.0 : 0.6;
         ctx.beginPath();
 
-        r.coords.forEach((pt, i) => {
+        coords.forEach((pt, i) => {
           const x = padding.left + (pt.distM / maxDist) * chartW;
           const y = padding.top + chartH - (pt.speed / maxSpeed) * chartH;
           if (i === 0) ctx.moveTo(x, y);
@@ -31618,8 +31735,9 @@
       if (primaryRunId) {
         const r = telemetryData.runs.find(x => x.id === primaryRunId);
         if (r && r.coords && r.coords.length > 0) {
-          const curIdx = Math.min(r.coords.length - 1, Math.floor(animFraction * (r.coords.length - 1)));
-          const curPt = r.coords[curIdx];
+          const coords = activeLineSmoothing ? getSmoothedCoords(r) : r.coords;
+          const curIdx = Math.min(coords.length - 1, Math.floor(animFraction * (coords.length - 1)));
+          const curPt = coords[curIdx];
           const cursorX = padding.left + (curPt.distM / maxDist) * chartW;
 
           ctx.strokeStyle = "#ffffff";
