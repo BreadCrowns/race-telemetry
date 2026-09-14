@@ -232,10 +232,10 @@
       display: block;
     }
 
-    /* Navigation Tabs: Stopwatch vs Leaderboard */
+    /* Navigation Tabs: Stopwatch vs Leaderboard vs GPS Analysis */
     .tab-bar {
       display: grid;
-      grid-template-columns: 1fr 1fr;
+      grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
       background: #020617;
       border: 1px solid var(--border);
       border-radius: 8px;
@@ -798,11 +798,14 @@
   <!-- View Mode Tabs -->
   <div class="tab-bar">
     <button type="button" class="tab-btn active" id="tab-btn-timing" onclick="switchView('timing')">
-      ⏱️ Stopwatch & Stage
+      ⏱️ Timing & Stage
     </button>
     <button type="button" class="tab-btn" id="tab-btn-leaderboard" onclick="switchView('leaderboard')">
       🏆 Leaderboard (<span id="count-runs">0</span>)
     </button>
+    <a href="analysis.html" class="tab-btn" style="text-decoration: none; color: #38bdf8;" target="_blank">
+      🗺️ GPS Lines ↗
+    </a>
   </div>
 
   <!-- ================= VIEW 1: STOPWATCH & STAGE ================= -->
