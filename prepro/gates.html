@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+  <title>Course Gates Calibration — Race Telemetry [PREPRO]</title>
+  
+  <!-- Leaflet CSS & JS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  
+  <!-- Firebase SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+    body {
+      background: #070a13;
+      color: #f8fafc;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    header {
+      background: #0f172a;
+      border-bottom: 1px solid #1e293b;
+      padding: 10px 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 8px;
+      z-index: 1000;
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .badge-prepro {
+      background: rgba(249, 115, 22, 0.2);
+      border: 1px solid #f97316;
+      color: #f97316;
+      font-size: 10px;
+      font-weight: 800;
+      padding: 2px 6px;
+      border-radius: 4px;
+      letter-spacing: 1px;
+    }
+    .title {
+      font-size: 14px;
+      font-weight: 800;
+      color: #fff;
+    }
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .btn {
+      background: #1e293b;
+      border: 1px solid #334155;
+      color: #e2e8f0;
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.15s ease;
+      text-decoration: none;
+    }
+    .btn:hover { border-color: #f97316; }
+    .btn-primary {
+      background: #ea580c;
+      border-color: #ea580c;
+      color: #fff;
+    }
+    .btn-primary:hover { background: #c2410c; }
+    .btn-green {
+      background: #15803d;
+      border-color: #15803d;
+      color: #fff;
+    }
+    .btn-green:hover { background: #166534; }
+    
+    #map-container {
+      flex: 1;
+      position: relative;
+      background: #050811;
+    }
+    #map {
+      width: 100%;
+      height: 100%;
+    }
+
+    /* Floating Control Overlay */
+    .gate-legend-card {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      background: rgba(15, 23, 42, 0.92);
+      backdrop-filter: blur(8px);
+      border: 1px solid #334155;
+      border-radius: 10px;
+      padding: 12px 16px;
+      z-index: 1000;
+      max-width: 320px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      box-shadow: 0 8px 30px rgba(0,0,0,0.5);
+    }
+    .legend-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      font-size: 12px;
+    }
+    .gate-indicator {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-weight: 800;
+    }
+    .dot-start {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: #22c55e;
+      border: 2px solid #fff;
+      box-shadow: 0 0 8px #22c55e;
+    }
+    .dot-finish {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: #ef4444;
+      border: 2px solid #fff;
+      box-shadow: 0 0 8px #ef4444;
+    }
+    .instructions {
+      font-size: 11px;
+      color: #94a3b8;
+      line-height: 1.4;
+      border-top: 1px solid #334155;
+      padding-top: 8px;
+    }
+    .toast {
+      position: absolute;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(15, 23, 42, 0.95);
+      border: 1px solid #22c55e;
+      color: #4ade80;
+      padding: 8px 16px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 800;
+      z-index: 2000;
+      display: none;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.6);
+    }
+
+    /* Custom Leaflet Handle Styles */
+    .gate-handle {
+      background: #fff;
+      border-radius: 50%;
+      box-shadow: 0 0 6px rgba(0,0,0,0.6);
+      cursor: grab;
+    }
+    .gate-handle:active { cursor: grabbing; }
+    .gate-handle-start { border: 3px solid #22c55e; }
+    .gate-handle-finish { border: 3px solid #ef4444; }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="brand">
+      <span class="badge-prepro">🧪 PREPRO</span>
+      <span class="title">🏁 Course Gates Satellite Calibrator</span>
+    </div>
+    <div class="header-actions">
+      <button type="button" class="btn" onclick="loadSundayPreset()" title="Load default coordinates from Sunday's Sonoma event">
+        📍 Sonoma Preset
+      </button>
+      <button type="button" class="btn btn-primary" onclick="saveGates()">
+        💾 Save Gates
+      </button>
+      <a href="pitwall.html" class="btn">
+        ⏱️ Return to Pit Wall
+      </a>
+    </div>
+  </header>
+
+  <div id="map-container">
+    <div id="map"></div>
+
+    <div class="gate-legend-card">
+      <div style="font-size: 11px; font-weight: 800; color: #f97316; letter-spacing: 1px; text-transform: uppercase;">
+        Course Virtual Timing Gates
+      </div>
+      <div class="legend-row">
+        <div class="gate-indicator">
+          <div class="dot-start"></div>
+          <span>Start Gate</span>
+        </div>
+        <button type="button" class="btn" style="padding: 2px 8px; font-size: 11px;" onclick="flipGateDirection('start')">Flip 🔁</button>
+      </div>
+      <div class="legend-row">
+        <div class="gate-indicator">
+          <div class="dot-finish"></div>
+          <span>Finish Gate</span>
+        </div>
+        <button type="button" class="btn" style="padding: 2px 8px; font-size: 11px;" onclick="flipGateDirection('finish')">Flip 🔁</button>
+      </div>
+      <div class="instructions">
+        💡 <strong>Drag the circular handles</strong> across the track to position the Start and Finish timing gates. The directional arrow indicates the forward racing direction required for auto-timing.
+      </div>
+    </div>
+
+    <div id="toast" class="toast">✅ Gates successfully saved!</div>
+  </div>
+
+  <script>
+    // --- FIREBASE SETUP ---
+    const firebaseConfig = {
+      authDomain: "fiero-telemetry.firebaseapp.com",
+      databaseURL: "https://fiero-telemetry-default-rtdb.firebaseio.com",
+      storageBucket: "fiero-telemetry.firebasestorage.app"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database().ref("raceTelemetry");
+
+    const activeEventKey = "sunday_autocross";
+
+    // --- DEFAULT GATE COORDINATES (Sonoma Autocross) ---
+    // Start Center: 38.1607778, -122.4554722 (bearing ~145°)
+    // Finish Center: 38.1589722, -122.4547778 (bearing ~155°)
+    const defaultGates = {
+      start: {
+        p1: { lat: 38.160750, lon: -122.455580 },
+        p2: { lat: 38.160820, lon: -122.455380 },
+        forwardRight: true
+      },
+      finish: {
+        p1: { lat: 38.159010, lon: -122.454700 },
+        p2: { lat: 38.158940, lon: -122.454880 },
+        forwardRight: true
+      }
+    };
+
+    let currentGates = JSON.parse(JSON.stringify(defaultGates));
+
+    // --- LEAFLET INITIALIZATION ---
+    const map = L.map('map', {
+      center: [38.1601, -122.4552],
+      zoom: 18,
+      maxZoom: 21
+    });
+
+    // Satellite Imagery (Esri World Imagery)
+    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+      attribution: 'Tiles &copy; Esri',
+      maxZoom: 21,
+      maxNativeZoom: 19
+    }).addTo(map);
+
+    // Optional CartoDB Dark Matter underlay / label overlay
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager_only_labels/{z}/{x}/{y}{r}.png', {
+      maxZoom: 21,
+      opacity: 0.75
+    }).addTo(map);
+
+    // Track Breadcrumb Guide Layer (Faint course guide)
+    fetch('../runs_telemetry.json')
+      .then(res => res.json())
+      .then(data => {
+        if (data && data.consensusRacingLine && data.consensusRacingLine.length > 0) {
+          const latlngs = data.consensusRacingLine.map(p => [p.lat, p.lon]);
+          L.polyline(latlngs, {
+            color: '#38bdf8',
+            weight: 3,
+            opacity: 0.35,
+            dashArray: '4, 8'
+          }).addTo(map);
+        }
+      })
+      .catch(() => {});
+
+    // --- GATE DRAWING & DRAGGING ENGINE ---
+    let startLayers = { line: null, arrow: null, m1: null, m2: null };
+    let finishLayers = { line: null, arrow: null, m1: null, m2: null };
+
+    function createHandleIcon(type) {
+      return L.divIcon({
+        className: `gate-handle gate-handle-${type}`,
+        iconSize: [16, 16],
+        iconAnchor: [8, 8]
+      });
+    }
+
+    function computeArrowEndpoint(p1, p2, forwardRight) {
+      const midLat = (p1.lat + p2.lat) / 2;
+      const midLon = (p1.lon + p2.lon) / 2;
+      const dLat = p2.lat - p1.lat;
+      const dLon = p2.lon - p1.lon;
+      // Perpendicular vector
+      const sign = forwardRight ? 1 : -1;
+      const perpLat = -dLon * sign * 0.8;
+      const perpLon = dLat * sign * 0.8;
+      return [midLat + perpLat, midLon + perpLon];
+    }
+
+    function renderGate(type) {
+      const gate = currentGates[type];
+      const layers = type === 'start' ? startLayers : finishLayers;
+      const color = type === 'start' ? '#22c55e' : '#ef4444';
+
+      // Clear existing layers
+      if (layers.line) map.removeLayer(layers.line);
+      if (layers.arrow) map.removeLayer(layers.arrow);
+      if (layers.m1) map.removeLayer(layers.m1);
+      if (layers.m2) map.removeLayer(layers.m2);
+
+      const latlngs = [[gate.p1.lat, gate.p1.lon], [gate.p2.lat, gate.p2.lon]];
+
+      // Gate Line
+      layers.line = L.polyline(latlngs, {
+        color: color,
+        weight: 5,
+        opacity: 0.95
+      }).addTo(map);
+
+      // Direction Arrow
+      const mid = [(gate.p1.lat + gate.p2.lat)/2, (gate.p1.lon + gate.p2.lon)/2];
+      const arrowEnd = computeArrowEndpoint(gate.p1, gate.p2, gate.forwardRight);
+      layers.arrow = L.polyline([mid, arrowEnd], {
+        color: color,
+        weight: 3,
+        dashArray: '3, 4'
+      }).addTo(map);
+
+      // Draggable Markers
+      layers.m1 = L.marker([gate.p1.lat, gate.p1.lon], {
+        draggable: true,
+        icon: createHandleIcon(type)
+      }).addTo(map);
+
+      layers.m2 = L.marker([gate.p2.lat, gate.p2.lon], {
+        draggable: true,
+        icon: createHandleIcon(type)
+      }).addTo(map);
+
+      layers.m1.on('drag', (e) => {
+        const pos = e.target.getLatLng();
+        gate.p1.lat = Number(pos.lat.toFixed(7));
+        gate.p1.lon = Number(pos.lng.toFixed(7));
+        updateGateVisuals(type);
+      });
+
+      layers.m2.on('drag', (e) => {
+        const pos = e.target.getLatLng();
+        gate.p2.lat = Number(pos.lat.toFixed(7));
+        gate.p2.lon = Number(pos.lng.toFixed(7));
+        updateGateVisuals(type);
+      });
+    }
+
+    function updateGateVisuals(type) {
+      const gate = currentGates[type];
+      const layers = type === 'start' ? startLayers : finishLayers;
+      layers.line.setLatLngs([[gate.p1.lat, gate.p1.lon], [gate.p2.lat, gate.p2.lon]]);
+      const mid = [(gate.p1.lat + gate.p2.lat)/2, (gate.p1.lon + gate.p2.lon)/2];
+      const arrowEnd = computeArrowEndpoint(gate.p1, gate.p2, gate.forwardRight);
+      layers.arrow.setLatLngs([mid, arrowEnd]);
+    }
+
+    function flipGateDirection(type) {
+      currentGates[type].forwardRight = !currentGates[type].forwardRight;
+      updateGateVisuals(type);
+    }
+
+    function renderAllGates() {
+      renderGate('start');
+      renderGate('finish');
+    }
+
+    // Load Gates from Firebase
+    function loadSavedGates() {
+      db.child("events").child(activeEventKey).child("gates").once("value", (snap) => {
+        const val = snap.val();
+        if (val && val.start && val.finish) {
+          currentGates = val;
+          console.log("Loaded gates from Firebase:", currentGates);
+        }
+        renderAllGates();
+      });
+    }
+
+    function loadSundayPreset() {
+      currentGates = JSON.parse(JSON.stringify(defaultGates));
+      renderAllGates();
+      map.setView([38.1601, -122.4552], 18);
+      showToast("📍 Sonoma Preset Loaded");
+    }
+
+    function saveGates() {
+      // 1. Save to Firebase RTDB
+      db.child("events").child(activeEventKey).child("gates").set(currentGates)
+        .then(() => {
+          showToast("✅ Gates successfully saved to Firebase!");
+        })
+        .catch(err => {
+          alert("Error saving gates: " + err.message);
+        });
+
+      // 2. Also POST to Cloudflare Worker
+      fetch('https://race-telemetry-worker.bazarkoj.workers.dev/api/gates', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          eventId: activeEventKey,
+          gates: currentGates
+        })
+      }).catch(() => {});
+    }
+
+    function showToast(msg) {
+      const toast = document.getElementById('toast');
+      toast.textContent = msg;
+      toast.style.display = 'block';
+      setTimeout(() => { toast.style.display = 'none'; }, 3000);
+    }
+
+    // Initialize
+    loadSavedGates();
+  </script>
+</body>
+</html>

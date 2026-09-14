@@ -58,10 +58,16 @@ export default {
       if (path === "/api/analysis") {
         return await handleAnalysisSummary(url, env);
       }
+      if (path === "/api/gates") {
+        if (request.method === "POST" || request.method === "PUT") {
+          return await handleSaveGates(request, env);
+        }
+        return await handleGetGates(url, env);
+      }
 
       // 4. TRACCAR & GPS INGESTION (CATCH-ALL)
       // Any other path (/, /traccar, /gps, /positions, etc.) is handled as telemetry ingestion.
-      return await handleTraccarIngestion(request, env);
+      return await handleTraccarIngestion(request, env, ctx);
     } catch (err) {
       console.error("Worker error:", err);
       return new Response(JSON.stringify({ error: err.message }), {
@@ -79,7 +85,7 @@ export default {
  * - POST with query params in the URL (standard OsmAnd/Traccar format)
  * - POST with form body or JSON
  */
-async function handleTraccarIngestion(request, env) {
+async function handleTraccarIngestion(request, env, ctx) {
   const url = new URL(request.url);
   let params = {};
 
@@ -94,8 +100,30 @@ async function handleTraccarIngestion(request, env) {
       const contentType = (request.headers.get("content-type") || "").toLowerCase();
       if (contentType.includes("application/json")) {
         const json = await request.json();
-        for (const [k, v] of Object.entries(json)) {
-          params[k.toLowerCase()] = v;
+        // Support Sensor Logger batched/structured payload format
+        if (json && Array.isArray(json.payload)) {
+          const loc = json.payload.find(p => p.name === "location" || p.name === "gps");
+          if (loc && loc.values) {
+            params.latitude = loc.values.latitude;
+            params.longitude = loc.values.longitude;
+            // Sensor Logger sends speed in m/s -> convert to knots for standard speed processing
+            params.speed = (loc.values.speed || 0) * 1.94384;
+            params.heading = loc.values.bearing || loc.values.course || 0;
+            params.altitude = loc.values.altitude || 0;
+            params.accuracy = loc.values.accuracy || 0;
+            params.timestamp = loc.time ? Math.round(loc.time / 1000000) : Date.now();
+          }
+          const accel = json.payload.find(p => p.name === "accelerometer");
+          if (accel && accel.values) {
+            params.ax = accel.values.x;
+            params.ay = accel.values.y;
+            params.az = accel.values.z;
+          }
+          if (json.deviceId) params.id = json.deviceId;
+        } else {
+          for (const [k, v] of Object.entries(json)) {
+            params[k.toLowerCase()] = v;
+          }
         }
       } else if (contentType.includes("form") || contentType.includes("urlencoded")) {
         const formData = await request.formData();
@@ -198,6 +226,9 @@ async function handleTraccarIngestion(request, env) {
   }
 
   await Promise.all([firebasePromise, d1Promise]);
+
+  // Execute Auto-Timing State Machine for Autocross
+  ctx && ctx.waitUntil ? ctx.waitUntil(evaluateAutoTiming(packet, env, deviceId)) : await evaluateAutoTiming(packet, env, deviceId);
 
   // Traccar requires HTTP 200 to mark points as delivered
   return new Response("OK", {
@@ -454,3 +485,198 @@ async function handleAnalysisSummary(url, env) {
     headers: { ...corsHeaders, "Content-Type": "application/json" }
   });
 }
+
+/**
+ * ==============================================================================
+ * AUTOCROSS COURSE GATES & AUTO-TIMING STATE ENGINE
+ * ==============================================================================
+ */
+
+let cachedGates = {
+  start: {
+    p1: { lat: 38.160750, lon: -122.455580 },
+    p2: { lat: 38.160820, lon: -122.455380 },
+    forwardRight: true
+  },
+  finish: {
+    p1: { lat: 38.159010, lon: -122.454700 },
+    p2: { lat: 38.158940, lon: -122.454880 },
+    forwardRight: true
+  }
+};
+
+const deviceTracking = new Map();
+
+function latLonToLocalMeters(lat, lon, anchorLat, anchorLon) {
+  const y = (lat - anchorLat) * 111139.0;
+  const x = (lon - anchorLon) * (111139.0 * Math.cos(anchorLat * Math.PI / 180.0));
+  return { x, y };
+}
+
+function checkSegmentIntersection(p1, p2, g1, g2) {
+  const rx = p2.x - p1.x;
+  const ry = p2.y - p1.y;
+  const sx = g2.x - g1.x;
+  const sy = g2.y - g1.y;
+
+  const denom = rx * sy - ry * sx;
+  if (Math.abs(denom) < 1e-9) return null;
+
+  const q_px = g1.x - p1.x;
+  const q_py = g1.y - p1.y;
+
+  const t = (q_px * sy - q_py * sx) / denom;
+  const u = (q_px * ry - q_py * rx) / denom;
+
+  if (t >= 0.0 && t <= 1.0 && u >= 0.0 && u <= 1.0) {
+    const normalX = -sy;
+    const normalY = sx;
+    const dot = rx * normalX + ry * normalY;
+    return { fraction: t, dotProduct: dot, forward: dot > 0 };
+  }
+  return null;
+}
+
+async function handleGetGates(url, env) {
+  const eventId = url.searchParams.get("eventId") || env.EVENT_ID || DEFAULT_EVENT_ID;
+  const firebaseUrl = env.FIREBASE_URL || DEFAULT_FIREBASE_URL;
+  try {
+    const res = await fetch(`${firebaseUrl.replace(/\.json$/, '')}/events/${eventId}/gates.json`);
+    const data = await res.json();
+    if (data && data.start && data.finish) {
+      cachedGates = data;
+    }
+  } catch (e) {}
+
+  return new Response(JSON.stringify(cachedGates), {
+    headers: { ...corsHeaders, "Content-Type": "application/json" }
+  });
+}
+
+async function handleSaveGates(request, env) {
+  try {
+    const body = await request.json();
+    const gates = body.gates || body;
+    const eventId = body.eventId || env.EVENT_ID || DEFAULT_EVENT_ID;
+    if (gates && gates.start && gates.finish) {
+      cachedGates = gates;
+      const firebaseUrl = env.FIREBASE_URL || DEFAULT_FIREBASE_URL;
+      await fetch(`${firebaseUrl.replace(/\.json$/, '')}/events/${eventId}/gates.json`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(gates)
+      }).catch(() => {});
+
+      return new Response(JSON.stringify({ status: "ok", gates: cachedGates }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" }
+      });
+    }
+    return new Response(JSON.stringify({ error: "Invalid gates format" }), { status: 400, headers: corsHeaders });
+  } catch (err) {
+    return new Response(JSON.stringify({ error: err.message }), { status: 500, headers: corsHeaders });
+  }
+}
+
+async function evaluateAutoTiming(packet, env, deviceId) {
+  if (!cachedGates || !cachedGates.start || !cachedGates.finish) return;
+  const anchor = cachedGates.start.p1;
+  const curPos = latLonToLocalMeters(packet.latitude, packet.longitude, anchor.lat, anchor.lon);
+  const curPt = {
+    ...packet,
+    ...curPos,
+    ts: packet.deviceTimestamp || Date.now()
+  };
+
+  let tracker = deviceTracking.get(deviceId);
+  if (!tracker) {
+    tracker = { state: 'IDLE', standstillCount: 0, lastPt: null, runStartTs: null, runPoints: [] };
+    deviceTracking.set(deviceId, tracker);
+  }
+
+  const gStart1 = latLonToLocalMeters(cachedGates.start.p1.lat, cachedGates.start.p1.lon, anchor.lat, anchor.lon);
+  const gStart2 = latLonToLocalMeters(cachedGates.start.p2.lat, cachedGates.start.p2.lon, anchor.lat, anchor.lon);
+  const gFinish1 = latLonToLocalMeters(cachedGates.finish.p1.lat, cachedGates.finish.p1.lon, anchor.lat, anchor.lon);
+  const gFinish2 = latLonToLocalMeters(cachedGates.finish.p2.lat, cachedGates.finish.p2.lon, anchor.lat, anchor.lon);
+
+  const startMidX = (gStart1.x + gStart2.x) / 2;
+  const startMidY = (gStart1.y + gStart2.y) / 2;
+  const distToStart = Math.hypot(curPt.x - startMidX, curPt.y - startMidY);
+
+  if (tracker.state === 'IDLE') {
+    if (distToStart < 30 && packet.speed < 2.0) {
+      tracker.standstillCount++;
+      if (tracker.standstillCount >= 3) {
+        tracker.state = 'ARMED';
+      }
+    } else {
+      tracker.standstillCount = 0;
+    }
+  } else if (tracker.state === 'ARMED') {
+    if (tracker.lastPt) {
+      const hitStart = checkSegmentIntersection(tracker.lastPt, curPt, gStart1, gStart2);
+      if (hitStart && packet.speed > 3.0) {
+        tracker.state = 'RUNNING';
+        tracker.runStartTs = tracker.lastPt.ts + hitStart.fraction * (curPt.ts - tracker.lastPt.ts);
+        tracker.runPoints = [tracker.lastPt, curPt];
+      } else if (distToStart > 45 && packet.speed < 2.0) {
+        tracker.state = 'IDLE';
+        tracker.standstillCount = 0;
+      }
+    }
+  } else if (tracker.state === 'RUNNING') {
+    tracker.runPoints.push(curPt);
+    if (tracker.lastPt) {
+      const hitFinish = checkSegmentIntersection(tracker.lastPt, curPt, gFinish1, gFinish2);
+      if (hitFinish && packet.speed > 5.0) {
+        const finishTs = tracker.lastPt.ts + hitFinish.fraction * (curPt.ts - tracker.lastPt.ts);
+        const rawTimeMs = Math.round(finishTs - tracker.runStartTs);
+        if (rawTimeMs >= 20000 && rawTimeMs <= 180000) {
+          const sec = (rawTimeMs / 1000).toFixed(2);
+          const eventId = env.EVENT_ID || DEFAULT_EVENT_ID;
+          const runId = `run-${Date.now()}`;
+          const runRecord = {
+            id: runId,
+            timestamp: Date.now(),
+            startTime: tracker.runStartTs,
+            finishTime: finishTs,
+            rawTimeMs: rawTimeMs,
+            rawFormatted: sec + 's',
+            finalTimeMs: rawTimeMs,
+            finalFormatted: sec + 's',
+            cones: 0,
+            isDnf: false,
+            driver: 'Driver',
+            status: 'CLEAN',
+            notes: 'Auto-timed via Gate Crossing',
+            coords: tracker.runPoints.map(p => ({
+              lat: p.latitude || p.lat,
+              lon: p.longitude || p.lon,
+              speed: p.speed,
+              heading: p.heading,
+              ts: p.ts
+            }))
+          };
+
+          const firebaseUrl = env.FIREBASE_URL || DEFAULT_FIREBASE_URL;
+          fetch(`${firebaseUrl.replace(/\.json$/, '')}/events/${eventId}/runs/${runId}.json`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(runRecord)
+          }).catch(err => console.warn("Auto-run Firebase save error:", err));
+        }
+        tracker.state = 'IDLE';
+        tracker.standstillCount = 0;
+        tracker.runStartTs = null;
+        tracker.runPoints = [];
+      } else if (tracker.runStartTs && (curPt.ts - tracker.runStartTs > 180000)) {
+        tracker.state = 'IDLE';
+        tracker.standstillCount = 0;
+        tracker.runStartTs = null;
+        tracker.runPoints = [];
+      }
+    }
+  }
+
+  tracker.lastPt = curPt;
+}
+
