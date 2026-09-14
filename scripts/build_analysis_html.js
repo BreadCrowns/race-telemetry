@@ -636,8 +636,23 @@ const htmlContent = `<!DOCTYPE html>
       display: block;
     }
 
+    .floating-scroll-btn, .btn-scroll-top { display: none; }
+
     /* RESPONSIVE MOBILE BREAKPOINTS */
     @media (max-width: 900px) {
+      html {
+        height: auto;
+        overflow-y: auto;
+        overflow-x: hidden;
+      }
+      body {
+        height: auto !important;
+        min-height: 100% !important;
+        min-height: 100dvh !important;
+        overflow-y: auto !important;
+        overflow-x: hidden !important;
+        -webkit-overflow-scrolling: touch;
+      }
       .app-header {
         flex-direction: column;
         align-items: stretch;
@@ -677,7 +692,25 @@ const htmlContent = `<!DOCTYPE html>
       }
 
       .main-workspace {
-        height: calc(100vh - 84px);
+        height: auto;
+        min-height: calc(100dvh - 84px);
+        overflow: visible;
+        display: flex;
+        flex-direction: column;
+      }
+      .map-container-wrap {
+        height: auto;
+        overflow: visible;
+        flex: none;
+        display: flex;
+        flex-direction: column;
+      }
+      #map {
+        height: 52vh;
+        min-height: 340px;
+        max-height: 440px;
+        width: 100%;
+        flex: none;
       }
 
       /* SIDEBAR AS MODAL OFF-CANVAS DRAWER */
@@ -733,38 +766,84 @@ const htmlContent = `<!DOCTYPE html>
         height: 10px;
       }
 
-      /* BOTTOM PANEL COMPACT ON MOBILE */
+      /* BOTTOM TIMELINE & TELEMETRY PANEL ON MOBILE */
       .bottom-telemetry-panel {
-        height: 135px;
-        padding: 6px 10px;
-        gap: 4px;
+        height: auto;
+        min-height: 195px;
+        padding: 12px 14px;
+        padding-bottom: calc(28px + env(safe-area-inset-bottom, 20px));
+        background: #090e1a;
+        border-top: 2px solid var(--accent);
+        flex-shrink: 0;
+        overflow: visible;
       }
       .bottom-telemetry-panel.minimized {
-        height: 48px;
+        height: 54px;
+        min-height: 54px;
+        padding-bottom: calc(12px + env(safe-area-inset-bottom, 8px));
       }
       .play-btn {
-        padding: 5px 10px;
+        padding: 6px 12px;
         font-size: 12px;
       }
       .speed-multiplier {
-        padding: 3px 6px;
+        padding: 4px 7px;
         font-size: 10px;
       }
       .playback-scrubber {
-        margin: 0 4px;
+        margin: 0 6px;
       }
       .readout-speed {
-        font-size: 17px;
+        font-size: 18px;
       }
       .readout-speed small {
-        font-size: 9px;
+        font-size: 10px;
       }
       .readout-dist, .readout-time {
         font-size: 11px;
       }
       .graph-container {
-        min-height: 44px;
+        height: 105px;
+        min-height: 105px;
+        margin-top: 8px;
       }
+
+      .floating-scroll-btn {
+        display: inline-flex;
+        position: absolute;
+        bottom: 14px;
+        left: 14px;
+        z-index: 850;
+        background: rgba(15, 23, 42, 0.92);
+        backdrop-filter: blur(8px);
+        color: #cbd5e1;
+        border: 1px solid #334155;
+        padding: 6px 12px;
+        border-radius: 20px;
+        font-size: 11px;
+        font-weight: 800;
+        cursor: pointer;
+        align-items: center;
+        gap: 4px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+      }
+      .floating-scroll-btn:hover { color: #fff; border-color: var(--accent); }
+      .btn-scroll-top {
+        display: inline-flex;
+        background: #1e293b;
+        color: #cbd5e1;
+        border: 1px solid #334155;
+        padding: 5px 8px;
+        border-radius: 6px;
+        font-size: 11px;
+        font-weight: 700;
+        cursor: pointer;
+        align-items: center;
+        gap: 4px;
+        white-space: nowrap;
+        flex-shrink: 0;
+      }
+      .btn-scroll-top:hover { color: #fff; border-color: var(--accent); }
     }
 
     @media (max-width: 480px) {
@@ -900,6 +979,11 @@ const htmlContent = `<!DOCTYPE html>
         ☰ Runs <span class="badge badge-run-count">4</span>
       </button>
 
+      <!-- FLOATING SCROLL BUTTON (MOBILE) -->
+      <button type="button" class="floating-scroll-btn" id="btn-scroll-timeline" onclick="scrollToTimeline()">
+        ⬇ Timeline
+      </button>
+
       <!-- FLOATING MAP LEGEND & STATS OVERLAY -->
       <div class="map-floating-overlay">
         <div class="map-tool-card" id="map-legend-card">
@@ -941,6 +1025,10 @@ const htmlContent = `<!DOCTYPE html>
 
           <button type="button" class="btn-toggle-graph" id="btn-toggle-graph" onclick="toggleGraphPanel()" title="Toggle speed chart">
             📉
+          </button>
+
+          <button type="button" class="btn-scroll-top" onclick="scrollToMap()" title="Back to Map view">
+            ⬆ Map
           </button>
         </div>
 
@@ -1591,6 +1679,17 @@ ${bundledData}
       if (footerBtnText) {
         footerBtnText.textContent = "✓ View on Map (" + count + " selected)";
       }
+    }
+
+    function scrollToTimeline() {
+      const panel = document.getElementById("bottom-telemetry-panel");
+      if (panel) {
+        panel.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+    }
+
+    function scrollToMap() {
+      window.scrollTo({ top: 0, behavior: "smooth" });
     }
   </script>
 </body>
