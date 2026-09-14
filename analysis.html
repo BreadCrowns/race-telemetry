@@ -54,7 +54,7 @@
     .header-left {
       display: flex;
       align-items: center;
-      gap: 14px;
+      gap: 12px;
     }
     .btn-back {
       background: #1e293b;
@@ -66,18 +66,21 @@
       font-weight: 700;
       text-decoration: none;
       transition: all 0.15s;
-      display: flex;
+      display: inline-flex;
       align-items: center;
       gap: 6px;
+      white-space: nowrap;
+      flex-shrink: 0;
     }
     .btn-back:hover { background: #334155; color: #fff; }
     .header-title {
-      font-size: 16px;
+      font-size: 15px;
       font-weight: 900;
       letter-spacing: 0.5px;
       display: flex;
       align-items: center;
       gap: 8px;
+      white-space: nowrap;
     }
     .header-tag {
       background: #ea580c;
@@ -91,7 +94,7 @@
     }
     .header-stats {
       display: flex;
-      gap: 10px;
+      gap: 8px;
       font-size: 12px;
       color: var(--text-muted);
     }
@@ -101,27 +104,30 @@
       padding: 3px 8px;
       border-radius: 4px;
       font-family: ui-monospace, monospace;
+      white-space: nowrap;
     }
     .stat-chip strong { color: #38bdf8; }
 
     .header-controls {
       display: flex;
       align-items: center;
-      gap: 8px;
+      gap: 6px;
     }
     .ctrl-btn {
       background: #1e293b;
       color: #cbd5e1;
       border: 1px solid #334155;
-      padding: 6px 12px;
+      padding: 6px 11px;
       border-radius: 6px;
       font-size: 12px;
       font-weight: 700;
       cursor: pointer;
       transition: all 0.15s;
-      display: flex;
+      display: inline-flex;
       align-items: center;
       gap: 5px;
+      white-space: nowrap;
+      flex-shrink: 0;
     }
     .ctrl-btn:hover { border-color: var(--accent); color: #fff; }
     .ctrl-btn.active {
@@ -129,6 +135,24 @@
       border-color: var(--accent);
       color: #fff;
     }
+
+    /* BUTTON TO OPEN SIDEBAR (MOBILE HEADER) */
+    .btn-toggle-sidebar {
+      background: #ea580c;
+      color: #fff;
+      border: none;
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 800;
+      cursor: pointer;
+      display: none;
+      align-items: center;
+      gap: 6px;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    .btn-toggle-sidebar:hover { background: #c2410c; }
 
     /* MAIN WORKSPACE LAYOUT */
     .main-workspace {
@@ -139,7 +163,23 @@
       overflow: hidden;
     }
 
-    /* SIDEBAR DRAWER (RUN SELECTOR & LEADERBOARD) */
+    /* BACKDROP OVERLAY FOR MOBILE DRAWER */
+    .sidebar-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.65);
+      backdrop-filter: blur(2px);
+      z-index: 1300;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.25s ease;
+    }
+    .sidebar-backdrop.active {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    /* SIDEBAR (DESKTOP DEFAULT) */
     .sidebar {
       width: 380px;
       background: #090e1a;
@@ -148,13 +188,11 @@
       flex-direction: column;
       flex-shrink: 0;
       z-index: 500;
-      transition: transform 0.25s ease;
+      transition: transform 0.25s ease, margin 0.25s ease;
     }
     .sidebar.collapsed {
       transform: translateX(-380px);
-      position: absolute;
-      bottom: 0;
-      top: 0;
+      margin-right: -380px;
     }
     .sidebar-header {
       padding: 12px 14px;
@@ -164,6 +202,43 @@
       gap: 10px;
       background: #0f172a;
     }
+    .sidebar-title-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+    .sidebar-heading {
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: 0.5px;
+      color: #94a3b8;
+      text-transform: uppercase;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .sidebar-heading .badge {
+      background: var(--accent);
+      color: #fff;
+      font-size: 10px;
+      padding: 1px 6px;
+      border-radius: 10px;
+      font-weight: 800;
+    }
+    .btn-close-sidebar {
+      background: #1e293b;
+      color: #cbd5e1;
+      border: 1px solid #334155;
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 800;
+      cursor: pointer;
+      display: none;
+    }
+    .btn-close-sidebar:hover { background: #334155; color: #fff; }
+
     .driver-filter-pills {
       display: flex;
       gap: 4px;
@@ -206,6 +281,31 @@
       font-weight: 700;
     }
     .link-action:hover { text-decoration: underline; }
+
+    .sidebar-footer {
+      display: none;
+      padding: 10px 14px;
+      background: #0f172a;
+      border-top: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    .btn-drawer-apply {
+      width: 100%;
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      padding: 11px 14px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 800;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      box-shadow: 0 4px 12px rgba(234, 88, 12, 0.4);
+    }
+    .btn-drawer-apply:hover { background: #c2410c; }
 
     /* RUNS LIST */
     .runs-list {
@@ -370,89 +470,159 @@
       font-family: ui-monospace, monospace;
     }
 
+    /* FLOATING RUNS BUTTON (MOBILE) */
+    .floating-runs-btn {
+      display: none;
+      position: absolute;
+      top: 14px;
+      left: 14px;
+      z-index: 850;
+      background: rgba(15, 23, 42, 0.92);
+      backdrop-filter: blur(8px);
+      color: #fff;
+      border: 1px solid rgba(249, 115, 22, 0.6);
+      padding: 8px 14px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 800;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.6);
+      cursor: pointer;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.15s;
+    }
+    .floating-runs-btn:active { transform: scale(0.96); }
+    .floating-runs-btn .badge {
+      background: var(--accent);
+      color: #fff;
+      font-size: 10px;
+      padding: 1px 6px;
+      border-radius: 10px;
+      font-weight: 800;
+    }
+
     /* BOTTOM TELEMETRY GRAPH & SCRUBBER PANEL */
     .bottom-telemetry-panel {
-      height: 170px;
-      background: rgba(15, 23, 42, 0.95);
+      height: 160px;
+      background: rgba(15, 23, 42, 0.96);
       border-top: 1px solid var(--border);
       display: flex;
       flex-direction: column;
-      padding: 10px 16px;
-      gap: 8px;
+      padding: 8px 16px;
+      gap: 6px;
       flex-shrink: 0;
       z-index: 900;
+      transition: height 0.22s cubic-bezier(0.16, 1, 0.3, 1);
     }
+    .bottom-telemetry-panel.minimized {
+      height: 52px;
+    }
+    .bottom-telemetry-panel.minimized .graph-container {
+      display: none;
+    }
+    .bottom-telemetry-panel.minimized .readout-dist,
+    .bottom-telemetry-panel.minimized .readout-time {
+      display: none;
+    }
+
     .telemetry-controls-row {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      gap: 12px;
+      gap: 10px;
+      flex-shrink: 0;
     }
     .playback-btns {
       display: flex;
       align-items: center;
-      gap: 8px;
+      gap: 6px;
+      flex-shrink: 0;
     }
     .play-btn {
       background: #16a34a;
       color: #fff;
       border: none;
-      padding: 6px 14px;
+      padding: 6px 13px;
       border-radius: 6px;
-      font-size: 13px;
+      font-size: 12px;
       font-weight: 800;
       cursor: pointer;
       display: flex;
       align-items: center;
-      gap: 6px;
+      gap: 5px;
+      transition: background 0.15s;
+      white-space: nowrap;
     }
     .play-btn:hover { background: #15803d; }
     .speed-multiplier {
       background: #1e293b;
       color: #94a3b8;
       border: 1px solid #334155;
-      padding: 4px 8px;
+      padding: 4px 7px;
       border-radius: 4px;
       font-size: 11px;
       font-weight: 700;
       cursor: pointer;
+      white-space: nowrap;
     }
     .playback-scrubber {
       flex: 1;
-      margin: 0 10px;
+      margin: 0 8px;
       accent-color: var(--accent);
       cursor: pointer;
+      min-width: 60px;
     }
     .telemetry-readout {
       display: flex;
       align-items: baseline;
-      gap: 12px;
+      gap: 10px;
       font-family: ui-monospace, monospace;
+      flex-shrink: 0;
     }
     .readout-speed {
-      font-size: 20px;
+      font-size: 19px;
       font-weight: 900;
       color: #f8fafc;
+      white-space: nowrap;
     }
     .readout-speed small {
-      font-size: 11px;
+      font-size: 10px;
       color: var(--accent);
       margin-left: 2px;
     }
     .readout-dist {
-      font-size: 13px;
+      font-size: 12px;
       color: #38bdf8;
+      white-space: nowrap;
     }
     .readout-time {
-      font-size: 13px;
+      font-size: 12px;
       color: #94a3b8;
+      white-space: nowrap;
     }
+    .btn-toggle-graph {
+      background: #1e293b;
+      color: #cbd5e1;
+      border: 1px solid #334155;
+      padding: 5px 8px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 700;
+      cursor: pointer;
+      white-space: nowrap;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .btn-toggle-graph:hover { background: #334155; color: #fff; }
 
     /* CANVAS GRAPH */
     .graph-container {
       flex: 1;
       width: 100%;
       position: relative;
+      min-height: 48px;
     }
     #speed-chart {
       width: 100%;
@@ -460,31 +630,154 @@
       display: block;
     }
 
-    /* TOGGLE SIDEBAR BUTTON (MOBILE) */
-    .btn-toggle-sidebar {
-      display: none;
-      background: #1e293b;
-      color: #fff;
-      border: 1px solid #334155;
-      padding: 6px 10px;
-      border-radius: 6px;
-      font-size: 12px;
-      cursor: pointer;
+    /* RESPONSIVE MOBILE BREAKPOINTS */
+    @media (max-width: 900px) {
+      .app-header {
+        flex-direction: column;
+        align-items: stretch;
+        padding: 8px 12px;
+        gap: 8px;
+      }
+      .header-left {
+        width: 100%;
+        justify-content: space-between;
+      }
+      .header-title {
+        font-size: 14px;
+      }
+      .header-tag {
+        display: none;
+      }
+      .header-stats {
+        display: none;
+      }
+      .btn-toggle-sidebar {
+        display: inline-flex;
+      }
+      .header-controls {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        white-space: nowrap;
+        padding-bottom: 2px;
+        scrollbar-width: none;
+        width: 100%;
+      }
+      .header-controls::-webkit-scrollbar {
+        display: none;
+      }
+      .ctrl-btn {
+        padding: 5px 10px;
+        font-size: 11px;
+      }
+
+      .main-workspace {
+        height: calc(100vh - 84px);
+      }
+
+      /* SIDEBAR AS MODAL OFF-CANVAS DRAWER */
+      .sidebar {
+        position: fixed;
+        top: 0;
+        bottom: 0;
+        left: 0;
+        width: min(88vw, 360px);
+        z-index: 1500;
+        transform: translateX(-100%);
+        transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+        box-shadow: none;
+      }
+      .sidebar.open {
+        transform: translateX(0);
+        box-shadow: 10px 0 35px rgba(0, 0, 0, 0.85);
+      }
+      .sidebar.collapsed {
+        transform: translateX(-100%);
+        margin-right: 0;
+      }
+      .btn-close-sidebar {
+        display: block;
+      }
+      .sidebar-footer {
+        display: block;
+      }
+      .floating-runs-btn {
+        display: flex;
+      }
+
+      /* MAP OVERLAY LEGEND ON MOBILE */
+      .map-floating-overlay {
+        top: 8px;
+        right: 8px;
+        max-width: 190px;
+      }
+      .map-tool-card {
+        padding: 6px 10px;
+      }
+      #legend-driver-content {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 3px 6px;
+      }
+      .legend-row {
+        font-size: 10px;
+        gap: 4px;
+      }
+      .legend-color-box {
+        width: 10px;
+        height: 10px;
+      }
+
+      /* BOTTOM PANEL COMPACT ON MOBILE */
+      .bottom-telemetry-panel {
+        height: 135px;
+        padding: 6px 10px;
+        gap: 4px;
+      }
+      .bottom-telemetry-panel.minimized {
+        height: 48px;
+      }
+      .play-btn {
+        padding: 5px 10px;
+        font-size: 12px;
+      }
+      .speed-multiplier {
+        padding: 3px 6px;
+        font-size: 10px;
+      }
+      .playback-scrubber {
+        margin: 0 4px;
+      }
+      .readout-speed {
+        font-size: 17px;
+      }
+      .readout-speed small {
+        font-size: 9px;
+      }
+      .readout-dist, .readout-time {
+        font-size: 11px;
+      }
+      .graph-container {
+        min-height: 44px;
+      }
     }
 
-    @media (max-width: 900px) {
-      .btn-toggle-sidebar { display: block; }
-      .header-stats { display: none; }
-      .sidebar {
-        position: absolute;
-        bottom: 0;
-        top: 0;
-        left: 0;
-        z-index: 1200;
-        box-shadow: 4px 0 20px rgba(0,0,0,0.6);
+    @media (max-width: 480px) {
+      .header-title {
+        font-size: 12px;
       }
-      .bottom-telemetry-panel {
-        height: 140px;
+      .btn-back {
+        padding: 5px 8px;
+        font-size: 11px;
+      }
+      .btn-toggle-sidebar {
+        padding: 5px 8px;
+        font-size: 11px;
+      }
+      .telemetry-readout {
+        gap: 6px;
+      }
+      .readout-dist {
+        display: none;
       }
     }
 
@@ -521,12 +814,12 @@
   <!-- TOP HEADER -->
   <header class="app-header">
     <div class="header-left">
-      <button type="button" class="btn-toggle-sidebar" onclick="toggleSidebar()">☰ Runs</button>
-      <a href="pitwall.html" class="btn-back">← Pit Wall</a>
+      <button type="button" class="btn-toggle-sidebar" id="btn-toggle-sidebar" onclick="toggleSidebar()">☰ Runs (4)</button>
       <div class="header-title">
-        <span>🏁 SONOMA RACEWAY AUTOCROSS</span>
+        <span>🏁 SONOMA RACEWAY</span>
         <span class="header-tag">GPS ANALYSIS</span>
       </div>
+      <a href="pitwall.html" class="btn-back">← Pit Wall</a>
       <div class="header-stats">
         <div class="stat-chip">Runs: <strong id="stat-total-runs">47</strong></div>
         <div class="stat-chip">Event Best: <strong id="stat-best-time">00:54.16</strong></div>
@@ -550,9 +843,20 @@
 
   <!-- MAIN WORKSPACE -->
   <div class="main-workspace">
+    <!-- BACKDROP FOR MOBILE DRAWER -->
+    <div class="sidebar-backdrop" id="sidebar-backdrop" onclick="closeSidebar()"></div>
+
     <!-- SIDEBAR: RUN SELECTION & FILTERS -->
     <aside class="sidebar" id="sidebar">
       <div class="sidebar-header">
+        <div class="sidebar-title-bar">
+          <div class="sidebar-heading">
+            <span>Select Runs</span>
+            <span class="badge badge-run-count" id="sidebar-run-count">4</span>
+          </div>
+          <button type="button" class="btn-close-sidebar" onclick="closeSidebar()">✕ Done</button>
+        </div>
+
         <div class="driver-filter-pills">
           <button type="button" class="filter-pill active" data-driver="ALL" onclick="filterDriver('ALL')">ALL (47)</button>
           <button type="button" class="filter-pill" data-driver="Liam" onclick="filterDriver('Liam')">LIAM (10)</button>
@@ -572,11 +876,23 @@
       <div class="runs-list" id="runs-list-container">
         <!-- Rendered by JS -->
       </div>
+
+      <!-- MOBILE DRAWER FOOTER -->
+      <div class="sidebar-footer">
+        <button type="button" class="btn-drawer-apply" onclick="closeSidebar()">
+          <span id="btn-drawer-apply-text">✓ View on Map (4 selected)</span>
+        </button>
+      </div>
     </aside>
 
     <!-- MAP CONTAINER -->
     <div class="map-container-wrap">
       <div id="map"></div>
+
+      <!-- FLOATING RUNS BUTTON (MOBILE) -->
+      <button type="button" class="floating-runs-btn" id="floating-runs-btn" onclick="openSidebar()">
+        ☰ Runs <span class="badge badge-run-count">4</span>
+      </button>
 
       <!-- FLOATING MAP LEGEND & STATS OVERLAY -->
       <div class="map-floating-overlay">
@@ -600,7 +916,7 @@
       </div>
 
       <!-- BOTTOM TELEMETRY GRAPH & PLAYBACK SCRUBBER -->
-      <div class="bottom-telemetry-panel">
+      <div class="bottom-telemetry-panel" id="bottom-telemetry-panel">
         <div class="telemetry-controls-row">
           <div class="playback-btns">
             <button type="button" class="play-btn" id="btn-play" onclick="togglePlayback()">
@@ -616,6 +932,10 @@
             <div class="readout-dist"><span id="telemetry-live-dist">0m</span></div>
             <div class="readout-time"><span id="telemetry-live-time">00:00.00</span></div>
           </div>
+
+          <button type="button" class="btn-toggle-graph" id="btn-toggle-graph" onclick="toggleGraphPanel()" title="Toggle speed chart">
+            📉
+          </button>
         </div>
 
         <!-- CANVAS SPEED VS DISTANCE PROFILE CHART -->
@@ -29818,10 +30138,15 @@
         zoom: 18,
         minZoom: 14,
         maxZoom: 21,
-        zoomControl: true
+        zoomControl: false
       });
+      L.control.zoom({ position: "bottomright" }).addTo(map);
 
       setMapLayer("satellite");
+
+      window.addEventListener("resize", () => {
+        if (map) map.invalidateSize();
+      });
     }
 
     function setMapLayer(type) {
@@ -30253,6 +30578,7 @@
       }
       renderRunsList();
       updateMapPolylines();
+      updateSelectionBadges();
     }
 
     function setPrimaryRun(runId) {
@@ -30261,6 +30587,7 @@
       animFraction = 0;
       renderRunsList();
       updateMapPolylines();
+      updateSelectionBadges();
     }
 
     function selectFastestPerDriver() {
@@ -30276,6 +30603,7 @@
       primaryRunId = Array.from(selectedRunIds)[0] || null;
       renderRunsList();
       updateMapPolylines();
+      updateSelectionBadges();
       fitTrackBounds();
     }
 
@@ -30287,6 +30615,7 @@
       primaryRunId = Array.from(selectedRunIds)[0] || null;
       renderRunsList();
       updateMapPolylines();
+      updateSelectionBadges();
       fitTrackBounds();
     }
 
@@ -30295,10 +30624,74 @@
       primaryRunId = null;
       renderRunsList();
       updateMapPolylines();
+      updateSelectionBadges();
+    }
+
+    function openSidebar() {
+      const sidebar = document.getElementById("sidebar");
+      const backdrop = document.getElementById("sidebar-backdrop");
+      sidebar.classList.add("open");
+      sidebar.classList.remove("collapsed");
+      if (backdrop) backdrop.classList.add("active");
+    }
+
+    function closeSidebar() {
+      const sidebar = document.getElementById("sidebar");
+      const backdrop = document.getElementById("sidebar-backdrop");
+      sidebar.classList.remove("open");
+      if (backdrop) backdrop.classList.remove("active");
+      if (window.innerWidth > 900) {
+        sidebar.classList.add("collapsed");
+      }
+      setTimeout(() => {
+        if (map) map.invalidateSize();
+        if (typeof drawSpeedChart === "function") drawSpeedChart();
+      }, 300);
     }
 
     function toggleSidebar() {
-      document.getElementById("sidebar").classList.toggle("collapsed");
+      const sidebar = document.getElementById("sidebar");
+      if (window.innerWidth <= 900) {
+        if (sidebar.classList.contains("open")) {
+          closeSidebar();
+        } else {
+          openSidebar();
+        }
+      } else {
+        sidebar.classList.toggle("collapsed");
+        setTimeout(() => {
+          if (map) map.invalidateSize();
+          if (typeof drawSpeedChart === "function") drawSpeedChart();
+        }, 300);
+      }
+    }
+
+    function toggleGraphPanel() {
+      const panel = document.getElementById("bottom-telemetry-panel");
+      const btn = document.getElementById("btn-toggle-graph");
+      if (!panel || !btn) return;
+      panel.classList.toggle("minimized");
+      const isMin = panel.classList.contains("minimized");
+      btn.innerHTML = isMin ? "📈 Show" : "📉 Hide";
+      setTimeout(() => {
+        if (map) map.invalidateSize();
+        if (!isMin && typeof drawSpeedChart === "function") drawSpeedChart();
+      }, 250);
+    }
+
+    function updateSelectionBadges() {
+      const count = selectedRunIds.size;
+      document.querySelectorAll(".badge-run-count").forEach(el => {
+        el.textContent = count;
+      });
+      const toggleBtn = document.getElementById("btn-toggle-sidebar");
+      if (toggleBtn) {
+        toggleBtn.textContent = "☰ Runs (" + count + ")";
+      }
+      const footerBtnText = document.getElementById("btn-drawer-apply-text");
+      if (footerBtnText) {
+        footerBtnText.textContent = "✓ View on Map (" + count + " selected)";
+      }
     }
   </script>
 </body>
