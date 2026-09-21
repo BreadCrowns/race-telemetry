@@ -104,6 +104,8 @@ async function handleTraccarIngestion(request, env, ctx) {
   }
 
   // 2. If request is POST/PUT, also inspect body
+  let batchedPackets = [];
+
   if (request.method === "POST" || request.method === "PUT") {
     try {
       const contentType = (request.headers.get("content-type") || "").toLowerCase();
@@ -111,24 +113,66 @@ async function handleTraccarIngestion(request, env, ctx) {
         const json = await request.json();
         // Support Sensor Logger batched/structured payload format
         if (json && Array.isArray(json.payload)) {
-          const loc = json.payload.find(p => p.name === "location" || p.name === "gps");
-          if (loc && loc.values) {
-            params.latitude = loc.values.latitude;
-            params.longitude = loc.values.longitude;
-            // Sensor Logger sends speed in m/s -> convert to knots for standard speed processing
-            params.speed = (loc.values.speed || 0) * 1.94384;
-            params.heading = loc.values.bearing || loc.values.course || 0;
-            params.altitude = loc.values.altitude || 0;
-            params.accuracy = loc.values.accuracy || 0;
-            params.timestamp = loc.time ? Math.round(loc.time / 1000000) : Date.now();
+          const deviceId = json.deviceId || "sensor-logger";
+          // Separate events by type
+          const locations = json.payload.filter(p => p.name === "location" || p.name === "gps");
+          const accelerometers = json.payload.filter(p => p.name === "accelerometer");
+
+          if (locations.length > 0 || accelerometers.length > 0) {
+              // Get the most recent location to use as base params for the main packet processing
+              const loc = locations[locations.length - 1];
+              if (loc && loc.values) {
+                params.latitude = loc.values.latitude;
+                params.longitude = loc.values.longitude;
+                // Sensor Logger sends speed in m/s -> convert to knots for standard speed processing
+                params.speed = (loc.values.speed || 0) * 1.94384;
+                params.heading = loc.values.bearing || loc.values.course || 0;
+                params.altitude = loc.values.altitude || 0;
+                params.accuracy = loc.values.accuracy || 0;
+                params.timestamp = loc.time ? Math.round(loc.time / 1000000) : Date.now();
+              }
+              const accel = accelerometers[accelerometers.length - 1];
+              if (accel && accel.values) {
+                params.ax = accel.values.x;
+                params.ay = accel.values.y;
+                params.az = accel.values.z;
+              }
+              params.id = deviceId;
+
+              // Create batched packets for high-frequency data
+              // We'll merge accelerometer and location data based on time or just send a combined array
+              // For simplicity, we create a batch array combining them, sorted by time
+              let allEvents = [...locations, ...accelerometers].sort((a,b) => a.time - b.time);
+
+              let currentLoc = { lat: 0, lon: 0, speed: 0 };
+              let currentAcc = { ax: 0, ay: 0, az: 0 };
+
+              for (const evt of allEvents) {
+                  if (evt.name === "location" || evt.name === "gps") {
+                      currentLoc = {
+                          lat: evt.values.latitude,
+                          lon: evt.values.longitude,
+                          speed: (evt.values.speed || 0) * 1.15078 * 1.94384 // m/s -> knots -> MPH
+                      };
+                  } else if (evt.name === "accelerometer") {
+                      currentAcc = {
+                          ax: evt.values.x,
+                          ay: evt.values.y,
+                          az: evt.values.z
+                      };
+                  }
+
+                  batchedPackets.push({
+                      ts: evt.time ? Math.round(evt.time / 1000000) : Date.now(),
+                      lat: currentLoc.lat,
+                      lon: currentLoc.lon,
+                      speed: currentLoc.speed,
+                      ax: currentAcc.ax,
+                      ay: currentAcc.ay,
+                      az: currentAcc.az
+                  });
+              }
           }
-          const accel = json.payload.find(p => p.name === "accelerometer");
-          if (accel && accel.values) {
-            params.ax = accel.values.x;
-            params.ay = accel.values.y;
-            params.az = accel.values.z;
-          }
-          if (json.deviceId) params.id = json.deviceId;
         } else {
           for (const [k, v] of Object.entries(json)) {
             params[k.toLowerCase()] = v;
@@ -203,10 +247,18 @@ async function handleTraccarIngestion(request, env, ctx) {
     heading: heading,
     altitude: altitude,
     battery: battery,
+    ax: params.ax !== undefined ? parseFloat(params.ax) : 0,
+    ay: params.ay !== undefined ? parseFloat(params.ay) : 0,
+    az: params.az !== undefined ? parseFloat(params.az) : 0,
     lastGpsTimestamp: arrivalTime,
     deviceTimestamp: rawTs,
     unit: "MPH"
   };
+
+  if (batchedPackets.length > 0) {
+      packet.batchedData = batchedPackets;
+  }
+
   lastReceivedPacket = packet;
 
   // 1. Push to Firebase Realtime Database
@@ -222,15 +274,49 @@ async function handleTraccarIngestion(request, env, ctx) {
   let d1Promise = Promise.resolve();
   if (d1) {
     const isoTime = new Date(rawTs).toISOString();
+
+    // Check if we have batched packets, otherwise just use the single packet
+    const packetsToInsert = batchedPackets.length > 0 ? batchedPackets.map(bp => ({
+        ...bp,
+        heading: heading,
+        altitude: altitude,
+        accuracy: accuracy,
+        battery: battery
+    })) : [packet];
+
+    // We would normally do a batch insert here, but D1 driver might need special batch syntax
+    // For simplicity, we just insert the most recent packet into telemetry_raw for now
+    // But we will add ax, ay, az columns
+
+    const ax = params.ax !== undefined ? parseFloat(params.ax) : 0;
+    const ay = params.ay !== undefined ? parseFloat(params.ay) : 0;
+    const az = params.az !== undefined ? parseFloat(params.az) : 0;
+
+    // Note: This requires altering the telemetry_raw table in D1 to add ax, ay, az columns
+    // ALTER TABLE telemetry_raw ADD COLUMN ax REAL DEFAULT 0;
+    // ALTER TABLE telemetry_raw ADD COLUMN ay REAL DEFAULT 0;
+    // ALTER TABLE telemetry_raw ADD COLUMN az REAL DEFAULT 0;
+
+    // We will use a try-catch to fallback to the old schema if the columns don't exist yet
     d1Promise = d1.prepare(`
-      INSERT INTO telemetry_raw (event_id, device_id, timestamp, iso_time, latitude, longitude, speed_mph, heading, altitude_m, accuracy_m, battery_level)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `).bind(eventId, deviceId, rawTs, isoTime, rawLat, rawLon, speedMph, heading, altitude, accuracy, battery)
+      INSERT INTO telemetry_raw (event_id, device_id, timestamp, iso_time, latitude, longitude, speed_mph, heading, altitude_m, accuracy_m, battery_level, ax, ay, az)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).bind(eventId, deviceId, rawTs, isoTime, rawLat, rawLon, speedMph, heading, altitude, accuracy, battery, ax, ay, az)
       .run()
       .then(() => { lastD1Error = null; })
       .catch(e => {
-        console.error("D1 Insert Error:", e);
-        lastD1Error = e.message || String(e);
+        // Fallback for older schema
+        console.warn("D1 Insert with G-Force failed, trying fallback:", e.message);
+        return d1.prepare(`
+          INSERT INTO telemetry_raw (event_id, device_id, timestamp, iso_time, latitude, longitude, speed_mph, heading, altitude_m, accuracy_m, battery_level)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `).bind(eventId, deviceId, rawTs, isoTime, rawLat, rawLon, speedMph, heading, altitude, accuracy, battery)
+          .run()
+          .then(() => { lastD1Error = null; })
+          .catch(err => {
+            console.error("D1 Fallback Insert Error:", err);
+            lastD1Error = err.message || String(err);
+          });
       });
   }
 
@@ -415,9 +501,9 @@ async function handleExportCsv(url, env) {
     });
   } else if (type === "telemetry") {
     const { results } = await d1.prepare("SELECT * FROM telemetry_raw WHERE event_id = ? ORDER BY timestamp ASC LIMIT 50000").bind(eventId).all();
-    csv = "Timestamp_MS,ISO_Time,Latitude,Longitude,Speed_MPH,Heading,Altitude_M,Accuracy_M,Battery_Pct\n";
+    csv = "Timestamp_MS,ISO_Time,Latitude,Longitude,Speed_MPH,Heading,Altitude_M,Accuracy_M,Battery_Pct,ax,ay,az\n";
     results.forEach(r => {
-      csv += `${r.timestamp},${r.iso_time},${r.latitude},${r.longitude},${r.speed_mph},${r.heading},${r.altitude_m},${r.accuracy_m},${r.battery_level}\n`;
+      csv += `${r.timestamp},${r.iso_time},${r.latitude},${r.longitude},${r.speed_mph},${r.heading},${r.altitude_m},${r.accuracy_m},${r.battery_level},${r.ax || 0},${r.ay || 0},${r.az || 0}\n`;
     });
   }
 

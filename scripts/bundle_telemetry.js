@@ -36,7 +36,10 @@ async function bundleTelemetry() {
         speed: parseFloat(p[4]),
         heading: parseFloat(p[5] || 0),
         alt: parseFloat(p[6] || 0),
-        acc: parseFloat(p[7] || 0)
+        acc: parseFloat(p[7] || 0),
+        ax: parseFloat(p[9] || 0),
+        ay: parseFloat(p[10] || 0),
+        az: parseFloat(p[11] || 0)
       });
     }
   }
@@ -118,6 +121,9 @@ async function bundleTelemetry() {
       heading: Math.round(pt.heading),
       alt: Number(pt.alt.toFixed(1)),
       acc: Math.round(pt.acc),
+      ax: Number(pt.ax.toFixed(2)),
+      ay: Number(pt.ay.toFixed(2)),
+      az: Number(pt.az.toFixed(2)),
       ts: pt.ts
     }));
 
