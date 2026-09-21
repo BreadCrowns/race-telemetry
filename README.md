@@ -10,6 +10,9 @@ A real-time racing telemetry, pit wall stopwatch, and live broadcast overlay sui
 * 🏆 **[PRISM / OBS Leaderboard Overlay](https://breadcrowns.github.io/race-telemetry/leaderboard.html)** - Real-time ranked fastest times and deltas.
 * 📡 **[Cockpit Web GPS](https://breadcrowns.github.io/race-telemetry/gps.html)** - In-car GPS transmitter (alternative to Traccar).
 * 🏎️ **[Endurance Pit Wall Suite](https://breadcrowns.github.io/race-telemetry/pitwall_future.html)** - Full endurance race tracking with stints, fuel, and lap charts.
+* ⚙️ **[Admin Controller](https://breadcrowns.github.io/race-telemetry/admin.html)** - Pit Wall Controller & GPS admin page.
+* 📈 **[Telemetry Analysis](https://breadcrowns.github.io/race-telemetry/analysis.html)** - Autocross GPS Racing Lines & Telemetry Analysis.
+* 🎥 **[Camera HUD](https://breadcrowns.github.io/race-telemetry/camera-hud.html)** - Cockpit Camera + Telemetry HUD.
 
 ---
 
