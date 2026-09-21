@@ -8,4 +8,5 @@ This directory contains the pre-production (staging) versions of the race teleme
 * 🏁 **[Gates](https://breadcrowns.github.io/race-telemetry/prepro/gates.html)** - Prepro Gates
 * 🏠 **[Index](https://breadcrowns.github.io/race-telemetry/prepro/index.html)** - Prepro Index
 * 🏆 **[Leaderboard](https://breadcrowns.github.io/race-telemetry/prepro/leaderboard.html)** - Prepro Leaderboard Overlay
+* 📺 **[Overlay](https://breadcrowns.github.io/race-telemetry/prepro/overlay.html)** - Prepro Stage HUD Overlay
 * ⏱️ **[Pit Wall](https://breadcrowns.github.io/race-telemetry/prepro/pitwall.html)** - Prepro Pit Wall App
