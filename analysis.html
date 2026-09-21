@@ -1102,6 +1102,7 @@
         <!-- COLOR MODE SWITCHER -->
         <button type="button" class="ctrl-btn active" id="btn-color-driver" onclick="setColorMode('driver')">🎨 Driver Color</button>
         <button type="button" class="ctrl-btn" id="btn-color-heat" onclick="setColorMode('heatmap')">🔥 Speed Heatmap</button>
+        <button type="button" class="ctrl-btn" id="btn-color-gforce" onclick="setColorMode('gforce')">☄️ G-Force Heatmap</button>
 
         <!-- LINE SMOOTHING SWITCHER -->
         <button type="button" class="ctrl-btn active" id="btn-smooth-lines" onclick="toggleLineSmoothing()" title="Toggle Heading-Guided Kinematic Racing Line Smoothing">🏎️ Smooth Lines</button>
@@ -1135,9 +1136,10 @@
 
     <div class="options-section">
       <div class="options-label">Line Colors</div>
-      <div class="options-btn-group">
+      <div class="options-btn-group" style="flex-wrap: wrap;">
         <button type="button" class="opt-btn active" id="opt-color-driver" onclick="setColorMode('driver')">🎨 Driver Colors</button>
         <button type="button" class="opt-btn" id="opt-color-heat" onclick="setColorMode('heatmap')">🔥 Speed Heatmap</button>
+        <button type="button" class="opt-btn" id="opt-color-gforce" onclick="setColorMode('gforce')">☄️ G-Force Heatmap</button>
       </div>
     </div>
 
@@ -1237,6 +1239,16 @@
               <span>0 MPH</span>
               <span>25 MPH</span>
               <span>45+ MPH</span>
+            </div>
+          </div>
+
+          <div class="map-legend" id="legend-gforce-content" style="display:none;">
+            <div style="font-size:11px; font-weight:800;">G-Force (Lateral)</div>
+            <div class="heatmap-bar" style="background: linear-gradient(to right, #22c55e, #eab308, #ef4444);"></div>
+            <div class="heatmap-labels">
+              <span>&lt;0.4G</span>
+              <span>0.6G</span>
+              <span>&gt;0.8G</span>
             </div>
           </div>
         </div>
@@ -32323,7 +32335,7 @@
     let map = null;
     let currentTileLayer = null;
     let activeLayerType = "satellite"; // "satellite", "dark", "street"
-    let activeColorMode = "driver"; // "driver", "heatmap"
+    let activeColorMode = "driver"; // "driver", "heatmap", "gforce"
     let currentDriverFilter = "ALL";
     let selectedRunIds = new Set();
     let primaryRunId = null; // Single run being scrubbed/animated
@@ -32440,9 +32452,14 @@
       activeColorMode = mode;
       document.querySelectorAll("#btn-color-driver, #opt-color-driver").forEach(el => el.classList.toggle("active", mode === "driver"));
       document.querySelectorAll("#btn-color-heat, #opt-color-heat").forEach(el => el.classList.toggle("active", mode === "heatmap"));
+      document.querySelectorAll("#btn-color-gforce, #opt-color-gforce").forEach(el => el.classList.toggle("active", mode === "gforce"));
 
       document.getElementById("legend-driver-content").style.display = mode === "driver" ? "flex" : "none";
       document.getElementById("legend-heat-content").style.display = mode === "heatmap" ? "flex" : "none";
+
+      const gforceLegend = document.getElementById("legend-gforce-content");
+      if (gforceLegend) gforceLegend.style.display = mode === "gforce" ? "flex" : "none";
+      else if (mode === "gforce") document.getElementById("legend-heat-content").style.display = "flex"; // fallback
 
       updateMapPolylines();
     }
@@ -32454,6 +32471,15 @@
       if (speedMph < 27) return "#22c55e"; // moderate
       if (speedMph < 35) return "#eab308"; // fast sweeper
       return "#ef4444"; // full throttle
+    }
+
+    // --- G-FORCE HEATMAP COLOR MAPPER ---
+    // Low G -> Green, Med G -> Yellow, High G -> Red
+    function getGForceColor(gForce) {
+      const g = Math.abs(gForce);
+      if (g < 0.4) return "#22c55e"; // low G (green)
+      if (g < 0.8) return "#eab308"; // med G (yellow)
+      return "#ef4444"; // high G (red)
     }
 
     // --- HEADING-GUIDED KINEMATIC RACING LINE SMOOTHING ---
@@ -32713,11 +32739,18 @@
           `);
           layers.push(line);
         } else {
-          // Speed Heatmap Mode: segmented polylines
+          // Heatmap Modes: segmented polylines (Speed or G-Force)
           for (let i = 0; i < renderCoords.length - 1; i++) {
             const p1 = renderCoords[i];
             const p2 = renderCoords[i + 1];
-            const segColor = getSpeedColor((p1.speed + p2.speed) / 2);
+
+            let segColor;
+            if (activeColorMode === "gforce") {
+              const avgLatG = ((p1.ax || 0) + (p2.ax || 0)) / 2 / 9.81;
+              segColor = getGForceColor(avgLatG);
+            } else {
+              segColor = getSpeedColor((p1.speed + p2.speed) / 2);
+            }
 
             const seg = L.polyline([[p1.lat, p1.lon], [p2.lat, p2.lon]], {
               color: segColor,
@@ -32726,10 +32759,14 @@
               lineCap: "round"
             }).addTo(map);
 
+            const gForceInfo = (p1.ax !== undefined && p1.ay !== undefined) ?
+              `<div class="popup-row">Lat G: <strong>${(Number(p1.ax) / 9.81).toFixed(2)}</strong> | Long G: <strong>${(Number(p1.ay) / 9.81).toFixed(2)}</strong></div>` : '';
+
             seg.bindPopup(`
               <div class="popup-box">
                 <div class="popup-title">${run.driver} - Run #${run.runNum}</div>
                 <div class="popup-row">Speed: <strong>${p1.speed} MPH</strong></div>
+                ${gForceInfo}
                 <div class="popup-row">Dist from Start: <strong>${p1.distM}m</strong></div>
                 <div class="popup-row">Elapsed: <strong>${(p1.relMs / 1000).toFixed(2)}s</strong></div>
               </div>
