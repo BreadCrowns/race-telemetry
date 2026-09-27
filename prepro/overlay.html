@@ -11,42 +11,54 @@
       padding: 0;
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
     }
-    body {
-      background-color: transparent;
+    :root {
+      --accent-color: #f97316;
+      --accent-glow: rgba(249, 115, 22, 0.35);
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      padding: 0;
       overflow: hidden;
-      padding: 8px 10px;
-      display: flex;
-      justify-content: center;
-      align-items: flex-start;
-      min-height: auto;
+      background-color: transparent;
     }
 
     .hud-scaler-wrap {
-      display: flex;
-      justify-content: center;
-      align-items: flex-start;
+      position: absolute;
+      top: 0;
+      left: 0;
       width: 100%;
+      height: 100%;
+      box-sizing: border-box;
       overflow: hidden;
+      pointer-events: none;
     }
 
     .hud-card {
+      position: absolute;
+      pointer-events: auto;
+      margin: 0;
       display: inline-flex;
       flex-direction: column;
       background: rgba(8, 12, 22, 0.92);
       backdrop-filter: blur(10px);
       -webkit-backdrop-filter: blur(10px);
       border: 1px solid rgba(255, 255, 255, 0.14);
-      border-left: 6px solid #f97316;
+      border-left: 6px solid var(--accent-color);
       border-radius: 10px;
       padding: 10px 14px;
       color: #ffffff;
       box-shadow: 0 12px 35px rgba(0, 0, 0, 0.75);
       gap: 6px;
-      min-width: 440px;
-      max-width: 520px;
+      width: 480px;
+      min-width: 480px;
+      max-width: 480px;
       flex-shrink: 0;
       transform-origin: top center;
       animation: fadeIn 0.3s ease-out;
+      transition: opacity 0.2s ease;
     }
 
     @keyframes fadeIn {
@@ -306,89 +318,573 @@
       margin-left: auto;
     }
 
-    /* Standalone mobile responsiveness */
-    @media (max-width: 480px) {
-      body {
-        padding: 6px;
-      }
-      .hud-card {
-        min-width: unset;
-        width: 100%;
-        max-width: 100%;
-        padding: 8px 10px;
-      }
-      .hud-main-row {
-        gap: 8px;
-      }
-      .driver-col {
-        min-width: 85px;
-        padding-right: 8px;
-      }
-      .driver-name {
-        font-size: 18px;
-      }
-      .timer-col {
-        min-width: 125px;
-        padding-right: 8px;
-      }
-      .timer-readout {
-        font-size: 24px;
-      }
-      .timer-readout.ready {
-        font-size: 20px;
-      }
-      .speed-num {
-        font-size: 32px;
-        min-width: 36px;
-      }
+    /* Layout Modes */
+    .layout-card {
+      width: 480px;
+      min-width: 480px;
+      max-width: 480px;
+    }
+
+    /* Banner Mode (Wide horizontal lower-third) */
+    .layout-banner {
+      width: 840px;
+      min-width: 840px;
+      max-width: 840px;
+      flex-direction: row;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 16px;
+      gap: 16px;
+      border-left: 6px solid var(--accent-color);
+    }
+    .layout-banner .hud-main-row {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      flex: 1;
+    }
+    .layout-banner .driver-col {
+      min-width: auto;
+      flex-direction: row;
+      align-items: center;
+      gap: 8px;
+      padding-right: 14px;
+      border-right: 1px solid rgba(255, 255, 255, 0.12);
+    }
+    .layout-banner .driver-top-row .tag-label {
+      display: none;
+    }
+    .layout-banner .driver-name {
+      font-size: 20px;
+      line-height: 1;
+    }
+    .layout-banner .status-badge {
+      margin-top: 0;
+      align-self: center;
+    }
+    .layout-banner .timer-col {
+      min-width: auto;
+      flex-direction: row;
+      align-items: center;
+      gap: 10px;
+      padding-right: 14px;
+      border-right: 1px solid rgba(255, 255, 255, 0.12);
+    }
+    .layout-banner .timer-col .tag-label {
+      display: none;
+    }
+    .layout-banner .timer-readout {
+      font-size: 28px;
+      line-height: 1;
+    }
+    .layout-banner .penalty-pill {
+      margin-top: 0;
+      align-self: center;
+    }
+    .layout-banner .speed-col {
+      min-width: auto;
+      flex-direction: row;
+      align-items: baseline;
+      gap: 6px;
+    }
+    .layout-banner .speed-col .tag-label {
+      display: none;
+    }
+    .layout-banner .speed-num {
+      font-size: 32px;
+      line-height: 1;
+      min-width: auto;
+    }
+    .layout-banner .speed-unit {
+      font-size: 11px;
+    }
+    .layout-banner .gps-sub-bar {
+      border-top: none;
+      border-left: 1px solid rgba(255, 255, 255, 0.12);
+      padding-top: 0;
+      padding-left: 12px;
+      gap: 3px;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      justify-content: center;
+    }
+
+    /* Pill Mode (Ultra-compact capsule) */
+    .layout-pill {
+      width: 380px;
+      min-width: 380px;
+      max-width: 380px;
+      border-radius: 9999px;
+      padding: 6px 18px;
+      flex-direction: row;
+      align-items: center;
+      justify-content: space-between;
+      border-left: 3px solid var(--accent-color);
+      border-right: 3px solid var(--accent-color);
+      gap: 10px;
+    }
+    .layout-pill .hud-main-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      width: 100%;
+      gap: 10px;
+    }
+    .layout-pill .tag-label,
+    .layout-pill .status-badge,
+    .layout-pill .gps-sub-bar,
+    .layout-pill .notes-banner {
+      display: none !important;
+    }
+    .layout-pill .driver-col {
+      min-width: auto;
+      border-right: 1px solid rgba(255, 255, 255, 0.14);
+      padding-right: 10px;
+      flex-direction: row;
+      align-items: baseline;
+      gap: 6px;
+    }
+    .layout-pill .driver-top-row {
+      display: none;
+    }
+    .layout-pill .driver-name {
+      font-size: 16px;
+      font-weight: 900;
+      max-width: 90px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .layout-pill .timer-col {
+      min-width: auto;
+      border-right: 1px solid rgba(255, 255, 255, 0.14);
+      padding-right: 10px;
+      flex-direction: row;
+      align-items: center;
+      gap: 6px;
+    }
+    .layout-pill .timer-readout {
+      font-size: 22px;
+      line-height: 1;
+    }
+    .layout-pill .speed-col {
+      min-width: auto;
+      flex-direction: row;
+      align-items: baseline;
+      gap: 4px;
+    }
+    .layout-pill .speed-num {
+      font-size: 22px;
+      line-height: 1;
+      min-width: auto;
+    }
+    .layout-pill .speed-unit {
+      font-size: 10px;
+    }
+
+    /* Stacked Mode (Vertical 9:16 for Reels/Shorts) */
+    .layout-stacked {
+      width: 250px;
+      min-width: 250px;
+      max-width: 250px;
+      flex-direction: column;
+      align-items: stretch;
+      padding: 12px 14px;
+      gap: 8px;
+      border-radius: 12px;
+      border-left-width: 1px;
+      border-top: 5px solid var(--accent-color);
+    }
+    .layout-stacked .hud-main-row {
+      flex-direction: column;
+      align-items: stretch;
+      gap: 8px;
+    }
+    .layout-stacked .driver-col {
+      border-right: none;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      padding-right: 0;
+      padding-bottom: 6px;
+      min-width: auto;
+      align-items: center;
+      text-align: center;
+    }
+    .layout-stacked .driver-name {
+      font-size: 22px;
+      text-align: center;
+    }
+    .layout-stacked .status-badge {
+      align-self: center;
+      margin-top: 4px;
+    }
+    .layout-stacked .timer-col {
+      border-right: none;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      padding-right: 0;
+      padding-bottom: 6px;
+      min-width: auto;
+      align-items: center;
+      text-align: center;
+    }
+    .layout-stacked .timer-readout {
+      font-size: 32px;
+      justify-content: center;
+    }
+    .layout-stacked .penalty-pill {
+      align-self: center;
+    }
+    .layout-stacked .speed-col {
+      align-items: center;
+      min-width: auto;
+      border-bottom: none;
+      padding-bottom: 0;
+    }
+    .layout-stacked .speed-wrap {
+      justify-content: center;
+    }
+    .layout-stacked .speed-num {
+      font-size: 36px;
+    }
+    .layout-stacked .gps-sub-bar {
+      justify-content: space-between;
+      font-size: 8.5px;
+    }
+
+    /* Themes */
+    .theme-glass {
+      background: rgba(8, 12, 22, 0.90);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      border-left: 6px solid var(--accent-color);
+    }
+    .theme-solid {
+      background: #090d16;
+      backdrop-filter: none;
+      -webkit-backdrop-filter: none;
+      border: 1px solid rgba(255, 255, 255, 0.22);
+      border-left: 6px solid var(--accent-color);
+      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.95);
+    }
+    .theme-minimal {
+      background: transparent !important;
+      backdrop-filter: none !important;
+      -webkit-backdrop-filter: none !important;
+      border: none !important;
+      box-shadow: none !important;
+      padding: 4px 6px !important;
+    }
+    .theme-minimal .driver-name,
+    .theme-minimal .timer-readout,
+    .theme-minimal .speed-num,
+    .theme-minimal .tag-label {
+      text-shadow: 0 2px 8px rgba(0, 0, 0, 0.95), 0 0 16px rgba(0, 0, 0, 0.9);
+    }
+    .theme-minimal .driver-col,
+    .theme-minimal .timer-col {
+      border-color: rgba(255, 255, 255, 0.3);
+    }
+
+    /* Visibility Controls */
+    body.hide-gps .gps-sub-bar {
+      display: none !important;
+    }
+    body.hide-notes .notes-banner {
+      display: none !important;
+    }
+    body.hide-speed .speed-col {
+      display: none !important;
+    }
+    body.hide-driver .driver-col {
+      display: none !important;
+    }
+
+    /* Streamlabs Interactive Configurator Drawer */
+    .setup-drawer {
+      position: fixed;
+      bottom: 12px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(15, 23, 42, 0.96);
+      border: 1px solid rgba(249, 115, 22, 0.5);
+      border-radius: 12px;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.85);
+      padding: 12px 18px;
+      color: #f1f5f9;
+      z-index: 99999;
+      font-size: 12px;
+      max-width: 95vw;
+      width: 740px;
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      pointer-events: auto;
+      animation: slideUp 0.25s ease-out;
+    }
+    @keyframes slideUp {
+      from { opacity: 0; transform: translate(-50%, 20px); }
+      to { opacity: 1; transform: translate(-50%, 0); }
+    }
+    .setup-drawer-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      padding-bottom: 8px;
+    }
+    .setup-title {
+      font-weight: 800;
+      font-size: 13px;
+      letter-spacing: 0.5px;
+      color: #f97316;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .setup-close-btn {
+      background: none;
+      border: none;
+      color: #94a3b8;
+      cursor: pointer;
+      font-size: 14px;
+      padding: 2px 6px;
+      border-radius: 4px;
+    }
+    .setup-close-btn:hover {
+      background: rgba(255, 255, 255, 0.1);
+      color: #fff;
+    }
+    .setup-controls-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+      gap: 8px;
+    }
+    .setup-control-group {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+    .setup-label {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      color: #94a3b8;
+      letter-spacing: 0.5px;
+    }
+    .setup-select, .setup-input {
+      background: #1e293b;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      color: #fff;
+      border-radius: 6px;
+      padding: 5px 8px;
+      font-size: 11px;
+      outline: none;
+    }
+    .setup-select:focus, .setup-input:focus {
+      border-color: #f97316;
+    }
+    .setup-checkbox-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+      padding-top: 4px;
+    }
+    .setup-checkbox-label {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      cursor: pointer;
+      font-size: 11px;
+      color: #cbd5e1;
+    }
+    .setup-url-row {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      background: #090d16;
+      padding: 6px 10px;
+      border-radius: 6px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    .setup-url-input {
+      flex: 1;
+      background: transparent;
+      border: none;
+      color: #38bdf8;
+      font-family: ui-monospace, SFMono-Regular, monospace;
+      font-size: 11px;
+      outline: none;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .setup-copy-btn {
+      background: #f97316;
+      color: #fff;
+      font-weight: 700;
+      border: none;
+      border-radius: 4px;
+      padding: 6px 12px;
+      cursor: pointer;
+      font-size: 11px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      white-space: nowrap;
+      transition: all 0.2s;
+    }
+    .setup-copy-btn:hover {
+      background: #ea580c;
+    }
+    .setup-rec-badge {
+      font-size: 10px;
+      color: #94a3b8;
+      font-family: ui-monospace, SFMono-Regular, monospace;
     }
   </style>
 </head>
 <body>
 
-  <div class="hud-scaler-wrap">
-    <div class="hud-card">
-    <div class="hud-main-row">
-      <!-- 1. Driver & Run -->
-      <div class="driver-col">
-        <div class="driver-top-row">
-          <span class="tag-label">Driver</span>
-          <span class="run-badge" id="run-val">STANDBY</span>
+  <div class="hud-scaler-wrap" id="hud-wrap">
+    <div class="hud-card" id="hud-card">
+      <div class="hud-main-row">
+        <!-- 1. Driver & Run -->
+        <div class="driver-col">
+          <div class="driver-top-row">
+            <span class="tag-label">Driver</span>
+            <span class="run-badge" id="run-val">STANDBY</span>
+          </div>
+          <span class="driver-name" id="driver-val">IN PITS</span>
+          <span class="status-badge inpits" id="status-val">IN PITS</span>
         </div>
-        <span class="driver-name" id="driver-val">IN PITS</span>
-        <span class="status-badge inpits" id="status-val">IN PITS</span>
-      </div>
 
-      <!-- 2. Autocross Timer & Penalty -->
-      <div class="timer-col">
-        <span class="tag-label">Autocross Time</span>
-        <div class="timer-readout ready" id="timer-val">STANDBY</div>
-        <span class="penalty-pill" id="penalty-val" style="display: none;">CLEAN</span>
-      </div>
+        <!-- 2. Autocross Timer & Penalty -->
+        <div class="timer-col">
+          <span class="tag-label">Autocross Time</span>
+          <div class="timer-readout ready" id="timer-val">STANDBY</div>
+          <span class="penalty-pill" id="penalty-val" style="display: none;">CLEAN</span>
+        </div>
 
-      <!-- 3. Live Speed -->
-      <div class="speed-col">
-        <span class="tag-label">Speed</span>
-        <div class="speed-wrap">
-          <span class="speed-num" id="speed-val">0</span>
-          <span class="speed-unit">MPH</span>
+        <!-- 3. Live Speed -->
+        <div class="speed-col">
+          <span class="tag-label">Speed</span>
+          <div class="speed-wrap">
+            <span class="speed-num" id="speed-val">0</span>
+            <span class="speed-unit">MPH</span>
+          </div>
         </div>
       </div>
-    </div>
 
-    <!-- Notes Banner (Appears once submitted) -->
-    <div class="notes-banner" id="notes-banner" style="display: none;">
-      <span class="notes-icon">💬</span>
-      <span class="notes-text" id="notes-val"></span>
-    </div>
+      <!-- Notes Banner (Appears once submitted) -->
+      <div class="notes-banner" id="notes-banner" style="display: none;">
+        <span class="notes-icon">💬</span>
+        <span class="notes-text" id="notes-val"></span>
+      </div>
 
-    <!-- Cockpit Phone GPS Sub-Bar -->
-    <div class="gps-sub-bar">
-      <span class="status-dot" id="gps-dot"></span>
-      <span class="gps-coords" id="gps-coords">--.----°, --.----°</span>
-      <span class="gps-acc" id="gps-acc">SEARCHING</span>
+      <!-- Cockpit Phone GPS Sub-Bar -->
+      <div class="gps-sub-bar" id="gps-bar">
+        <span class="status-dot" id="gps-dot"></span>
+        <span class="gps-coords" id="gps-coords">--.----°, --.----°</span>
+        <span class="gps-acc" id="gps-acc">SEARCHING</span>
+      </div>
     </div>
   </div>
+
+  <!-- Streamlabs Interactive Configurator Drawer (Activated with ?setup=1 or Alt+S) -->
+  <div class="setup-drawer" id="setup-drawer" style="display: none;">
+    <div class="setup-drawer-header">
+      <div class="setup-title">
+        <span>⚙️</span> STREAMLABS OVERLAY CONFIGURATOR
+      </div>
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <span class="setup-rec-badge" id="setup-rec-badge">Recommended: 800 x 200</span>
+        <button class="setup-close-btn" id="setup-close-btn" title="Close Drawer">✕</button>
+      </div>
+    </div>
+
+    <div class="setup-controls-grid">
+      <!-- 1. Layout Mode -->
+      <div class="setup-control-group">
+        <label class="setup-label">Layout Mode</label>
+        <select class="setup-select" id="cfg-layout">
+          <option value="card">Card (Default 3-Col)</option>
+          <option value="banner">Banner (Horizontal Lower-Third)</option>
+          <option value="pill">Pill (Ultra-Compact Capsule)</option>
+          <option value="stacked">Stacked (Vertical 9:16 Mobile)</option>
+        </select>
+      </div>
+
+      <!-- 2. Theme -->
+      <div class="setup-control-group">
+        <label class="setup-label">Visual Theme</label>
+        <select class="setup-select" id="cfg-theme">
+          <option value="glass">Glass (Semi-Transparent)</option>
+          <option value="solid">Solid (High Contrast Dark)</option>
+          <option value="minimal">Minimal (Floating Text Only)</option>
+        </select>
+      </div>
+
+      <!-- 3. Accent Color -->
+      <div class="setup-control-group">
+        <label class="setup-label">Accent Color</label>
+        <select class="setup-select" id="cfg-accent">
+          <option value="#f97316">Orange (#f97316)</option>
+          <option value="#38bdf8">Electric Blue (#38bdf8)</option>
+          <option value="#22c55e">Racing Green (#22c55e)</option>
+          <option value="#a855f7">Purple (#a855f7)</option>
+          <option value="#ef4444">Red Line (#ef4444)</option>
+          <option value="#eab308">Solar Yellow (#eab308)</option>
+        </select>
+      </div>
+
+      <!-- 4. Horizontal Alignment -->
+      <div class="setup-control-group">
+        <label class="setup-label">Horizontal Align</label>
+        <select class="setup-select" id="cfg-align">
+          <option value="center">Center</option>
+          <option value="left">Left</option>
+          <option value="right">Right</option>
+        </select>
+      </div>
+
+      <!-- 5. Vertical Alignment -->
+      <div class="setup-control-group">
+        <label class="setup-label">Vertical Align</label>
+        <select class="setup-select" id="cfg-valign">
+          <option value="top">Top</option>
+          <option value="middle">Middle / Center</option>
+          <option value="bottom">Bottom</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Checkboxes -->
+    <div class="setup-checkbox-row">
+      <label class="setup-checkbox-label">
+        <input type="checkbox" id="cfg-hide-gps" />
+        🛡️ Hide GPS Coordinates (Stream Privacy)
+      </label>
+      <label class="setup-checkbox-label">
+        <input type="checkbox" id="cfg-demo" />
+        🏎️ Simulate Live Run (Demo Animation)
+      </label>
+      <label class="setup-checkbox-label">
+        <input type="checkbox" id="cfg-hide-notes" />
+        💬 Hide Driver Notes
+      </label>
+    </div>
+
+    <!-- URL Generator & 1-Click Copy -->
+    <div class="setup-url-row">
+      <input type="text" class="setup-url-input" id="cfg-url-output" readonly />
+      <button class="setup-copy-btn" id="cfg-copy-btn">
+        <span>📋</span> Copy Streamlabs URL
+      </button>
+    </div>
   </div>
 
   <!-- Firebase SDKs -->
@@ -429,6 +925,10 @@
     let smoothSpeed = 0;
     const SPEED_CUTOFF_MPH = 2.5;
 
+    // Demo Mode Simulation State
+    let isDemoMode = false;
+    let demoStartTime = Date.now();
+
     // Continuous GPS Watchdog State (declared before Firebase listener)
     let lastGpsFixTimestamp = 0;
     let lastGpsPacketWallTime = 0;
@@ -446,6 +946,10 @@
 
     // 60 FPS animation loop: speed interpolation & running timer
     function animate() {
+      if (isDemoMode) {
+        runDemoSimulation();
+      }
+
       // Speed smoothing
       if (targetSpeed === 0) {
         smoothSpeed += (0 - smoothSpeed) * 0.35;
@@ -456,7 +960,7 @@
       speedEl.textContent = Math.round(smoothSpeed);
 
       // Smooth running stopwatch
-      if (autoxState === "RUNNING" && runStartTime > 0) {
+      if (!isDemoMode && autoxState === "RUNNING" && runStartTime > 0) {
         const elapsed = Math.max(0, Date.now() - runStartTime);
         timerEl.textContent = formatTimeMs(elapsed);
       }
@@ -467,6 +971,7 @@
 
     // Listen to Firebase Telemetry & Autocross timing
     db.on("value", (snap) => {
+      if (isDemoMode) return;
       const root = snap.val();
       if (!root) return;
 
@@ -609,6 +1114,7 @@
 
     // --- CONTINUOUS GPS WATCHDOG (GREEN -> YELLOW -> RED) ---
     function checkOverlayGpsWatchdog() {
+      if (isDemoMode) return;
       const now = Date.now();
       if (!lastGpsFixTimestamp && !lastGpsPacketWallTime) {
         gpsDot.className = "status-dot red";
@@ -646,23 +1152,316 @@
     // Check GPS freshness every 500ms so transition from green -> yellow -> red happens live
     setInterval(checkOverlayGpsWatchdog, 500);
 
-    // Auto-scale card dynamically when embedded in narrow iframes (Google Sites, mobile, etc.)
-    function autoScaleOverlay() {
-      const card = document.querySelector(".hud-card");
-      if (!card) return;
-      const targetWidth = 470;
-      const availWidth = window.innerWidth - 16;
-      if (availWidth < targetWidth && availWidth > 0) {
-        const scale = Math.max(0.35, availWidth / targetWidth);
-        card.style.transform = "scale(" + scale + ")";
-      } else {
-        card.style.transform = "none";
-      }
+    // --- DEMO MODE SIMULATION ---
+    function runDemoSimulation() {
+      if (!isDemoMode) return;
+      driverEl.textContent = "MATT";
+      runEl.textContent = "RUN #4";
+      statusEl.textContent = "⚡ ON COURSE";
+      statusEl.className = "status-badge running";
+      penaltyEl.style.display = "inline-flex";
+      penaltyEl.textContent = "CLEAN RUN";
+      penaltyEl.className = "penalty-pill clean";
+
+      const elapsed = (Date.now() - demoStartTime) % 52000;
+      timerEl.textContent = formatTimeMs(elapsed);
+      timerEl.className = "timer-readout running";
+
+      // Simulate speed cycle between 38 and 62 mph
+      const cycle = (Date.now() / 1400) % (Math.PI * 2);
+      targetSpeed = Math.round(48 + 14 * Math.sin(cycle));
+
+      gpsDot.className = "status-dot green";
+      gpsCoords.textContent = "37.4219°, -122.0840°";
+      gpsAcc.textContent = "±3m";
+      gpsAcc.style.color = "#4ade80";
     }
-    window.addEventListener("resize", autoScaleOverlay);
-    window.addEventListener("orientationchange", autoScaleOverlay);
-    window.addEventListener("DOMContentLoaded", autoScaleOverlay);
-    setTimeout(autoScaleOverlay, 60);
+
+    // --- STREAMLABS DYNAMIC 2D AUTO-FIT SCALER ENGINE ---
+    function updateDynamicLayout() {
+      const card = document.getElementById("hud-card");
+      if (!card) return;
+
+      const params = new URLSearchParams(window.location.search);
+      const layout = params.get("layout") || "card";
+      const align = params.get("align") || "center";
+      const valign = params.get("valign") || "top";
+      const scaleParam = params.get("scale") || "fit";
+      const maxScale = parseFloat(params.get("maxScale")) || 2.5;
+      const minScale = parseFloat(params.get("minScale")) || 0.2;
+
+      // 1. Reset transform to accurately read natural content dimensions
+      card.style.transform = "none";
+      const naturalWidth = card.offsetWidth || (layout === "banner" ? 840 : layout === "pill" ? 380 : layout === "stacked" ? 250 : 480);
+      const naturalHeight = card.offsetHeight || (layout === "stacked" ? 260 : 120);
+
+      // 2. Viewport dimensions & safety margins
+      const availW = window.innerWidth;
+      const availH = window.innerHeight;
+      const padX = 8;
+      const padY = 8;
+
+      // 3. 2D Proportional Scale Calculation
+      let scale = 1.0;
+      if (scaleParam === "fit") {
+        const scaleX = Math.max(0.1, (availW - padX) / naturalWidth);
+        const scaleY = Math.max(0.1, (availH - padY) / naturalHeight);
+        scale = Math.min(scaleX, scaleY);
+        scale = Math.min(maxScale, Math.max(minScale, scale));
+      } else {
+        scale = parseFloat(scaleParam) || 1.0;
+      }
+
+      // 4. Transform Origin & Coordinate Placement
+      let originX = "center";
+      let originY = "top";
+      let translateStr = "";
+
+      if (align === "left") {
+        card.style.left = "4px";
+        card.style.right = "auto";
+        originX = "left";
+      } else if (align === "right") {
+        card.style.right = "4px";
+        card.style.left = "auto";
+        originX = "right";
+      } else { // center
+        card.style.left = "50%";
+        card.style.right = "auto";
+        originX = "center";
+        translateStr += "translateX(-50%) ";
+      }
+
+      if (valign === "top") {
+        card.style.top = "4px";
+        card.style.bottom = "auto";
+        originY = "top";
+      } else if (valign === "bottom") {
+        card.style.bottom = "4px";
+        card.style.top = "auto";
+        originY = "bottom";
+      } else { // middle / center
+        card.style.top = "50%";
+        card.style.bottom = "auto";
+        originY = "center";
+        translateStr += "translateY(-50%) ";
+      }
+
+      card.style.transformOrigin = `${originX} ${originY}`;
+      card.style.transform = `${translateStr}scale(${scale.toFixed(4)})`;
+    }
+
+    // --- URL PARAMETER & OPTIONS PARSER ---
+    function parseUrlOptions() {
+      const params = new URLSearchParams(window.location.search);
+
+      // Layout mode: card (default) | banner | pill | stacked
+      const layout = params.get("layout") || "card";
+      const validLayouts = ["card", "banner", "pill", "stacked"];
+      const selectedLayout = validLayouts.includes(layout) ? layout : "card";
+
+      // Theme: glass (default) | solid | minimal
+      const theme = params.get("theme") || "glass";
+      const validThemes = ["glass", "solid", "minimal"];
+      const selectedTheme = validThemes.includes(theme) ? theme : "glass";
+
+      // Accent color
+      const accent = params.get("accent") || "#f97316";
+
+      // Alignments
+      const align = params.get("align") || "center";
+      const valign = params.get("valign") || "top";
+
+      // Toggles & Privacy Flags
+      const hideGps = params.get("hideGps") === "1" || params.get("gps") === "0";
+      const hideNotes = params.get("hideNotes") === "1";
+      const hideSpeed = params.get("hideSpeed") === "1";
+      const hideDriver = params.get("hideDriver") === "1";
+
+      // Demo mode
+      isDemoMode = params.get("demo") === "1";
+      if (isDemoMode) demoStartTime = Date.now();
+
+      // Apply CSS classes to card
+      const card = document.getElementById("hud-card");
+      if (card) {
+        card.classList.remove("layout-card", "layout-banner", "layout-pill", "layout-stacked");
+        card.classList.add(`layout-${selectedLayout}`);
+
+        card.classList.remove("theme-glass", "theme-solid", "theme-minimal");
+        card.classList.add(`theme-${selectedTheme}`);
+
+        document.documentElement.style.setProperty("--accent-color", accent);
+        document.documentElement.style.setProperty("--accent-glow", accent + "59");
+      }
+
+      // Apply body flags
+      document.body.classList.toggle("hide-gps", hideGps);
+      document.body.classList.toggle("hide-notes", hideNotes);
+      document.body.classList.toggle("hide-speed", hideSpeed);
+      document.body.classList.toggle("hide-driver", hideDriver);
+
+      // Setup Drawer visibility
+      const showSetup = params.get("setup") === "1";
+      const drawer = document.getElementById("setup-drawer");
+      if (drawer) {
+        drawer.style.display = showSetup ? "flex" : "none";
+        if (showSetup) {
+          syncDrawerInputs(selectedLayout, selectedTheme, accent, align, valign, hideGps, isDemoMode, hideNotes);
+        }
+      }
+
+      updateDynamicLayout();
+    }
+
+    // --- SETUP DRAWER CONTROLS & INTERACTIVITY ---
+    function syncDrawerInputs(layout, theme, accent, align, valign, hideGps, demo, hideNotes) {
+      const elLayout = document.getElementById("cfg-layout");
+      const elTheme = document.getElementById("cfg-theme");
+      const elAccent = document.getElementById("cfg-accent");
+      const elAlign = document.getElementById("cfg-align");
+      const elValign = document.getElementById("cfg-valign");
+      const elHideGps = document.getElementById("cfg-hide-gps");
+      const elDemo = document.getElementById("cfg-demo");
+      const elHideNotes = document.getElementById("cfg-hide-notes");
+
+      if (elLayout) elLayout.value = layout;
+      if (elTheme) elTheme.value = theme;
+      if (elAccent) elAccent.value = accent;
+      if (elAlign) elAlign.value = align;
+      if (elValign) elValign.value = valign;
+      if (elHideGps) elHideGps.checked = hideGps;
+      if (elDemo) elDemo.checked = demo;
+      if (elHideNotes) elHideNotes.checked = hideNotes;
+
+      updateGeneratedUrl();
+    }
+
+    function updateGeneratedUrl() {
+      const layout = document.getElementById("cfg-layout")?.value || "card";
+      const theme = document.getElementById("cfg-theme")?.value || "glass";
+      const accent = document.getElementById("cfg-accent")?.value || "#f97316";
+      const align = document.getElementById("cfg-align")?.value || "center";
+      const valign = document.getElementById("cfg-valign")?.value || "top";
+      const hideGps = document.getElementById("cfg-hide-gps")?.checked;
+      const demo = document.getElementById("cfg-demo")?.checked;
+      const hideNotes = document.getElementById("cfg-hide-notes")?.checked;
+
+      const url = new URL(window.location.href);
+      const cleanParams = new URLSearchParams();
+      if (layout !== "card") cleanParams.set("layout", layout);
+      if (theme !== "glass") cleanParams.set("theme", theme);
+      if (accent !== "#f97316") cleanParams.set("accent", accent);
+      if (align !== "center") cleanParams.set("align", align);
+      if (valign !== "top") cleanParams.set("valign", valign);
+      if (hideGps) cleanParams.set("hideGps", "1");
+      if (hideNotes) cleanParams.set("hideNotes", "1");
+      if (demo) cleanParams.set("demo", "1");
+
+      const cleanUrlStr = url.origin + url.pathname + (cleanParams.toString() ? "?" + cleanParams.toString() : "");
+      const inputEl = document.getElementById("cfg-url-output");
+      if (inputEl) inputEl.value = cleanUrlStr;
+
+      // Update recommended dimensions badge
+      const recBadge = document.getElementById("setup-rec-badge");
+      if (recBadge) {
+        if (layout === "card") recBadge.textContent = "Recommended: 800 x 200 or 520 x 140";
+        else if (layout === "banner") recBadge.textContent = "Recommended: 1200 x 80 or 840 x 70";
+        else if (layout === "pill") recBadge.textContent = "Recommended: 400 x 60 or 380 x 50";
+        else if (layout === "stacked") recBadge.textContent = "Recommended: 260 x 300 (9:16 Mobile)";
+      }
+
+      // Sync browser history with ?setup=1 retained
+      const activeParams = new URLSearchParams(cleanParams);
+      activeParams.set("setup", "1");
+      window.history.replaceState({}, "", url.pathname + "?" + activeParams.toString());
+    }
+
+    // Toggle setup drawer on Alt + S
+    window.addEventListener("keydown", (e) => {
+      if (e.altKey && e.key.toLowerCase() === "s") {
+        const drawer = document.getElementById("setup-drawer");
+        if (drawer) {
+          const willShow = drawer.style.display === "none";
+          drawer.style.display = willShow ? "flex" : "none";
+          if (willShow) {
+            parseUrlOptions();
+          }
+        }
+      }
+    });
+
+    // Close button
+    document.getElementById("setup-close-btn")?.addEventListener("click", () => {
+      const drawer = document.getElementById("setup-drawer");
+      if (drawer) drawer.style.display = "none";
+    });
+
+    // 1-Click Copy Streamlabs URL button
+    document.getElementById("cfg-copy-btn")?.addEventListener("click", async () => {
+      const inputEl = document.getElementById("cfg-url-output");
+      if (!inputEl) return;
+      try {
+        await navigator.clipboard.writeText(inputEl.value);
+        const btn = document.getElementById("cfg-copy-btn");
+        btn.innerHTML = "<span>✅</span> Copied!";
+        setTimeout(() => {
+          btn.innerHTML = "<span>📋</span> Copy Streamlabs URL";
+        }, 2000);
+      } catch (err) {
+        inputEl.select();
+        document.execCommand("copy");
+        const btn = document.getElementById("cfg-copy-btn");
+        btn.innerHTML = "<span>✅</span> Copied!";
+        setTimeout(() => {
+          btn.innerHTML = "<span>📋</span> Copy Streamlabs URL";
+        }, 2000);
+      }
+    });
+
+    // Setup input change listeners
+    const setupControlIds = ["cfg-layout", "cfg-theme", "cfg-accent", "cfg-align", "cfg-valign", "cfg-hide-gps", "cfg-demo", "cfg-hide-notes"];
+    setupControlIds.forEach(id => {
+      const el = document.getElementById(id);
+      if (el) {
+        el.addEventListener("change", () => {
+          const layout = document.getElementById("cfg-layout").value;
+          const theme = document.getElementById("cfg-theme").value;
+          const accent = document.getElementById("cfg-accent").value;
+          const hideGps = document.getElementById("cfg-hide-gps").checked;
+          isDemoMode = document.getElementById("cfg-demo").checked;
+          if (isDemoMode) demoStartTime = Date.now();
+          const hideNotes = document.getElementById("cfg-hide-notes").checked;
+
+          const card = document.getElementById("hud-card");
+          card.className = "hud-card layout-" + layout + " theme-" + theme;
+          document.documentElement.style.setProperty("--accent-color", accent);
+          document.documentElement.style.setProperty("--accent-glow", accent + "59");
+          document.body.classList.toggle("hide-gps", hideGps);
+          document.body.classList.toggle("hide-notes", hideNotes);
+
+          updateGeneratedUrl();
+          updateDynamicLayout();
+        });
+      }
+    });
+
+    // Dynamic Viewport Resize Listeners & ResizeObserver
+    const bodyResizeObserver = new ResizeObserver(() => {
+      updateDynamicLayout();
+    });
+    bodyResizeObserver.observe(document.body);
+
+    window.addEventListener("resize", updateDynamicLayout);
+    window.addEventListener("orientationchange", updateDynamicLayout);
+    window.addEventListener("DOMContentLoaded", () => {
+      parseUrlOptions();
+      updateDynamicLayout();
+    });
+    setTimeout(() => {
+      parseUrlOptions();
+      updateDynamicLayout();
+    }, 60);
   </script>
 </body>
 </html>
