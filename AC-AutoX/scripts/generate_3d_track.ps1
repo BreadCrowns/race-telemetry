@@ -229,28 +229,6 @@ foreach ($c in $cones) {
     }
 }
 
-# --- C. TIMING BEAM DUMMIES & SPAWNS ---
-# Helper to write a small 3-vertex locator pyramid
-function AddLocator($name, $x, $y) {
-    $elev = GetElevation $x $y
-    $startIdx = $script:vIndex
-    [void]$script:sb.AppendLine("o $name")
-    [void]$script:sb.AppendLine("usemtl MAT_TIMING_SENSOR")
-    [void]$script:sb.AppendLine(("v {0:F3} {1:F3} {2:F3}" -f ($x - 0.2), $elev, (-$y - 0.2)))
-    [void]$script:sb.AppendLine(("v {0:F3} {1:F3} {2:F3}" -f ($x + 0.2), $elev, (-$y - 0.2)))
-    [void]$script:sb.AppendLine(("v {0:F3} {1:F3} {2:F3}" -f $x, ($elev + 0.3), (-$y + 0.2)))
-    $script:vIndex += 3
-    [void]$script:sb.AppendLine(("f {0} {1} {2}" -f $startIdx, ($startIdx+1), ($startIdx+2)))
-}
-
-AddLocator "AC_START_0" -32.5 118.0
-AddLocator "AC_PIT_0" -36.0 122.0
-AddLocator "AC_HOTLAP_START_0" -32.5 118.0
-AddLocator "AC_TIME_0_L" -41.90 105.48
-AddLocator "AC_TIME_0_R" -24.44 113.25
-AddLocator "AC_TIME_1_L" 34.92 -87.71
-AddLocator "AC_TIME_1_R" 19.21 -95.49
-
 # Write out OBJ file
 [System.IO.File]::WriteAllText($objPath, $sb.ToString())
 $fileSize = (Get-Item $objPath).Length / 1024
