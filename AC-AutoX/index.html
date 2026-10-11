@@ -1,0 +1,1481 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sonoma Autocross â€” Precision Course & Cone Calibration</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
+    body { background: #090d16; color: #f1f5f9; display: flex; height: 100vh; overflow: hidden; user-select: none; }
+    
+    /* Left Controls Sidebar */
+    #sidebar {
+      width: 360px;
+      min-width: 360px;
+      background: #0f172a;
+      border-right: 1px solid #1e293b;
+      display: flex;
+      flex-direction: column;
+      z-index: 10;
+      box-shadow: 4px 0 24px rgba(0,0,0,0.5);
+    }
+    .header {
+      padding: 14px 18px;
+      border-bottom: 1px solid #1e293b;
+      background: #090d16;
+    }
+    .badge {
+      display: inline-block;
+      padding: 2px 7px;
+      font-size: 10px;
+      font-weight: 800;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      border-radius: 4px;
+      background: #f97316;
+      color: #fff;
+      margin-bottom: 5px;
+    }
+    .title { font-size: 16px; font-weight: 700; color: #fff; line-height: 1.2; }
+    .subtitle { font-size: 11px; color: #94a3b8; margin-top: 3px; }
+
+    .stats-bar {
+      display: flex;
+      padding: 9px 18px;
+      background: #131d35;
+      border-bottom: 1px solid #1e293b;
+      gap: 12px;
+    }
+    .stat-item { flex: 1; }
+    .stat-lbl { font-size: 9px; color: #64748b; font-weight: 700; text-transform: uppercase; }
+    .stat-val { font-size: 13px; font-weight: 700; color: #38bdf8; }
+
+    .panel-scroll {
+      flex: 1;
+      overflow-y: auto;
+      padding: 14px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .section-title {
+      font-size: 11px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: #94a3b8;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    /* Tool Mode Tabs */
+    .tool-mode-bar {
+      display: flex;
+      gap: 6px;
+      background: #131d35;
+      padding: 4px;
+      border-radius: 8px;
+      border: 1px solid #1e293b;
+    }
+    .tool-mode-btn {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      padding: 8px 10px;
+      font-size: 11px;
+      font-weight: 700;
+      border-radius: 6px;
+      border: none;
+      cursor: pointer;
+      background: transparent;
+      color: #94a3b8;
+      transition: all 0.15s;
+    }
+    .tool-mode-btn.active {
+      background: #0284c7;
+      color: #fff;
+      box-shadow: 0 2px 8px rgba(2, 132, 199, 0.4);
+    }
+    .tool-mode-btn:hover:not(.active) {
+      background: #1e293b;
+      color: #f1f5f9;
+    }
+
+    /* Add Cone Settings Box */
+    .add-cone-panel {
+      background: #131d35;
+      border: 1px solid #0284c7;
+      border-radius: 8px;
+      padding: 10px 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .preset-select {
+      background: #0f172a;
+      border: 1px solid #334155;
+      color: #f1f5f9;
+      font-size: 11px;
+      padding: 6px 8px;
+      border-radius: 5px;
+      outline: none;
+      width: 100%;
+    }
+    .preset-hint {
+      font-size: 10.5px;
+      color: #38bdf8;
+      line-height: 1.4;
+    }
+
+    /* Layers */
+    .layer-group {
+      background: #131d35;
+      border: 1px solid #1e293b;
+      border-radius: 8px;
+      padding: 10px 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .layer-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 11.5px;
+      color: #cbd5e1;
+      cursor: pointer;
+    }
+    .layer-item input[type="checkbox"] {
+      cursor: pointer;
+      accent-color: #38bdf8;
+      width: 14px;
+      height: 14px;
+    }
+    .layer-label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .legend-dot {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      display: inline-block;
+    }
+
+    /* Inspector Card */
+    #inspector {
+      background: #131d35;
+      border: 1px solid #1e293b;
+      border-radius: 8px;
+      padding: 12px;
+    }
+    .inspector-card {
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+    }
+    .inspector-id-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 4px;
+      border-bottom: 1px solid #1e293b;
+      padding-bottom: 6px;
+    }
+    .inspector-id {
+      font-size: 15px;
+      font-weight: 800;
+      color: #38bdf8;
+    }
+    .inspector-actions-top {
+      display: flex;
+      gap: 6px;
+    }
+    .btn-icon-danger {
+      background: rgba(239, 68, 68, 0.15);
+      border: 1px solid #ef4444;
+      color: #f87171;
+      border-radius: 4px;
+      padding: 3px 8px;
+      font-size: 11px;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      transition: all 0.15s;
+    }
+    .btn-icon-danger:hover {
+      background: #ef4444;
+      color: #fff;
+    }
+    .btn-icon-subtle {
+      background: #1e293b;
+      border: 1px solid #334155;
+      color: #94a3b8;
+      border-radius: 4px;
+      padding: 3px 8px;
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      transition: all 0.15s;
+    }
+    .btn-icon-subtle:hover {
+      background: #334155;
+      color: #fff;
+    }
+
+    .field-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 11px;
+      line-height: 1.4;
+    }
+    .field-label { color: #64748b; font-weight: 600; }
+    .field-value { color: #f1f5f9; font-family: monospace; font-weight: 600; }
+
+    .prop-input {
+      background: #0f172a;
+      border: 1px solid #334155;
+      color: #f1f5f9;
+      font-size: 11px;
+      padding: 3px 6px;
+      border-radius: 4px;
+      outline: none;
+      width: 130px;
+    }
+    .prop-select {
+      background: #0f172a;
+      border: 1px solid #334155;
+      color: #f1f5f9;
+      font-size: 11px;
+      padding: 3px 6px;
+      border-radius: 4px;
+      outline: none;
+      width: 155px;
+    }
+
+    /* Heading Rotation Controls */
+    .heading-control-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-top: 4px;
+      background: #0b1120;
+      padding: 6px;
+      border-radius: 6px;
+    }
+    .rot-btn {
+      background: #1e293b;
+      border: 1px solid #334155;
+      color: #cbd5e1;
+      padding: 3px 6px;
+      font-size: 10px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: bold;
+    }
+    .rot-btn:hover { background: #334155; color: #fff; }
+
+    /* Nudge control buttons */
+    .nudge-controls {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 4px;
+      margin-top: 8px;
+      background: #0b1120;
+      padding: 6px;
+      border-radius: 6px;
+    }
+    .nudge-btn {
+      background: #1e293b;
+      color: #cbd5e1;
+      border: 1px solid #334155;
+      border-radius: 4px;
+      padding: 5px 0;
+      font-size: 10px;
+      font-weight: bold;
+      text-align: center;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .nudge-btn:hover { background: #334155; color: #fff; }
+
+    /* Actions Bar */
+    .actions-bar {
+      padding: 12px 16px;
+      background: #090d16;
+      border-top: 1px solid #1e293b;
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+    }
+    .btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 8px 12px;
+      border-radius: 6px;
+      font-size: 11.5px;
+      font-weight: 700;
+      cursor: pointer;
+      border: none;
+      transition: all 0.2s;
+    }
+    .btn-primary { background: #0284c7; color: #fff; }
+    .btn-primary:hover { background: #0369a1; }
+    .btn-secondary { background: #1e293b; color: #cbd5e1; border: 1px solid #334155; }
+    .btn-secondary:hover { background: #334155; color: #fff; }
+
+    /* Main Canvas Viewport */
+    #viewport-container {
+      flex: 1;
+      position: relative;
+      background: #070a10;
+      overflow: hidden;
+      cursor: grab;
+    }
+    #viewport-container.mode-add { cursor: crosshair !important; }
+    #viewport-container:active:not(.mode-add) { cursor: grabbing; }
+
+    #mapCanvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      transform-origin: 0 0;
+      image-rendering: auto;
+    }
+
+    /* Map Controls */
+    .map-controls {
+      position: absolute;
+      top: 16px;
+      right: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      z-index: 20;
+    }
+    .ctrl-btn {
+      width: 36px;
+      height: 36px;
+      background: #0f172a;
+      border: 1px solid #334155;
+      color: #f1f5f9;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      font-weight: bold;
+      cursor: pointer;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+      transition: background 0.15s, border-color 0.15s;
+    }
+    .ctrl-btn:hover { background: #1e293b; border-color: #38bdf8; }
+
+    /* Bottom Info HUD */
+    .hud-bar {
+      position: absolute;
+      bottom: 12px;
+      left: 16px;
+      background: rgba(15, 23, 42, 0.88);
+      backdrop-filter: blur(8px);
+      border: 1px solid #334155;
+      border-radius: 6px;
+      padding: 6px 12px;
+      font-size: 11px;
+      color: #94a3b8;
+      display: flex;
+      gap: 16px;
+      z-index: 20;
+      font-family: monospace;
+    }
+    .hud-bar span b { color: #38bdf8; }
+
+    /* Floating Toast Notification */
+    #toast {
+      position: absolute;
+      bottom: 16px;
+      right: 16px;
+      background: #0284c7;
+      color: #fff;
+      padding: 8px 14px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 600;
+      box-shadow: 0 6px 18px rgba(0,0,0,0.5);
+      z-index: 100;
+      opacity: 0;
+      pointer-events: none;
+      transform: translateY(10px);
+      transition: opacity 0.2s, transform 0.2s;
+    }
+    #toast.show {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    /* Floating Tooltip */
+    .tooltip {
+      position: absolute;
+      background: rgba(15, 23, 42, 0.95);
+      border: 1px solid #38bdf8;
+      color: #fff;
+      padding: 6px 10px;
+      border-radius: 6px;
+      font-size: 11px;
+      pointer-events: none;
+      display: none;
+      z-index: 50;
+      box-shadow: 0 4px 14px rgba(0,0,0,0.6);
+    }
+    /* Panoramic Photo Modal Lightbox */
+    #panoModal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(4, 7, 13, 0.94);
+      backdrop-filter: blur(12px);
+      z-index: 1000;
+      display: none;
+      flex-direction: column;
+    }
+    #panoModal.show { display: flex; }
+    .pano-modal-header {
+      padding: 12px 20px;
+      background: #0f172a;
+      border-bottom: 1px solid #1e293b;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+    .pano-nav-btn {
+      background: #1e293b;
+      border: 1px solid #334155;
+      color: #cbd5e1;
+      padding: 6px 12px;
+      border-radius: 5px;
+      font-size: 11px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .pano-nav-btn:hover { background: #334155; color: #fff; }
+    .pano-body {
+      flex: 1;
+      overflow: auto;
+      padding: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: flex-start;
+      position: relative;
+    }
+    .pano-img {
+      max-height: 85vh;
+      width: auto;
+      border-radius: 8px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.8);
+      border: 1px solid #334155;
+      transform-origin: 0 50%;
+      transition: transform 0.2s ease-out;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- SIDEBAR -->
+  <div id="sidebar">
+    <div class="header">
+      <span class="badge">Sonoma Paddock &bull; Zoom 19 ESRI</span>
+      <div class="title">Course & Cone Editor</div>
+      <div class="subtitle">1988 Pontiac Fiero Autocross Calibration</div>
+    </div>
+
+    <div class="stats-bar">
+      <div class="stat-item">
+        <div class="stat-lbl">Course Length</div>
+        <div class="stat-val">678 m</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-lbl">Total Cones</div>
+        <div class="stat-val" id="statConeCount">127</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-lbl">GPS Runs</div>
+        <div class="stat-val">47 Verified</div>
+      </div>
+    </div>
+
+    <div class="panel-scroll">
+      <!-- Tool Mode Switcher -->
+      <div>
+        <div class="section-title">
+          <span>Tool Mode</span>
+          <span style="font-size: 9px; color: #64748b; font-weight: normal;">Shift+Click to Quick Add</span>
+        </div>
+        <div class="tool-mode-bar">
+          <button class="tool-mode-btn active" id="modeSelectBtn" onclick="setToolMode('select')">
+            Select &amp; Move
+          </button>
+          <button class="tool-mode-btn" id="modeAddBtn" onclick="setToolMode('add')">
+            + Add Cone Tool
+          </button>
+        </div>
+      </div>
+
+      <!-- Add Cone Options (shown in Add mode) -->
+      <div id="addConePanel" class="add-cone-panel" style="display: none;">
+        <div style="font-size: 11px; font-weight: 700; color: #38bdf8;">New Cone Template:</div>
+        <select id="newConeType" class="preset-select">
+          <option value="standing_orange">Standard Standing Cone (Orange)</option>
+          <option value="standing_yellow_apex">Apex Standing Cone (Yellow)</option>
+          <option value="pointer_flat">Laying Down Pointer Cone (Orange)</option>
+          <option value="timing_beam_pole">Timing Gate Sensor Pole</option>
+        </select>
+        <label class="layer-item" style="margin-top: 2px;">
+          <span class="layer-label">
+            <span class="legend-dot" style="background: #ffffff; border: 1px solid #94a3b8;"></span>
+            Include Chalk Circle
+          </span>
+          <input type="checkbox" id="newConeChalk">
+        </label>
+        <div class="preset-hint">
+          Click anywhere on the satellite image or track to place this cone.
+        </div>
+      </div>
+
+      <!-- Layers -->
+      <div>
+        <div class="section-title">
+          <span>Display Layers</span>
+        </div>
+        <div class="layer-group">
+          <label class="layer-item">
+            <span class="layer-label">
+              <span class="legend-dot" style="background: #38bdf8;"></span>
+              ESRI Satellite Basemap
+            </span>
+            <input type="checkbox" id="layerSatellite" checked onchange="render()">
+          </label>
+          <label class="layer-item">
+            <span class="layer-label">
+              <span class="legend-dot" style="background: #0ea5e9;"></span>
+              Consensus GPS Racing Line
+            </span>
+            <input type="checkbox" id="layerSpline" checked onchange="render()">
+          </label>
+          <label class="layer-item">
+            <span class="layer-label">
+              <span class="legend-dot" style="background: #f97316;"></span>
+              Surveyed Cones &amp; Pointers
+            </span>
+            <input type="checkbox" id="layerCones" checked onchange="render()">
+          </label>
+          <label class="layer-item">
+            <span class="layer-label">
+              <span class="legend-dot" style="background: #ffffff; border: 1px solid #94a3b8;"></span>
+              Chalk Verification Markings
+            </span>
+            <input type="checkbox" id="layerChalk" checked onchange="render()">
+          </label>
+          <label class="layer-item">
+            <span class="layer-label">
+              <span class="legend-dot" style="background: #22c55e;"></span>
+              Timing Gates (Start/Finish)
+            </span>
+            <input type="checkbox" id="layerGates" checked onchange="render()">
+          </label>
+          <label class="layer-item">
+            <span class="layer-label">
+              <span class="legend-dot" style="background: #a855f7;"></span>
+              Cone ID Labels
+            </span>
+            <input type="checkbox" id="layerLabels" checked onchange="render()">
+          </label>
+          <label class="layer-item">
+            <span class="layer-label">
+              <span class="legend-dot" style="background: #475569;"></span>
+              20m Alignment Grid
+            </span>
+            <input type="checkbox" id="layerGrid" onchange="render()">
+          </label>
+        </div>
+      </div>
+
+      <!-- Inspector -->
+      <div>
+        <div class="section-title">
+          <span>Selected Cone Inspector</span>
+          <button id="undoBtn" class="btn-icon-subtle" onclick="undo()" style="display: none;" title="Undo (Ctrl+Z)">
+            Undo
+          </button>
+        </div>
+        <div id="inspector">
+          <div id="inspectorContent" style="color: #64748b; font-size: 11.5px; line-height: 1.5;">
+            Click any cone to inspect, drag, edit properties, or delete it. Press <b>Delete</b> key to remove.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Actions -->
+    <div class="actions-bar">
+      <button class="btn btn-secondary" onclick="openPanoramaModal()" style="border-color: #f97316; color: #fdba74; background: rgba(249, 115, 22, 0.15); font-weight: 800;">
+        &#128247; View Panoramic Photo Reference
+      </button>
+      <button class="btn btn-primary" onclick="exportConesJson()">
+        Export Updated JSON
+      </button>
+      <button class="btn btn-secondary" onclick="exportConesCsv()">
+        Export Updated CSV
+      </button>
+      <button class="btn btn-secondary" onclick="resetAllCones()">
+        Reset to Telemetry Baseline
+      </button>
+    </div>
+  </div>
+
+  <!-- PANORAMIC PHOTO LIGHTBOX -->
+  <div id="panoModal">
+    <div class="pano-modal-header">
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <span class="badge" style="margin: 0; background: #f97316;">VIDEO SURVEY</span>
+        <span style="font-weight: 700; font-size: 14px; color: #fff;">Sonoma Paddock Panoramic Photo Reference</span>
+      </div>
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <button class="pano-nav-btn" onclick="scrollPano(0)">Sector 1 (Start)</button>
+        <button class="pano-nav-btn" onclick="scrollPano(0.45)">Sector 2 (Slalom)</button>
+        <button class="pano-nav-btn" onclick="scrollPano(0.85)">Sector 3 (Finish)</button>
+        <button class="pano-nav-btn" onclick="zoomPano(1.25)">Zoom +</button>
+        <button class="pano-nav-btn" onclick="zoomPano(0.8)">Zoom &minus;</button>
+        <button class="pano-nav-btn" onclick="closePanoramaModal()" style="background: #ef4444; color: #fff; border: none; font-weight: bold; margin-left: 10px;">&times; Close (Esc)</button>
+      </div>
+    </div>
+    <div class="pano-body" id="panoBody">
+      <img id="panoImg" class="pano-img" src="sonoma_autocross_panorama.jpg" alt="Sonoma Autocross Panorama">
+    </div>
+  </div>
+
+  <!-- VIEWPORT -->
+  <div id="viewport-container">
+    <canvas id="mapCanvas" width="1536" height="1792"></canvas>
+    <div id="tooltip" class="tooltip"></div>
+    <div id="toast"></div>
+
+    <div class="map-controls">
+      <div class="ctrl-btn" onclick="zoomIn()" title="Zoom In">+</div>
+      <div class="ctrl-btn" onclick="zoomOut()" title="Zoom Out">&minus;</div>
+      <div class="ctrl-btn" onclick="resetView()" title="Center &amp; Fit Track">&#8982;</div>
+      <div class="ctrl-btn" id="ctrlAddBtn" onclick="toggleToolMode()" title="Toggle Add Cone Tool">+</div>
+    </div>
+
+    <div class="hud-bar" id="hudBar">
+      <span>Cursor: <b id="hudCoords">--</b></span>
+      <span>Local: <b id="hudLocal">--</b></span>
+      <span>Zoom: <b id="hudZoom">100%</b></span>
+      <span id="hudMode" style="color: #38bdf8;">Select Mode</span>
+    </div>
+  </div>
+
+  <!-- LOAD TELEMETRY DATA FIRST -->
+  <script src="course_data.js"></script>
+
+  <script>
+    // --- 1. PROJECTION & GEOMETRY CONSTANTS ---
+    const lat0 = 38.1598, lon0 = -122.4551;
+    const mPerLat = 111030.0;
+    const mPerLon = 111030.0 * Math.cos(lat0 * Math.PI / 180.0);
+
+    const zoom = 19;
+    const minTileX = 83802, minTileY = 201934;
+    const n = Math.pow(2.0, zoom) * 256.0;
+
+    function latLonToImg(lat, lon) {
+      const px = (lon + 180.0) / 360.0 * n;
+      const latRad = lat * Math.PI / 180.0;
+      const sinLat = Math.sin(latRad);
+      const py = (0.5 - Math.log((1.0 + sinLat) / (1.0 - sinLat)) / (4.0 * Math.PI)) * n;
+      return { x: px - (minTileX * 256.0), y: py - (minTileY * 256.0) };
+    }
+
+    function xyToImg(x, y) {
+      const lat = lat0 + (y / mPerLat);
+      const lon = lon0 + (x / mPerLon);
+      return latLonToImg(lat, lon);
+    }
+
+    function imgToXY(ix, iy) {
+      const px = ix + (minTileX * 256.0);
+      const py = iy + (minTileY * 256.0);
+      const lon = (px / n) * 360.0 - 180.0;
+      const mercN = Math.PI - (2.0 * Math.PI * py) / n;
+      const lat = (180.0 / Math.PI) * Math.atan(0.5 * (Math.exp(mercN) - Math.exp(-mercN)));
+      const x = (lon - lon0) * mPerLon;
+      const y = (lat - lat0) * mPerLat;
+      return { 
+        x: Number(x.toFixed(3)), 
+        y: Number(y.toFixed(3)), 
+        lat: Number(lat.toFixed(7)), 
+        lon: Number(lon.toFixed(7)) 
+      };
+    }
+
+    // --- 2. DATA INITIALIZATION & UNDO HISTORY ---
+    let consensusLine = window.SONOMA_CONSENSUS_LINE || [];
+    let initialCones = window.INITIAL_CONES || [];
+    let cones = JSON.parse(JSON.stringify(initialCones));
+    let selectedCone = null;
+    let toolMode = 'select'; // 'select' | 'add'
+    let historyStack = [];
+
+    function updateStats() {
+      document.getElementById('statConeCount').innerText = cones.length;
+    }
+
+    function saveHistory(desc) {
+      historyStack.push({
+        desc: desc,
+        cones: JSON.parse(JSON.stringify(cones)),
+        selectedId: selectedCone ? selectedCone.id : null
+      });
+      if (historyStack.length > 40) historyStack.shift();
+      document.getElementById('undoBtn').style.display = 'inline-flex';
+    }
+
+    function undo() {
+      if (historyStack.length === 0) return;
+      const last = historyStack.pop();
+      cones = last.cones;
+      selectedCone = cones.find(c => c.id === last.selectedId) || null;
+      if (historyStack.length === 0) {
+        document.getElementById('undoBtn').style.display = 'none';
+      }
+      updateStats();
+      updateInspector(selectedCone);
+      render();
+      showToast("Undid: " + last.desc);
+    }
+
+    function showToast(msg) {
+      const t = document.getElementById('toast');
+      t.innerText = msg;
+      t.className = 'show';
+      clearTimeout(t._timer);
+      t._timer = setTimeout(() => {
+        t.className = '';
+      }, 2400);
+    }
+
+    // Fallback fetch if course_data.js was blocked or not yet ready
+    if (cones.length === 0) {
+      fetch('course_cones.json')
+        .then(res => res.json())
+        .then(data => {
+          initialCones = data;
+          cones = JSON.parse(JSON.stringify(initialCones));
+          updateStats();
+          render();
+        })
+        .catch(err => console.warn('Could not load course_cones.json:', err));
+    }
+    if (consensusLine.length === 0) {
+      fetch('runs_telemetry.json')
+        .then(res => res.json())
+        .then(data => {
+          if (data && data.consensusLine) {
+            consensusLine = data.consensusLine;
+            render();
+          }
+        })
+        .catch(err => console.warn('Could not load runs_telemetry.json:', err));
+    }
+
+    // --- 3. CANVAS & SATELLITE IMAGE SETUP ---
+    const container = document.getElementById('viewport-container');
+    const canvas = document.getElementById('mapCanvas');
+    const ctx = canvas.getContext('2d');
+    const tooltip = document.getElementById('tooltip');
+
+    let bgImg = new Image();
+    let bgLoaded = false;
+    bgImg.src = 'sonoma_paddock_z19.jpg';
+    bgImg.onload = function() {
+      bgLoaded = true;
+      render();
+    };
+    bgImg.onerror = function() {
+      console.warn('Satellite image failed to load, falling back to grid rendering.');
+      bgLoaded = false;
+      render();
+    };
+
+    let scale = 1.0;
+    let panX = 0, panY = 0;
+    let isPanning = false, startPanX = 0, startPanY = 0;
+    let draggedCone = null;
+    let hasDragged = false;
+
+    function resetView() {
+      const w = container.clientWidth || (window.innerWidth - 360) || 920;
+      const h = container.clientHeight || window.innerHeight || 800;
+      const trackCenterX = 1035.5;
+      const trackCenterY = 824.1;
+      const spanX = 640;
+      const spanY = 1120;
+      scale = Math.min((w - 40) / spanX, (h - 40) / spanY);
+      scale = Math.max(0.4, Math.min(1.8, scale));
+      panX = (w / 2) - (trackCenterX * scale);
+      panY = (h / 2) - (trackCenterY * scale);
+      updateTransform();
+      render();
+    }
+
+    function updateTransform() {
+      canvas.style.transform = "translate(" + panX + "px, " + panY + "px) scale(" + scale + ")";
+      document.getElementById('hudZoom').innerText = Math.round(scale * 100) + "%";
+    }
+
+    function zoomIn() {
+      const rect = container.getBoundingClientRect();
+      zoomAround(rect.width / 2, rect.height / 2, 1.25);
+    }
+
+    function zoomOut() {
+      const rect = container.getBoundingClientRect();
+      zoomAround(rect.width / 2, rect.height / 2, 0.8);
+    }
+
+    function zoomAround(clientX, clientY, factor) {
+      const newScale = Math.max(0.3, Math.min(6.0, scale * factor));
+      panX = clientX - (clientX - panX) * (newScale / scale);
+      panY = clientY - (clientY - panY) * (newScale / scale);
+      scale = newScale;
+      updateTransform();
+      render();
+    }
+
+    function getCanvasCoords(e) {
+      const rect = container.getBoundingClientRect();
+      const viewX = e.clientX - rect.left;
+      const viewY = e.clientY - rect.top;
+      return {
+        x: (viewX - panX) / scale,
+        y: (viewY - panY) / scale
+      };
+    }
+
+    // --- 4. TOOL MODES (SELECT VS ADD) ---
+    function setToolMode(mode) {
+      toolMode = mode;
+      const selectBtn = document.getElementById('modeSelectBtn');
+      const addBtn = document.getElementById('modeAddBtn');
+      const addPanel = document.getElementById('addConePanel');
+      const hudMode = document.getElementById('hudMode');
+      const ctrlAddBtn = document.getElementById('ctrlAddBtn');
+
+      if (mode === 'add') {
+        selectBtn.classList.remove('active');
+        addBtn.classList.add('active');
+        addPanel.style.display = 'flex';
+        container.classList.add('mode-add');
+        hudMode.innerText = "Click Map to Place Cone";
+        hudMode.style.color = "#f97316";
+        ctrlAddBtn.style.borderColor = "#0284c7";
+        ctrlAddBtn.style.color = "#38bdf8";
+      } else {
+        selectBtn.classList.add('active');
+        addBtn.classList.remove('active');
+        addPanel.style.display = 'none';
+        container.classList.remove('mode-add');
+        hudMode.innerText = "Select & Move Mode";
+        hudMode.style.color = "#38bdf8";
+        ctrlAddBtn.style.borderColor = "#334155";
+        ctrlAddBtn.style.color = "#f1f5f9";
+      }
+    }
+
+    function toggleToolMode() {
+      setToolMode(toolMode === 'select' ? 'add' : 'select');
+    }
+
+    function generateNextConeId() {
+      let maxNum = 0;
+      cones.forEach(c => {
+        const match = c.id.match(/\d+/);
+        if (match) {
+          const num = parseInt(match[0], 10);
+          if (num > maxNum) maxNum = num;
+        }
+      });
+      return "cone_" + String(maxNum + 1).padStart(3, '0');
+    }
+
+    function addNewConeAt(localX, localY) {
+      saveHistory("Add cone");
+      const nextId = generateNextConeId();
+      const type = document.getElementById('newConeType').value;
+      const chalk = document.getElementById('newConeChalk').checked;
+
+      // Find closest existing cone to inherit sector
+      let sector = 1;
+      let minDist = Infinity;
+      cones.forEach(c => {
+        const d = Math.hypot(c.x - localX, c.y - localY);
+        if (d < minDist) {
+          minDist = d;
+          sector = c.sector || 1;
+        }
+      });
+
+      const newCone = {
+        id: nextId,
+        type: type,
+        x: Number(localX.toFixed(2)),
+        y: Number(localY.toFixed(2)),
+        z: 0.0,
+        heading_deg: 0,
+        has_chalk_circle: chalk,
+        sector: sector,
+        notes: "User created cone"
+      };
+
+      cones.push(newCone);
+      selectedCone = newCone;
+      updateStats();
+      updateInspector(newCone);
+      render();
+      showToast("Placed " + nextId + " (" + type.replace('_', ' ') + ")");
+    }
+
+    function deleteSelectedCone() {
+      if (!selectedCone) return;
+      saveHistory("Delete " + selectedCone.id);
+      const delId = selectedCone.id;
+      cones = cones.filter(c => c !== selectedCone);
+      selectedCone = null;
+      updateStats();
+      updateInspector(null);
+      render();
+      showToast("Deleted " + delId);
+    }
+
+    function duplicateSelectedCone() {
+      if (!selectedCone) return;
+      saveHistory("Duplicate " + selectedCone.id);
+      const nextId = generateNextConeId();
+      const copy = {
+        id: nextId,
+        type: selectedCone.type,
+        x: Number((selectedCone.x + 1.5).toFixed(2)),
+        y: Number((selectedCone.y + 1.5).toFixed(2)),
+        z: selectedCone.z || 0.0,
+        heading_deg: selectedCone.heading_deg || 0,
+        has_chalk_circle: selectedCone.has_chalk_circle || false,
+        sector: selectedCone.sector || 1,
+        notes: (selectedCone.notes ? selectedCone.notes + " " : "") + "(copy)"
+      };
+      cones.push(copy);
+      selectedCone = copy;
+      updateStats();
+      updateInspector(copy);
+      render();
+      showToast("Duplicated as " + nextId);
+    }
+
+    // --- 5. RENDERING ENGINE ---
+    function render() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      const showSatellite = document.getElementById('layerSatellite').checked;
+      const showSpline = document.getElementById('layerSpline').checked;
+      const showCones = document.getElementById('layerCones').checked;
+      const showChalk = document.getElementById('layerChalk').checked;
+      const showGates = document.getElementById('layerGates').checked;
+      const showLabels = document.getElementById('layerLabels').checked;
+      const showGrid = document.getElementById('layerGrid').checked;
+
+      // Draw Satellite or Dark Backdrop
+      if (showSatellite && bgLoaded) {
+        ctx.drawImage(bgImg, 0, 0, canvas.width, canvas.height);
+      } else {
+        ctx.fillStyle = '#0f172a';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+      }
+
+      // Draw 20m Grid if enabled
+      if (showGrid) {
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.12)';
+        ctx.lineWidth = 1;
+        for (let gx = -160; gx <= 160; gx += 20) {
+          const p1 = xyToImg(gx, -160);
+          const p2 = xyToImg(gx, 160);
+          ctx.beginPath();
+          ctx.moveTo(p1.x, p1.y);
+          ctx.lineTo(p2.x, p2.y);
+          ctx.stroke();
+        }
+        for (let gy = -160; gy <= 160; gy += 20) {
+          const p1 = xyToImg(-160, gy);
+          const p2 = xyToImg(160, gy);
+          ctx.beginPath();
+          ctx.moveTo(p1.x, p1.y);
+          ctx.lineTo(p2.x, p2.y);
+          ctx.stroke();
+        }
+      }
+
+      // Draw Consensus GPS Line
+      if (showSpline && consensusLine.length > 0) {
+        // Outer glow
+        ctx.beginPath();
+        consensusLine.forEach((p, idx) => {
+          const pt = latLonToImg(p[0], p[1]);
+          if (idx === 0) ctx.moveTo(pt.x, pt.y);
+          else ctx.lineTo(pt.x, pt.y);
+        });
+        ctx.strokeStyle = 'rgba(14, 165, 233, 0.40)';
+        ctx.lineWidth = 14;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        ctx.stroke();
+
+        // Core spline
+        ctx.beginPath();
+        consensusLine.forEach((p, idx) => {
+          const pt = latLonToImg(p[0], p[1]);
+          if (idx === 0) ctx.moveTo(pt.x, pt.y);
+          else ctx.lineTo(pt.x, pt.y);
+        });
+        ctx.strokeStyle = '#38bdf8';
+        ctx.lineWidth = 3.5;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        ctx.stroke();
+      }
+
+      // Draw Gates
+      if (showGates) {
+        // Start Gate
+        const s1 = xyToImg(-41.90, 105.48);
+        const s2 = xyToImg(-24.44, 113.25);
+        ctx.beginPath();
+        ctx.moveTo(s1.x, s1.y); ctx.lineTo(s2.x, s2.y);
+        ctx.strokeStyle = '#22c55e'; ctx.lineWidth = 5; ctx.stroke();
+
+        // Finish Gate
+        const f1 = xyToImg(34.92, -87.71);
+        const f2 = xyToImg(19.21, -95.49);
+        ctx.beginPath();
+        ctx.moveTo(f1.x, f1.y); ctx.lineTo(f2.x, f2.y);
+        ctx.strokeStyle = '#ef4444'; ctx.lineWidth = 5; ctx.stroke();
+      }
+
+      // Draw Cones
+      if (showCones) {
+        cones.forEach((c) => {
+          const pt = xyToImg(c.x, c.y);
+
+          // Chalk Circle
+          if (showChalk && c.has_chalk_circle) {
+            ctx.beginPath();
+            ctx.arc(pt.x, pt.y, 11, 0, Math.PI * 2);
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.85)';
+            ctx.lineWidth = 2.5;
+            ctx.stroke();
+          }
+
+          const isSelected = (selectedCone === c);
+
+          // Selection highlight halo
+          if (isSelected) {
+            ctx.beginPath();
+            ctx.arc(pt.x, pt.y, 15, 0, Math.PI * 2);
+            ctx.strokeStyle = '#38bdf8';
+            ctx.lineWidth = 3;
+            ctx.stroke();
+          }
+
+          if (c.type === 'pointer_flat') {
+            const rad = (c.heading_deg || 0) * Math.PI / 180.0;
+            const dx = Math.sin(rad) * 14.0;
+            const dy = -Math.cos(rad) * 14.0;
+            const px = -Math.cos(rad) * 5.0;
+            const py = -Math.sin(rad) * 5.0;
+            ctx.beginPath();
+            ctx.moveTo(pt.x - px, pt.y - py);
+            ctx.lineTo(pt.x + px, pt.y + py);
+            ctx.lineTo(pt.x + dx, pt.y + dy);
+            ctx.closePath();
+            ctx.fillStyle = '#f97316';
+            ctx.fill();
+            ctx.strokeStyle = isSelected ? '#38bdf8' : '#0f172a';
+            ctx.lineWidth = 1.8;
+            ctx.stroke();
+          } else if (c.type === 'timing_beam_pole') {
+            ctx.fillStyle = '#22c55e';
+            ctx.fillRect(pt.x - 5, pt.y - 5, 10, 10);
+            ctx.strokeStyle = isSelected ? '#38bdf8' : '#0f172a';
+            ctx.lineWidth = 1.8;
+            ctx.strokeRect(pt.x - 5, pt.y - 5, 10, 10);
+          } else {
+            ctx.beginPath();
+            ctx.arc(pt.x, pt.y, c.type === 'standing_yellow_apex' ? 6.5 : 5.5, 0, Math.PI * 2);
+            ctx.fillStyle = c.type === 'standing_yellow_apex' ? '#facc15' : '#f97316';
+            ctx.fill();
+            ctx.strokeStyle = isSelected ? '#ffffff' : '#0f172a';
+            ctx.lineWidth = 2.0;
+            ctx.stroke();
+          }
+
+          if (showLabels) {
+            ctx.font = 'bold 9px -apple-system, sans-serif';
+            ctx.fillStyle = '#ffffff';
+            ctx.fillText(c.id.replace('cone_', ''), pt.x + 8, pt.y + 3);
+          }
+        });
+      }
+    }
+
+    // --- 6. INSPECTOR PANEL, EDITING & NUDGING ---
+    function updateInspector(c) {
+      const containerEl = document.getElementById('inspectorContent');
+      if (!c) {
+        containerEl.innerHTML = '<div style="color: #64748b; font-size: 11.5px; line-height: 1.5;">Click any cone to inspect, drag, edit properties, or delete it. Press <b>Delete</b> key to remove.</div>';
+        return;
+      }
+
+      const geo = imgToXY(xyToImg(c.x, c.y).x, xyToImg(c.x, c.y).y);
+      let html = '<div class="inspector-card">';
+      
+      // Top row: ID, Duplicate & Delete buttons
+      html += '<div class="inspector-id-row">';
+      html += '  <span class="inspector-id">' + c.id + '</span>';
+      html += '  <div class="inspector-actions-top">';
+      html += '    <button class="btn-icon-subtle" onclick="duplicateSelectedCone()" title="Duplicate this cone">Clone</button>';
+      html += '    <button class="btn-icon-danger" onclick="deleteSelectedCone()" title="Delete this cone (Del)">Delete</button>';
+      html += '  </div>';
+      html += '</div>';
+
+      // Type Selector Dropdown
+      html += '<div class="field-row">';
+      html += '  <span class="field-label">Type:</span>';
+      html += '  <select class="prop-select" onchange="changeConeType(this.value)">';
+      html += '    <option value="standing_orange"' + (c.type === 'standing_orange' ? ' selected' : '') + '>Standing Orange</option>';
+      html += '    <option value="standing_yellow_apex"' + (c.type === 'standing_yellow_apex' ? ' selected' : '') + '>Apex Yellow</option>';
+      html += '    <option value="pointer_flat"' + (c.type === 'pointer_flat' ? ' selected' : '') + '>Pointer (Laying Flat)</option>';
+      html += '    <option value="timing_beam_pole"' + (c.type === 'timing_beam_pole' ? ' selected' : '') + '>Timing Gate Pole</option>';
+      html += '  </select>';
+      html += '</div>';
+
+      // Chalk Ring Toggle
+      html += '<div class="field-row">';
+      html += '  <span class="field-label">Chalk Ring:</span>';
+      html += '  <label style="cursor: pointer; display: flex; align-items: center; gap: 4px; font-size: 11px; color: #f1f5f9;">';
+      html += '    <input type="checkbox" ' + (c.has_chalk_circle ? 'checked' : '') + ' onchange="toggleConeChalk(this.checked)" style="accent-color: #38bdf8;"> Has Circle';
+      html += '  </label>';
+      html += '</div>';
+
+      // Sector & Elevation
+      html += '<div class="field-row">';
+      html += '  <span class="field-label">Sector:</span>';
+      html += '  <input type="number" min="1" max="5" class="prop-input" style="width: 60px;" value="' + (c.sector || 1) + '" onchange="changeConeSector(parseInt(this.value, 10))">';
+      html += '</div>';
+
+      // Coordinates Display
+      html += '<div class="field-row"><span class="field-label">Local X (East):</span><span class="field-value">' + c.x.toFixed(2) + ' m</span></div>';
+      html += '<div class="field-row"><span class="field-label">Local Y (North):</span><span class="field-value">' + c.y.toFixed(2) + ' m</span></div>';
+      html += '<div class="field-row"><span class="field-label">Elevation (Z):</span><span class="field-value">' + (c.z ? c.z.toFixed(2) : '0.00') + ' m</span></div>';
+      html += '<div class="field-row"><span class="field-label">Lat / Lon:</span><span class="field-value">' + geo.lat.toFixed(5) + ', ' + geo.lon.toFixed(5) + '</span></div>';
+
+      // Heading / Orientation (especially for pointer cones)
+      html += '<div class="field-row"><span class="field-label">Heading:</span><span class="field-value">' + (c.heading_deg || 0) + '&deg;</span></div>';
+      html += '<div class="heading-control-row">';
+      html += '  <button class="rot-btn" onclick="rotateCone(-45)">&minus;45&deg;</button>';
+      html += '  <button class="rot-btn" onclick="rotateCone(-15)">&minus;15&deg;</button>';
+      html += '  <input type="range" min="0" max="360" value="' + (((c.heading_deg || 0) % 360 + 360) % 360) + '" style="flex: 1; accent-color: #f97316;" oninput="setConeHeading(parseInt(this.value, 10))">';
+      html += '  <button class="rot-btn" onclick="rotateCone(15)">+15&deg;</button>';
+      html += '  <button class="rot-btn" onclick="rotateCone(45)">+45&deg;</button>';
+      html += '</div>';
+
+      // Notes Input
+      html += '<div style="margin-top: 4px;">';
+      html += '  <div class="field-label" style="margin-bottom: 2px;">Field Notes:</div>';
+      html += '  <input type="text" class="prop-input" style="width: 100%;" value="' + (c.notes || '').replace(/"/g, '&quot;') + '" placeholder="e.g. Slalom gate 3 right" onchange="changeConeNotes(this.value)">';
+      html += '</div>';
+
+      // Nudge control buttons for precision micro-adjustment
+      html += '<div style="margin-top: 6px;">';
+      html += '  <div style="font-size: 10px; color: #64748b; font-weight: 700; text-transform: uppercase;">Nudge Position (&plusmn;0.25m / Arrow Keys)</div>';
+      html += '  <div class="nudge-controls">';
+      html += '    <div></div><div class="nudge-btn" onclick="nudgeCone(0, 0.25)">&uarr; +Y</div><div></div>';
+      html += '    <div class="nudge-btn" onclick="nudgeCone(-0.25, 0)">&larr; -X</div>';
+      html += '    <div class="nudge-btn" onclick="nudgeCone(0, 0)" style="font-size: 9px; line-height: 18px;">&bull;</div>';
+      html += '    <div class="nudge-btn" onclick="nudgeCone(0.25, 0)">&rarr; +X</div>';
+      html += '    <div></div><div class="nudge-btn" onclick="nudgeCone(0, -0.25)">&darr; -Y</div><div></div>';
+      html += '  </div>';
+      html += '</div>';
+
+      html += '</div>';
+      containerEl.innerHTML = html;
+    }
+
+    function changeConeType(newType) {
+      if (!selectedCone) return;
+      saveHistory("Change type of " + selectedCone.id);
+      selectedCone.type = newType;
+      render();
+    }
+
+    function toggleConeChalk(val) {
+      if (!selectedCone) return;
+      saveHistory("Toggle chalk on " + selectedCone.id);
+      selectedCone.has_chalk_circle = val;
+      render();
+    }
+
+    function changeConeSector(val) {
+      if (!selectedCone) return;
+      selectedCone.sector = val || 1;
+    }
+
+    function changeConeNotes(val) {
+      if (!selectedCone) return;
+      selectedCone.notes = val;
+    }
+
+    function rotateCone(delta) {
+      if (!selectedCone) return;
+      saveHistory("Rotate " + selectedCone.id);
+      let cur = selectedCone.heading_deg || 0;
+      let next = (cur + delta) % 360;
+      if (next < 0) next += 360;
+      selectedCone.heading_deg = next;
+      updateInspector(selectedCone);
+      render();
+    }
+
+    function setConeHeading(deg) {
+      if (!selectedCone) return;
+      selectedCone.heading_deg = deg;
+      render();
+    }
+
+    function nudgeCone(dx, dy) {
+      if (!selectedCone) return;
+      selectedCone.x = Number((selectedCone.x + dx).toFixed(2));
+      selectedCone.y = Number((selectedCone.y + dy).toFixed(2));
+      updateInspector(selectedCone);
+      render();
+    }
+
+    // Keyboard Shortcuts: Delete, Arrows, Ctrl+Z
+    window.addEventListener('keydown', (e) => {
+      // Ignore if user is typing in an input field
+      if (['INPUT', 'SELECT', 'TEXTAREA'].includes(document.activeElement.tagName)) return;
+
+      if ((e.key === 'Delete' || e.key === 'Backspace') && selectedCone) {
+        deleteSelectedCone();
+        e.preventDefault();
+        return;
+      }
+
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') {
+        undo();
+        e.preventDefault();
+        return;
+      }
+
+      if (e.key.toLowerCase() === 'a') {
+        toggleToolMode();
+        e.preventDefault();
+        return;
+      }
+
+      if (selectedCone) {
+        const step = e.shiftKey ? 1.0 : 0.25;
+        if (e.key === 'ArrowUp') { nudgeCone(0, step); e.preventDefault(); }
+        else if (e.key === 'ArrowDown') { nudgeCone(0, -step); e.preventDefault(); }
+        else if (e.key === 'ArrowLeft') { nudgeCone(-step, 0); e.preventDefault(); }
+        else if (e.key === 'ArrowRight') { nudgeCone(step, 0); e.preventDefault(); }
+      }
+    });
+
+    // --- 7. USER INTERACTIONS (CLICK, DRAG, PAN, ZOOM) ---
+    container.addEventListener('mousedown', (e) => {
+      const mouse = getCanvasCoords(e);
+      const geo = imgToXY(mouse.x, mouse.y);
+      hasDragged = false;
+
+      // Shift+Click quick add cone in any mode
+      if (e.shiftKey) {
+        addNewConeAt(geo.x, geo.y);
+        return;
+      }
+
+      // If in Add Cone Mode, place cone on click
+      if (toolMode === 'add') {
+        addNewConeAt(geo.x, geo.y);
+        return;
+      }
+
+      // Check if clicking on any cone
+      for (let i = cones.length - 1; i >= 0; i--) {
+        const c = cones[i];
+        const pt = xyToImg(c.x, c.y);
+        const dist = Math.hypot(mouse.x - pt.x, mouse.y - pt.y);
+        if (dist <= 14 / scale) {
+          draggedCone = c;
+          selectedCone = c;
+          saveHistory("Move " + c.id);
+          updateInspector(c);
+          render();
+          return;
+        }
+      }
+
+      // If clicked background in select mode, start panning
+      isPanning = true;
+      startPanX = e.clientX - panX;
+      startPanY = e.clientY - panY;
+    });
+
+    window.addEventListener('mousemove', (e) => {
+      const mouse = getCanvasCoords(e);
+      const geo = imgToXY(mouse.x, mouse.y);
+      document.getElementById('hudCoords').innerText = geo.lat.toFixed(6) + ", " + geo.lon.toFixed(6);
+      document.getElementById('hudLocal').innerText = "X=" + geo.x.toFixed(1) + "m, Y=" + geo.y.toFixed(1) + "m";
+
+      if (draggedCone) {
+        hasDragged = true;
+        draggedCone.x = geo.x;
+        draggedCone.y = geo.y;
+        updateInspector(draggedCone);
+        render();
+      } else if (isPanning) {
+        hasDragged = true;
+        panX = e.clientX - startPanX;
+        panY = e.clientY - startPanY;
+        updateTransform();
+      } else {
+        // Tooltip hover detection
+        let hovered = null;
+        for (let c of cones) {
+          const pt = xyToImg(c.x, c.y);
+          if (Math.hypot(mouse.x - pt.x, mouse.y - pt.y) <= 12 / scale) {
+            hovered = c;
+            break;
+          }
+        }
+        if (hovered && toolMode !== 'add') {
+          const rect = container.getBoundingClientRect();
+          tooltip.style.left = (e.clientX - rect.left + 14) + "px";
+          tooltip.style.top = (e.clientY - rect.top + 14) + "px";
+          tooltip.innerHTML = "<b>" + hovered.id + "</b> (" + hovered.type.replace('_', ' ') + ")<br>X: " + hovered.x.toFixed(2) + "m, Y: " + hovered.y.toFixed(2) + "m";
+          tooltip.style.display = "block";
+        } else {
+          tooltip.style.display = "none";
+        }
+      }
+    });
+
+    window.addEventListener('mouseup', () => {
+      isPanning = false;
+      draggedCone = null;
+    });
+
+    container.addEventListener('wheel', (e) => {
+      e.preventDefault();
+      const zoomFactor = e.deltaY < 0 ? 1.15 : 0.85;
+      const rect = container.getBoundingClientRect();
+      const mouseX = e.clientX - rect.left;
+      const mouseY = e.clientY - rect.top;
+      zoomAround(mouseX, mouseY, zoomFactor);
+    }, { passive: false });
+
+    // --- 8. EXPORT & RESET HANDLERS ---
+    function exportConesJson() {
+      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(cones, null, 2));
+      const downloadAnchor = document.createElement('a');
+      downloadAnchor.setAttribute("href", dataStr);
+      downloadAnchor.setAttribute("download", "course_cones_adjusted.json");
+      document.body.appendChild(downloadAnchor);
+      downloadAnchor.click();
+      downloadAnchor.remove();
+      showToast("Exported course_cones_adjusted.json (" + cones.length + " cones)");
+    }
+
+    function exportConesCsv() {
+      let csv = "id,type,x,y,z,heading_deg,has_chalk_circle,sector,notes\n";
+      cones.forEach(c => {
+        csv += c.id + "," + c.type + "," + c.x + "," + c.y + "," + (c.z || 0) + "," + (c.heading_deg || 0) + "," + (c.has_chalk_circle || false) + "," + (c.sector || 1) + ",\"" + (c.notes || "") + "\"\n";
+      });
+      const dataStr = "data:text/csv;charset=utf-8," + encodeURIComponent(csv);
+      const downloadAnchor = document.createElement('a');
+      downloadAnchor.setAttribute("href", dataStr);
+      downloadAnchor.setAttribute("download", "course_cones_adjusted.csv");
+      document.body.appendChild(downloadAnchor);
+      downloadAnchor.click();
+      downloadAnchor.remove();
+      showToast("Exported course_cones_adjusted.csv (" + cones.length + " cones)");
+    }
+
+    function resetAllCones() {
+      if (confirm("Reset all cones back to the initial telemetry positions?")) {
+        saveHistory("Reset to telemetry baseline");
+        cones = JSON.parse(JSON.stringify(initialCones));
+        selectedCone = null;
+        updateStats();
+        updateInspector(null);
+        render();
+        showToast("Reset all cones to initial baseline");
+      }
+    }
+
+    // Panoramic Modal Controls
+    let panoScale = 1.0;
+    function openPanoramaModal() {
+      document.getElementById('panoModal').classList.add('show');
+    }
+    function closePanoramaModal() {
+      document.getElementById('panoModal').classList.remove('show');
+    }
+    function zoomPano(f) {
+      panoScale = Math.max(0.5, Math.min(3.0, panoScale * f));
+      document.getElementById('panoImg').style.transform = 'scale(' + panoScale + ')';
+    }
+    function scrollPano(pct) {
+      const body = document.getElementById('panoBody');
+      body.scrollLeft = (body.scrollWidth - body.clientWidth) * pct;
+    }
+
+    // Escape key closes modal
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') closePanoramaModal();
+    });
+
+    // Immediate auto-fit
+    updateStats();
+    resetView();
+    window.addEventListener('load', () => { updateStats(); resetView(); });
+    window.addEventListener('resize', () => {
+      resetView();
+      render();
+    });
+  </script>
+</body>
+</html>

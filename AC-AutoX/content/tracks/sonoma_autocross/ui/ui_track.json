@@ -1,0 +1,23 @@
+{
+    "name":  "Sonoma Raceway - Paddock Autocross",
+    "description":  "Exact digital twin of the Sunday Autocross course at Sonoma Raceway Paddock, recreated from 1988 Pontiac Fiero GPS telemetry, onboard multi-driver runs, and trackside video. Features all 77 surveyed cone locations, chalked apexes, pointer cones, and timing gates.",
+    "tags":  [
+                 "autocross",
+                 "sonoma",
+                 "california",
+                 "fiero",
+                 "telemetry"
+             ],
+    "geotags":  [
+                    "38.1598",
+                    "-122.4551"
+                ],
+    "country":  "United States",
+    "city":  "Sonoma",
+    "length":  "678 m",
+    "width":  "5 m",
+    "pitboxes":  "1",
+    "run":  "clockwise",
+    "author":  "Jeff Bazarko \u0026 Antigravity",
+    "version":  "1.0"
+}

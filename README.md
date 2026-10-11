@@ -13,7 +13,7 @@ A real-time racing telemetry, pit wall stopwatch, and live broadcast overlay sui
 * ⚙️ **[Admin Controller](https://breadcrowns.github.io/race-telemetry/admin.html)** - Pit Wall Controller & GPS admin page.
 * 📈 **[Telemetry Analysis](https://breadcrowns.github.io/race-telemetry/analysis.html)** - Autocross GPS Racing Lines & Telemetry Analysis.
 * 🎥 **[Camera HUD](https://breadcrowns.github.io/race-telemetry/camera-hud.html)** - Cockpit Camera + Telemetry HUD.
-* 🎯 **[Course & Cone Editor (course-editor.html)](https://breadcrowns.github.io/race-telemetry/course-editor.html)** - Interactive satellite course calibrator and drag-and-drop cone positioning tool.
+* 🏁 **[AC-AutoX Assetto Corsa Digital Twin & Course Editor](AC-AutoX/README.md)** - Full 3D track package for Assetto Corsa, Blender exporter, and **[Live Interactive Course & Cone Editor](https://breadcrowns.github.io/race-telemetry/AC-AutoX/course-editor.html)**.
 
 ---
 

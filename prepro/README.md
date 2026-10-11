@@ -10,4 +10,4 @@ This directory contains the pre-production (staging) versions of the race teleme
 * 🏆 **[Leaderboard](https://breadcrowns.github.io/race-telemetry/prepro/leaderboard.html)** - Prepro Leaderboard Overlay
 * 📺 **[Overlay](https://breadcrowns.github.io/race-telemetry/prepro/overlay.html)** - Prepro Stage HUD Overlay
 * ⏱️ **[Pit Wall](https://breadcrowns.github.io/race-telemetry/prepro/pitwall.html)** - Prepro Pit Wall App
-* 🎯 **[Course & Cone Editor](https://breadcrowns.github.io/race-telemetry/prepro/course-editor.html)** - Prepro Satellite Course & Cone Calibrator
+* 🎯 **[Course & Cone Editor](https://breadcrowns.github.io/race-telemetry/AC-AutoX/course-editor.html)** - Sonoma Autocross Satellite Course & Cone Calibrator (AC-AutoX)
