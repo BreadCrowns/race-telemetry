@@ -74,8 +74,25 @@ def setup_and_render():
                 bsdf.inputs['Emission'].default_value = emission[:3]
         return mat
 
-    # Asphalt Paddock
-    create_principled_mat("MAT_ASPHALT_PADDOCK", (0.12, 0.13, 0.15, 1.0), roughness=0.88)
+    # Asphalt Paddock with Satellite Imagery Texture
+    asphalt_mat = bpy.data.materials.get("MAT_ASPHALT_PADDOCK")
+    if not asphalt_mat:
+        asphalt_mat = bpy.data.materials.new(name="MAT_ASPHALT_PADDOCK")
+    asphalt_mat.use_nodes = True
+    a_nodes = asphalt_mat.node_tree.nodes
+    a_links = asphalt_mat.node_tree.links
+    a_bsdf = a_nodes.get("Principled BSDF")
+    if a_bsdf:
+        tex_path = os.path.join(track_dir, "sonoma_paddock_z19.jpg")
+        if os.path.exists(tex_path):
+            tex_img = bpy.data.images.load(tex_path)
+            tex_node = a_nodes.new(type="ShaderNodeTexImage")
+            tex_node.image = tex_img
+            a_links.new(tex_node.outputs['Color'], a_bsdf.inputs['Base Color'])
+            a_bsdf.inputs['Roughness'].default_value = 0.85
+        else:
+            a_bsdf.inputs['Base Color'].default_value = (0.12, 0.13, 0.15, 1.0)
+
     # Bright Fluorescent Orange Cones
     create_principled_mat("MAT_CONE_ORANGE", (1.0, 0.28, 0.02, 1.0), roughness=0.35, emission=(0.2, 0.05, 0.0, 1.0))
     # Bright Yellow Apex Cones

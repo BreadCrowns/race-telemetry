@@ -9,11 +9,12 @@ $mtlPath = "$trackDir/sonoma_autocross.mtl"
 $mtlContent = @"
 # Sonoma Autocross Materials
 newmtl MAT_ASPHALT_PADDOCK
-Ka 0.2 0.2 0.2
-Kd 0.35 0.35 0.35
+Ka 0.8 0.8 0.8
+Kd 1.0 1.0 1.0
 Ks 0.05 0.05 0.05
 Ns 10.0
 d 1.0
+map_Kd sonoma_paddock_z19.jpg
 
 newmtl MAT_CONE_ORANGE
 Ka 0.8 0.2 0.0
@@ -67,6 +68,14 @@ $ny = [int](($maxY - $minY) / $stepY) + 1
 
 $gridVStart = $vIndex
 
+$lat0 = 38.1598; $lon0 = -122.4551
+$mPerLat = 111030.0
+$mPerLon = 111030.0 * [Math]::Cos($lat0 * [Math]::PI / 180.0)
+$zoom = 19
+$minTileX = 83802; $minTileY = 201934
+$n = [Math]::Pow(2.0, $zoom) * 256.0
+$imgW = 1536.0; $imgH = 1792.0
+
 # Vertices
 for ($iy = 0; $iy -lt $ny; $iy++) {
     $y2d = $minY + $iy * $stepY
@@ -77,10 +86,19 @@ for ($iy = 0; $iy -lt $ny; $iy++) {
         $x3d = $x2d
         $y3d = $zElev
         $z3d = -$y2d
-        $u = ($x2d - $minX) / 10.0
-        $v = ($y2d - $minY) / 10.0
+        
+        # Satellite UV mapping
+        $lat = $lat0 + ($y2d / $mPerLat)
+        $lon = $lon0 + ($x2d / $mPerLon)
+        $latRad = $lat * [Math]::PI / 180.0
+        $sinLat = [Math]::Sin($latRad)
+        $px = ($lon + 180.0) / 360.0 * $n - ($minTileX * 256.0)
+        $py = (0.5 - [Math]::Log((1.0 + $sinLat) / (1.0 - $sinLat)) / (4.0 * [Math]::PI)) * $n - ($minTileY * 256.0)
+        $u = [Math]::Round($px / $imgW, 6)
+        $v = [Math]::Round(1.0 - ($py / $imgH), 6)
+
         [void]$sb.AppendLine(("v {0:F3} {1:F3} {2:F3}" -f $x3d, $y3d, $z3d))
-        [void]$sb.AppendLine(("vt {0:F3} {1:F3}" -f $u, $v))
+        [void]$sb.AppendLine(("vt {0:F6} {1:F6}" -f $u, $v))
         $vIndex++
     }
 }
