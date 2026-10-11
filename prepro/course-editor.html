@@ -513,7 +513,7 @@
       </div>
       <div class="stat-item">
         <div class="stat-lbl">Total Cones</div>
-        <div class="stat-val" id="statConeCount">77</div>
+        <div class="stat-val" id="statConeCount">127</div>
       </div>
       <div class="stat-item">
         <div class="stat-lbl">GPS Runs</div>
@@ -1469,8 +1469,9 @@
     });
 
     // Immediate auto-fit
+    updateStats();
     resetView();
-    window.addEventListener('load', resetView);
+    window.addEventListener('load', () => { updateStats(); resetView(); });
     window.addEventListener('resize', () => {
       resetView();
       render();
