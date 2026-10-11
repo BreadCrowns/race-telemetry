@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -20,13 +20,13 @@
       box-shadow: 4px 0 24px rgba(0,0,0,0.5);
     }
     .header {
-      padding: 16px 20px;
+      padding: 14px 18px;
       border-bottom: 1px solid #1e293b;
       background: #090d16;
     }
     .badge {
       display: inline-block;
-      padding: 3px 8px;
+      padding: 2px 7px;
       font-size: 10px;
       font-weight: 800;
       letter-spacing: 0.5px;
@@ -34,14 +34,14 @@
       border-radius: 4px;
       background: #f97316;
       color: #fff;
-      margin-bottom: 6px;
+      margin-bottom: 5px;
     }
-    .title { font-size: 17px; font-weight: 700; color: #fff; line-height: 1.2; }
-    .subtitle { font-size: 11px; color: #94a3b8; margin-top: 4px; }
+    .title { font-size: 16px; font-weight: 700; color: #fff; line-height: 1.2; }
+    .subtitle { font-size: 11px; color: #94a3b8; margin-top: 3px; }
 
     .stats-bar {
       display: flex;
-      padding: 10px 18px;
+      padding: 9px 18px;
       background: #131d35;
       border-bottom: 1px solid #1e293b;
       gap: 12px;
@@ -53,10 +53,10 @@
     .panel-scroll {
       flex: 1;
       overflow-y: auto;
-      padding: 16px;
+      padding: 14px 16px;
       display: flex;
       flex-direction: column;
-      gap: 16px;
+      gap: 14px;
     }
 
     .section-title {
@@ -68,9 +68,71 @@
       margin-bottom: 8px;
       display: flex;
       align-items: center;
-      gap: 6px;
+      justify-content: space-between;
     }
 
+    /* Tool Mode Tabs */
+    .tool-mode-bar {
+      display: flex;
+      gap: 6px;
+      background: #131d35;
+      padding: 4px;
+      border-radius: 8px;
+      border: 1px solid #1e293b;
+    }
+    .tool-mode-btn {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      padding: 8px 10px;
+      font-size: 11px;
+      font-weight: 700;
+      border-radius: 6px;
+      border: none;
+      cursor: pointer;
+      background: transparent;
+      color: #94a3b8;
+      transition: all 0.15s;
+    }
+    .tool-mode-btn.active {
+      background: #0284c7;
+      color: #fff;
+      box-shadow: 0 2px 8px rgba(2, 132, 199, 0.4);
+    }
+    .tool-mode-btn:hover:not(.active) {
+      background: #1e293b;
+      color: #f1f5f9;
+    }
+
+    /* Add Cone Settings Box */
+    .add-cone-panel {
+      background: #131d35;
+      border: 1px solid #0284c7;
+      border-radius: 8px;
+      padding: 10px 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .preset-select {
+      background: #0f172a;
+      border: 1px solid #334155;
+      color: #f1f5f9;
+      font-size: 11px;
+      padding: 6px 8px;
+      border-radius: 5px;
+      outline: none;
+      width: 100%;
+    }
+    .preset-hint {
+      font-size: 10.5px;
+      color: #38bdf8;
+      line-height: 1.4;
+    }
+
+    /* Layers */
     .layer-group {
       background: #131d35;
       border: 1px solid #1e293b;
@@ -84,15 +146,15 @@
       display: flex;
       align-items: center;
       justify-content: space-between;
-      font-size: 12px;
+      font-size: 11.5px;
       color: #cbd5e1;
       cursor: pointer;
     }
     .layer-item input[type="checkbox"] {
       cursor: pointer;
       accent-color: #38bdf8;
-      width: 15px;
-      height: 15px;
+      width: 14px;
+      height: 14px;
     }
     .layer-label {
       display: flex;
@@ -116,7 +178,7 @@
     .inspector-card {
       display: flex;
       flex-direction: column;
-      gap: 6px;
+      gap: 7px;
     }
     .inspector-id-row {
       display: flex;
@@ -131,23 +193,108 @@
       font-weight: 800;
       color: #38bdf8;
     }
+    .inspector-actions-top {
+      display: flex;
+      gap: 6px;
+    }
+    .btn-icon-danger {
+      background: rgba(239, 68, 68, 0.15);
+      border: 1px solid #ef4444;
+      color: #f87171;
+      border-radius: 4px;
+      padding: 3px 8px;
+      font-size: 11px;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      transition: all 0.15s;
+    }
+    .btn-icon-danger:hover {
+      background: #ef4444;
+      color: #fff;
+    }
+    .btn-icon-subtle {
+      background: #1e293b;
+      border: 1px solid #334155;
+      color: #94a3b8;
+      border-radius: 4px;
+      padding: 3px 8px;
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      transition: all 0.15s;
+    }
+    .btn-icon-subtle:hover {
+      background: #334155;
+      color: #fff;
+    }
+
     .field-row {
       display: flex;
+      align-items: center;
       justify-content: space-between;
       font-size: 11px;
-      line-height: 1.5;
+      line-height: 1.4;
     }
     .field-label { color: #64748b; font-weight: 600; }
     .field-value { color: #f1f5f9; font-family: monospace; font-weight: 600; }
+
+    .prop-input {
+      background: #0f172a;
+      border: 1px solid #334155;
+      color: #f1f5f9;
+      font-size: 11px;
+      padding: 3px 6px;
+      border-radius: 4px;
+      outline: none;
+      width: 130px;
+    }
+    .prop-select {
+      background: #0f172a;
+      border: 1px solid #334155;
+      color: #f1f5f9;
+      font-size: 11px;
+      padding: 3px 6px;
+      border-radius: 4px;
+      outline: none;
+      width: 155px;
+    }
+
+    /* Heading Rotation Controls */
+    .heading-control-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-top: 4px;
+      background: #0b1120;
+      padding: 6px;
+      border-radius: 6px;
+    }
+    .rot-btn {
+      background: #1e293b;
+      border: 1px solid #334155;
+      color: #cbd5e1;
+      padding: 3px 6px;
+      font-size: 10px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: bold;
+    }
+    .rot-btn:hover { background: #334155; color: #fff; }
 
     /* Nudge control buttons */
     .nudge-controls {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
       gap: 4px;
-      margin-top: 10px;
+      margin-top: 8px;
       background: #0b1120;
-      padding: 8px;
+      padding: 6px;
       border-radius: 6px;
     }
     .nudge-btn {
@@ -155,8 +302,8 @@
       color: #cbd5e1;
       border: 1px solid #334155;
       border-radius: 4px;
-      padding: 6px 0;
-      font-size: 11px;
+      padding: 5px 0;
+      font-size: 10px;
       font-weight: bold;
       text-align: center;
       cursor: pointer;
@@ -166,36 +313,29 @@
 
     /* Actions Bar */
     .actions-bar {
-      padding: 14px 16px;
+      padding: 12px 16px;
       background: #090d16;
       border-top: 1px solid #1e293b;
       display: flex;
       flex-direction: column;
-      gap: 8px;
+      gap: 7px;
     }
     .btn {
       display: flex;
       align-items: center;
       justify-content: center;
       gap: 8px;
-      padding: 9px 12px;
+      padding: 8px 12px;
       border-radius: 6px;
-      font-size: 12px;
+      font-size: 11.5px;
       font-weight: 700;
       cursor: pointer;
       border: none;
       transition: all 0.2s;
     }
-    .btn-primary {
-      background: #0284c7;
-      color: #fff;
-    }
+    .btn-primary { background: #0284c7; color: #fff; }
     .btn-primary:hover { background: #0369a1; }
-    .btn-secondary {
-      background: #1e293b;
-      color: #cbd5e1;
-      border: 1px solid #334155;
-    }
+    .btn-secondary { background: #1e293b; color: #cbd5e1; border: 1px solid #334155; }
     .btn-secondary:hover { background: #334155; color: #fff; }
 
     /* Main Canvas Viewport */
@@ -206,7 +346,8 @@
       overflow: hidden;
       cursor: grab;
     }
-    #viewport-container:active { cursor: grabbing; }
+    #viewport-container.mode-add { cursor: crosshair !important; }
+    #viewport-container:active:not(.mode-add) { cursor: grabbing; }
 
     #mapCanvas {
       position: absolute;
@@ -263,6 +404,29 @@
     }
     .hud-bar span b { color: #38bdf8; }
 
+    /* Floating Toast Notification */
+    #toast {
+      position: absolute;
+      bottom: 16px;
+      right: 16px;
+      background: #0284c7;
+      color: #fff;
+      padding: 8px 14px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 600;
+      box-shadow: 0 6px 18px rgba(0,0,0,0.5);
+      z-index: 100;
+      opacity: 0;
+      pointer-events: none;
+      transform: translateY(10px);
+      transition: opacity 0.2s, transform 0.2s;
+    }
+    #toast.show {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
     /* Floating Tooltip */
     .tooltip {
       position: absolute;
@@ -305,9 +469,48 @@
     </div>
 
     <div class="panel-scroll">
+      <!-- Tool Mode Switcher -->
+      <div>
+        <div class="section-title">
+          <span>Tool Mode</span>
+          <span style="font-size: 9px; color: #64748b; font-weight: normal;">Shift+Click to Quick Add</span>
+        </div>
+        <div class="tool-mode-bar">
+          <button class="tool-mode-btn active" id="modeSelectBtn" onclick="setToolMode('select')">
+            Select &amp; Move
+          </button>
+          <button class="tool-mode-btn" id="modeAddBtn" onclick="setToolMode('add')">
+            + Add Cone Tool
+          </button>
+        </div>
+      </div>
+
+      <!-- Add Cone Options (shown in Add mode) -->
+      <div id="addConePanel" class="add-cone-panel" style="display: none;">
+        <div style="font-size: 11px; font-weight: 700; color: #38bdf8;">New Cone Template:</div>
+        <select id="newConeType" class="preset-select">
+          <option value="standing_orange">Standard Standing Cone (Orange)</option>
+          <option value="standing_yellow_apex">Apex Standing Cone (Yellow)</option>
+          <option value="pointer_flat">Laying Down Pointer Cone (Orange)</option>
+          <option value="timing_beam_pole">Timing Gate Sensor Pole</option>
+        </select>
+        <label class="layer-item" style="margin-top: 2px;">
+          <span class="layer-label">
+            <span class="legend-dot" style="background: #ffffff; border: 1px solid #94a3b8;"></span>
+            Include Chalk Circle
+          </span>
+          <input type="checkbox" id="newConeChalk">
+        </label>
+        <div class="preset-hint">
+          Click anywhere on the satellite image or track to place this cone.
+        </div>
+      </div>
+
       <!-- Layers -->
       <div>
-        <div class="section-title">&#9776; Display Layers</div>
+        <div class="section-title">
+          <span>Display Layers</span>
+        </div>
         <div class="layer-group">
           <label class="layer-item">
             <span class="layer-label">
@@ -326,7 +529,7 @@
           <label class="layer-item">
             <span class="layer-label">
               <span class="legend-dot" style="background: #f97316;"></span>
-              Surveyed Cones & Pointers
+              Surveyed Cones &amp; Pointers
             </span>
             <input type="checkbox" id="layerCones" checked onchange="render()">
           </label>
@@ -363,10 +566,15 @@
 
       <!-- Inspector -->
       <div>
-        <div class="section-title">&#128065; Selected Marker Inspector</div>
+        <div class="section-title">
+          <span>Selected Cone Inspector</span>
+          <button id="undoBtn" class="btn-icon-subtle" onclick="undo()" style="display: none;" title="Undo (Ctrl+Z)">
+            Undo
+          </button>
+        </div>
         <div id="inspector">
-          <div id="inspectorContent" style="color: #64748b; font-size: 12px; line-height: 1.5;">
-            Click or drag any cone marker on the satellite imagery to calibrate its exact location. Use arrow keys or the buttons below to nudge.
+          <div id="inspectorContent" style="color: #64748b; font-size: 11.5px; line-height: 1.5;">
+            Click any cone to inspect, drag, edit properties, or delete it. Press <b>Delete</b> key to remove.
           </div>
         </div>
       </div>
@@ -375,13 +583,13 @@
     <!-- Actions -->
     <div class="actions-bar">
       <button class="btn btn-primary" onclick="exportConesJson()">
-        &#128190; Export Updated JSON
+        Export Updated JSON
       </button>
       <button class="btn btn-secondary" onclick="exportConesCsv()">
-        &#128196; Export Updated CSV
+        Export Updated CSV
       </button>
       <button class="btn btn-secondary" onclick="resetAllCones()">
-        &#8634; Reset to Telemetry Baseline
+        Reset to Telemetry Baseline
       </button>
     </div>
   </div>
@@ -390,17 +598,20 @@
   <div id="viewport-container">
     <canvas id="mapCanvas" width="1536" height="1792"></canvas>
     <div id="tooltip" class="tooltip"></div>
+    <div id="toast"></div>
 
     <div class="map-controls">
       <div class="ctrl-btn" onclick="zoomIn()" title="Zoom In">+</div>
       <div class="ctrl-btn" onclick="zoomOut()" title="Zoom Out">&minus;</div>
-      <div class="ctrl-btn" onclick="resetView()" title="Center & Fit Track">&#8982;</div>
+      <div class="ctrl-btn" onclick="resetView()" title="Center &amp; Fit Track">&#8982;</div>
+      <div class="ctrl-btn" id="ctrlAddBtn" onclick="toggleToolMode()" title="Toggle Add Cone Tool">+</div>
     </div>
 
     <div class="hud-bar" id="hudBar">
       <span>Cursor: <b id="hudCoords">--</b></span>
       <span>Local: <b id="hudLocal">--</b></span>
       <span>Zoom: <b id="hudZoom">100%</b></span>
+      <span id="hudMode" style="color: #38bdf8;">Select Mode</span>
     </div>
   </div>
 
@@ -447,11 +658,51 @@
       };
     }
 
-    // --- 2. DATA INITIALIZATION ---
+    // --- 2. DATA INITIALIZATION & UNDO HISTORY ---
     let consensusLine = window.SONOMA_CONSENSUS_LINE || [];
     let initialCones = window.INITIAL_CONES || [];
     let cones = JSON.parse(JSON.stringify(initialCones));
     let selectedCone = null;
+    let toolMode = 'select'; // 'select' | 'add'
+    let historyStack = [];
+
+    function updateStats() {
+      document.getElementById('statConeCount').innerText = cones.length;
+    }
+
+    function saveHistory(desc) {
+      historyStack.push({
+        desc: desc,
+        cones: JSON.parse(JSON.stringify(cones)),
+        selectedId: selectedCone ? selectedCone.id : null
+      });
+      if (historyStack.length > 40) historyStack.shift();
+      document.getElementById('undoBtn').style.display = 'inline-flex';
+    }
+
+    function undo() {
+      if (historyStack.length === 0) return;
+      const last = historyStack.pop();
+      cones = last.cones;
+      selectedCone = cones.find(c => c.id === last.selectedId) || null;
+      if (historyStack.length === 0) {
+        document.getElementById('undoBtn').style.display = 'none';
+      }
+      updateStats();
+      updateInspector(selectedCone);
+      render();
+      showToast("Undid: " + last.desc);
+    }
+
+    function showToast(msg) {
+      const t = document.getElementById('toast');
+      t.innerText = msg;
+      t.className = 'show';
+      clearTimeout(t._timer);
+      t._timer = setTimeout(() => {
+        t.className = '';
+      }, 2400);
+    }
 
     // Fallback fetch if course_data.js was blocked or not yet ready
     if (cones.length === 0) {
@@ -460,7 +711,7 @@
         .then(data => {
           initialCones = data;
           cones = JSON.parse(JSON.stringify(initialCones));
-          document.getElementById('statConeCount').innerText = cones.length;
+          updateStats();
           render();
         })
         .catch(err => console.warn('Could not load course_cones.json:', err));
@@ -500,6 +751,7 @@
     let panX = 0, panY = 0;
     let isPanning = false, startPanX = 0, startPanY = 0;
     let draggedCone = null;
+    let hasDragged = false;
 
     function resetView() {
       const w = container.clientWidth || (window.innerWidth - 360) || 920;
@@ -513,6 +765,7 @@
       panX = (w / 2) - (trackCenterX * scale);
       panY = (h / 2) - (trackCenterY * scale);
       updateTransform();
+      render();
     }
 
     function updateTransform() {
@@ -522,16 +775,12 @@
 
     function zoomIn() {
       const rect = container.getBoundingClientRect();
-      const cx = rect.width / 2;
-      const cy = rect.height / 2;
-      zoomAround(cx, cy, 1.25);
+      zoomAround(rect.width / 2, rect.height / 2, 1.25);
     }
 
     function zoomOut() {
       const rect = container.getBoundingClientRect();
-      const cx = rect.width / 2;
-      const cy = rect.height / 2;
-      zoomAround(cx, cy, 0.8);
+      zoomAround(rect.width / 2, rect.height / 2, 0.8);
     }
 
     function zoomAround(clientX, clientY, factor) {
@@ -553,7 +802,125 @@
       };
     }
 
-    // --- 4. RENDERING ENGINE ---
+    // --- 4. TOOL MODES (SELECT VS ADD) ---
+    function setToolMode(mode) {
+      toolMode = mode;
+      const selectBtn = document.getElementById('modeSelectBtn');
+      const addBtn = document.getElementById('modeAddBtn');
+      const addPanel = document.getElementById('addConePanel');
+      const hudMode = document.getElementById('hudMode');
+      const ctrlAddBtn = document.getElementById('ctrlAddBtn');
+
+      if (mode === 'add') {
+        selectBtn.classList.remove('active');
+        addBtn.classList.add('active');
+        addPanel.style.display = 'flex';
+        container.classList.add('mode-add');
+        hudMode.innerText = "Click Map to Place Cone";
+        hudMode.style.color = "#f97316";
+        ctrlAddBtn.style.borderColor = "#0284c7";
+        ctrlAddBtn.style.color = "#38bdf8";
+      } else {
+        selectBtn.classList.add('active');
+        addBtn.classList.remove('active');
+        addPanel.style.display = 'none';
+        container.classList.remove('mode-add');
+        hudMode.innerText = "Select & Move Mode";
+        hudMode.style.color = "#38bdf8";
+        ctrlAddBtn.style.borderColor = "#334155";
+        ctrlAddBtn.style.color = "#f1f5f9";
+      }
+    }
+
+    function toggleToolMode() {
+      setToolMode(toolMode === 'select' ? 'add' : 'select');
+    }
+
+    function generateNextConeId() {
+      let maxNum = 0;
+      cones.forEach(c => {
+        const match = c.id.match(/\d+/);
+        if (match) {
+          const num = parseInt(match[0], 10);
+          if (num > maxNum) maxNum = num;
+        }
+      });
+      return "cone_" + String(maxNum + 1).padStart(3, '0');
+    }
+
+    function addNewConeAt(localX, localY) {
+      saveHistory("Add cone");
+      const nextId = generateNextConeId();
+      const type = document.getElementById('newConeType').value;
+      const chalk = document.getElementById('newConeChalk').checked;
+
+      // Find closest existing cone to inherit sector
+      let sector = 1;
+      let minDist = Infinity;
+      cones.forEach(c => {
+        const d = Math.hypot(c.x - localX, c.y - localY);
+        if (d < minDist) {
+          minDist = d;
+          sector = c.sector || 1;
+        }
+      });
+
+      const newCone = {
+        id: nextId,
+        type: type,
+        x: Number(localX.toFixed(2)),
+        y: Number(localY.toFixed(2)),
+        z: 0.0,
+        heading_deg: 0,
+        has_chalk_circle: chalk,
+        sector: sector,
+        notes: "User created cone"
+      };
+
+      cones.push(newCone);
+      selectedCone = newCone;
+      updateStats();
+      updateInspector(newCone);
+      render();
+      showToast("Placed " + nextId + " (" + type.replace('_', ' ') + ")");
+    }
+
+    function deleteSelectedCone() {
+      if (!selectedCone) return;
+      saveHistory("Delete " + selectedCone.id);
+      const delId = selectedCone.id;
+      cones = cones.filter(c => c !== selectedCone);
+      selectedCone = null;
+      updateStats();
+      updateInspector(null);
+      render();
+      showToast("Deleted " + delId);
+    }
+
+    function duplicateSelectedCone() {
+      if (!selectedCone) return;
+      saveHistory("Duplicate " + selectedCone.id);
+      const nextId = generateNextConeId();
+      const copy = {
+        id: nextId,
+        type: selectedCone.type,
+        x: Number((selectedCone.x + 1.5).toFixed(2)),
+        y: Number((selectedCone.y + 1.5).toFixed(2)),
+        z: selectedCone.z || 0.0,
+        heading_deg: selectedCone.heading_deg || 0,
+        has_chalk_circle: selectedCone.has_chalk_circle || false,
+        sector: selectedCone.sector || 1,
+        notes: (selectedCone.notes ? selectedCone.notes + " " : "") + "(copy)"
+      };
+      cones.push(copy);
+      selectedCone = copy;
+      updateStats();
+      updateInspector(copy);
+      render();
+      showToast("Duplicated as " + nextId);
+    }
+
+    // --- 5. RENDERING ENGINE ---
     function render() {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
@@ -660,14 +1027,14 @@
           // Selection highlight halo
           if (isSelected) {
             ctx.beginPath();
-            ctx.arc(pt.x, pt.y, 14, 0, Math.PI * 2);
+            ctx.arc(pt.x, pt.y, 15, 0, Math.PI * 2);
             ctx.strokeStyle = '#38bdf8';
             ctx.lineWidth = 3;
             ctx.stroke();
           }
 
           if (c.type === 'pointer_flat') {
-            const rad = c.heading_deg * Math.PI / 180.0;
+            const rad = (c.heading_deg || 0) * Math.PI / 180.0;
             const dx = Math.sin(rad) * 14.0;
             const dy = -Math.cos(rad) * 14.0;
             const px = -Math.cos(rad) * 5.0;
@@ -679,14 +1046,14 @@
             ctx.closePath();
             ctx.fillStyle = '#f97316';
             ctx.fill();
-            ctx.strokeStyle = '#0f172a';
-            ctx.lineWidth = 1.5;
+            ctx.strokeStyle = isSelected ? '#38bdf8' : '#0f172a';
+            ctx.lineWidth = 1.8;
             ctx.stroke();
           } else if (c.type === 'timing_beam_pole') {
             ctx.fillStyle = '#22c55e';
             ctx.fillRect(pt.x - 5, pt.y - 5, 10, 10);
-            ctx.strokeStyle = '#0f172a';
-            ctx.lineWidth = 1.5;
+            ctx.strokeStyle = isSelected ? '#38bdf8' : '#0f172a';
+            ctx.lineWidth = 1.8;
             ctx.strokeRect(pt.x - 5, pt.y - 5, 10, 10);
           } else {
             ctx.beginPath();
@@ -707,50 +1074,128 @@
       }
     }
 
-    // --- 5. INSPECTOR PANEL & NUDGING ---
+    // --- 6. INSPECTOR PANEL, EDITING & NUDGING ---
     function updateInspector(c) {
       const containerEl = document.getElementById('inspectorContent');
       if (!c) {
-        containerEl.innerHTML = '<div style="color: #64748b; font-size: 12px; line-height: 1.5;">Click or drag any cone marker on the satellite imagery to calibrate its exact location. Use arrow keys or the buttons below to nudge.</div>';
+        containerEl.innerHTML = '<div style="color: #64748b; font-size: 11.5px; line-height: 1.5;">Click any cone to inspect, drag, edit properties, or delete it. Press <b>Delete</b> key to remove.</div>';
         return;
       }
 
       const geo = imgToXY(xyToImg(c.x, c.y).x, xyToImg(c.x, c.y).y);
       let html = '<div class="inspector-card">';
+      
+      // Top row: ID, Duplicate & Delete buttons
       html += '<div class="inspector-id-row">';
-      html += '<span class="inspector-id">' + c.id + '</span>';
-      html += '<span class="badge" style="margin:0; background: #0284c7;">Sector ' + c.sector + '</span>';
+      html += '  <span class="inspector-id">' + c.id + '</span>';
+      html += '  <div class="inspector-actions-top">';
+      html += '    <button class="btn-icon-subtle" onclick="duplicateSelectedCone()" title="Duplicate this cone">Clone</button>';
+      html += '    <button class="btn-icon-danger" onclick="deleteSelectedCone()" title="Delete this cone (Del)">Delete</button>';
+      html += '  </div>';
       html += '</div>';
 
-      html += '<div class="field-row"><span class="field-label">Type:</span><span class="field-value">' + c.type + '</span></div>';
+      // Type Selector Dropdown
+      html += '<div class="field-row">';
+      html += '  <span class="field-label">Type:</span>';
+      html += '  <select class="prop-select" onchange="changeConeType(this.value)">';
+      html += '    <option value="standing_orange"' + (c.type === 'standing_orange' ? ' selected' : '') + '>Standing Orange</option>';
+      html += '    <option value="standing_yellow_apex"' + (c.type === 'standing_yellow_apex' ? ' selected' : '') + '>Apex Yellow</option>';
+      html += '    <option value="pointer_flat"' + (c.type === 'pointer_flat' ? ' selected' : '') + '>Pointer (Laying Flat)</option>';
+      html += '    <option value="timing_beam_pole"' + (c.type === 'timing_beam_pole' ? ' selected' : '') + '>Timing Gate Pole</option>';
+      html += '  </select>';
+      html += '</div>';
+
+      // Chalk Ring Toggle
+      html += '<div class="field-row">';
+      html += '  <span class="field-label">Chalk Ring:</span>';
+      html += '  <label style="cursor: pointer; display: flex; align-items: center; gap: 4px; font-size: 11px; color: #f1f5f9;">';
+      html += '    <input type="checkbox" ' + (c.has_chalk_circle ? 'checked' : '') + ' onchange="toggleConeChalk(this.checked)" style="accent-color: #38bdf8;"> Has Circle';
+      html += '  </label>';
+      html += '</div>';
+
+      // Sector & Elevation
+      html += '<div class="field-row">';
+      html += '  <span class="field-label">Sector:</span>';
+      html += '  <input type="number" min="1" max="5" class="prop-input" style="width: 60px;" value="' + (c.sector || 1) + '" onchange="changeConeSector(parseInt(this.value, 10))">';
+      html += '</div>';
+
+      // Coordinates Display
       html += '<div class="field-row"><span class="field-label">Local X (East):</span><span class="field-value">' + c.x.toFixed(2) + ' m</span></div>';
       html += '<div class="field-row"><span class="field-label">Local Y (North):</span><span class="field-value">' + c.y.toFixed(2) + ' m</span></div>';
-      html += '<div class="field-row"><span class="field-label">Local Z (Elev):</span><span class="field-value">' + (c.z ? c.z.toFixed(2) : '0.00') + ' m</span></div>';
-      html += '<div class="field-row"><span class="field-label">Heading:</span><span class="field-value">' + c.heading_deg + '&deg;</span></div>';
-      html += '<div class="field-row"><span class="field-label">Chalk Ring:</span><span class="field-value">' + (c.has_chalk_circle ? 'Yes (Surveyed)' : 'No') + '</span></div>';
-      html += '<div class="field-row"><span class="field-label">Latitude:</span><span class="field-value">' + geo.lat.toFixed(6) + '</span></div>';
-      html += '<div class="field-row"><span class="field-label">Longitude:</span><span class="field-value">' + geo.lon.toFixed(6) + '</span></div>';
+      html += '<div class="field-row"><span class="field-label">Elevation (Z):</span><span class="field-value">' + (c.z ? c.z.toFixed(2) : '0.00') + ' m</span></div>';
+      html += '<div class="field-row"><span class="field-label">Lat / Lon:</span><span class="field-value">' + geo.lat.toFixed(5) + ', ' + geo.lon.toFixed(5) + '</span></div>';
 
-      if (c.notes) {
-        html += '<div style="margin-top: 8px; font-size: 11px; color: #cbd5e1; border-top: 1px solid #1e293b; padding-top: 6px;">';
-        html += '<strong>Notes:</strong> ' + c.notes;
-        html += '</div>';
-      }
+      // Heading / Orientation (especially for pointer cones)
+      html += '<div class="field-row"><span class="field-label">Heading:</span><span class="field-value">' + (c.heading_deg || 0) + '&deg;</span></div>';
+      html += '<div class="heading-control-row">';
+      html += '  <button class="rot-btn" onclick="rotateCone(-45)">&minus;45&deg;</button>';
+      html += '  <button class="rot-btn" onclick="rotateCone(-15)">&minus;15&deg;</button>';
+      html += '  <input type="range" min="0" max="360" value="' + (((c.heading_deg || 0) % 360 + 360) % 360) + '" style="flex: 1; accent-color: #f97316;" oninput="setConeHeading(parseInt(this.value, 10))">';
+      html += '  <button class="rot-btn" onclick="rotateCone(15)">+15&deg;</button>';
+      html += '  <button class="rot-btn" onclick="rotateCone(45)">+45&deg;</button>';
+      html += '</div>';
+
+      // Notes Input
+      html += '<div style="margin-top: 4px;">';
+      html += '  <div class="field-label" style="margin-bottom: 2px;">Field Notes:</div>';
+      html += '  <input type="text" class="prop-input" style="width: 100%;" value="' + (c.notes || '').replace(/"/g, '&quot;') + '" placeholder="e.g. Slalom gate 3 right" onchange="changeConeNotes(this.value)">';
+      html += '</div>';
 
       // Nudge control buttons for precision micro-adjustment
-      html += '<div style="margin-top: 8px;">';
-      html += '<div style="font-size: 10px; color: #64748b; font-weight: 700; text-transform: uppercase;">Nudge Position (&plusmn;0.25m)</div>';
-      html += '<div class="nudge-controls">';
-      html += '<div></div><div class="nudge-btn" onclick="nudgeCone(0, 0.25)">&uarr; +Y</div><div></div>';
-      html += '<div class="nudge-btn" onclick="nudgeCone(-0.25, 0)">&larr; -X</div>';
-      html += '<div class="nudge-btn" onclick="nudgeCone(0, 0)" style="font-size: 9px; line-height: 18px;">RESET</div>';
-      html += '<div class="nudge-btn" onclick="nudgeCone(0.25, 0)">&rarr; +X</div>';
-      html += '<div></div><div class="nudge-btn" onclick="nudgeCone(0, -0.25)">&darr; -Y</div><div></div>';
-      html += '</div>';
+      html += '<div style="margin-top: 6px;">';
+      html += '  <div style="font-size: 10px; color: #64748b; font-weight: 700; text-transform: uppercase;">Nudge Position (&plusmn;0.25m / Arrow Keys)</div>';
+      html += '  <div class="nudge-controls">';
+      html += '    <div></div><div class="nudge-btn" onclick="nudgeCone(0, 0.25)">&uarr; +Y</div><div></div>';
+      html += '    <div class="nudge-btn" onclick="nudgeCone(-0.25, 0)">&larr; -X</div>';
+      html += '    <div class="nudge-btn" onclick="nudgeCone(0, 0)" style="font-size: 9px; line-height: 18px;">&bull;</div>';
+      html += '    <div class="nudge-btn" onclick="nudgeCone(0.25, 0)">&rarr; +X</div>';
+      html += '    <div></div><div class="nudge-btn" onclick="nudgeCone(0, -0.25)">&darr; -Y</div><div></div>';
+      html += '  </div>';
       html += '</div>';
 
       html += '</div>';
       containerEl.innerHTML = html;
+    }
+
+    function changeConeType(newType) {
+      if (!selectedCone) return;
+      saveHistory("Change type of " + selectedCone.id);
+      selectedCone.type = newType;
+      render();
+    }
+
+    function toggleConeChalk(val) {
+      if (!selectedCone) return;
+      saveHistory("Toggle chalk on " + selectedCone.id);
+      selectedCone.has_chalk_circle = val;
+      render();
+    }
+
+    function changeConeSector(val) {
+      if (!selectedCone) return;
+      selectedCone.sector = val || 1;
+    }
+
+    function changeConeNotes(val) {
+      if (!selectedCone) return;
+      selectedCone.notes = val;
+    }
+
+    function rotateCone(delta) {
+      if (!selectedCone) return;
+      saveHistory("Rotate " + selectedCone.id);
+      let cur = selectedCone.heading_deg || 0;
+      let next = (cur + delta) % 360;
+      if (next < 0) next += 360;
+      selectedCone.heading_deg = next;
+      updateInspector(selectedCone);
+      render();
+    }
+
+    function setConeHeading(deg) {
+      if (!selectedCone) return;
+      selectedCone.heading_deg = deg;
+      render();
     }
 
     function nudgeCone(dx, dy) {
@@ -761,19 +1206,55 @@
       render();
     }
 
-    // Keyboard Arrow keys to nudge selected cone
+    // Keyboard Shortcuts: Delete, Arrows, Ctrl+Z
     window.addEventListener('keydown', (e) => {
-      if (!selectedCone) return;
-      const step = e.shiftKey ? 1.0 : 0.25;
-      if (e.key === 'ArrowUp') { nudgeCone(0, step); e.preventDefault(); }
-      else if (e.key === 'ArrowDown') { nudgeCone(0, -step); e.preventDefault(); }
-      else if (e.key === 'ArrowLeft') { nudgeCone(-step, 0); e.preventDefault(); }
-      else if (e.key === 'ArrowRight') { nudgeCone(step, 0); e.preventDefault(); }
+      // Ignore if user is typing in an input field
+      if (['INPUT', 'SELECT', 'TEXTAREA'].includes(document.activeElement.tagName)) return;
+
+      if ((e.key === 'Delete' || e.key === 'Backspace') && selectedCone) {
+        deleteSelectedCone();
+        e.preventDefault();
+        return;
+      }
+
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') {
+        undo();
+        e.preventDefault();
+        return;
+      }
+
+      if (e.key.toLowerCase() === 'a') {
+        toggleToolMode();
+        e.preventDefault();
+        return;
+      }
+
+      if (selectedCone) {
+        const step = e.shiftKey ? 1.0 : 0.25;
+        if (e.key === 'ArrowUp') { nudgeCone(0, step); e.preventDefault(); }
+        else if (e.key === 'ArrowDown') { nudgeCone(0, -step); e.preventDefault(); }
+        else if (e.key === 'ArrowLeft') { nudgeCone(-step, 0); e.preventDefault(); }
+        else if (e.key === 'ArrowRight') { nudgeCone(step, 0); e.preventDefault(); }
+      }
     });
 
-    // --- 6. USER INTERACTIONS (DRAG, PAN, ZOOM) ---
+    // --- 7. USER INTERACTIONS (CLICK, DRAG, PAN, ZOOM) ---
     container.addEventListener('mousedown', (e) => {
       const mouse = getCanvasCoords(e);
+      const geo = imgToXY(mouse.x, mouse.y);
+      hasDragged = false;
+
+      // Shift+Click quick add cone in any mode
+      if (e.shiftKey) {
+        addNewConeAt(geo.x, geo.y);
+        return;
+      }
+
+      // If in Add Cone Mode, place cone on click
+      if (toolMode === 'add') {
+        addNewConeAt(geo.x, geo.y);
+        return;
+      }
 
       // Check if clicking on any cone
       for (let i = cones.length - 1; i >= 0; i--) {
@@ -783,31 +1264,33 @@
         if (dist <= 14 / scale) {
           draggedCone = c;
           selectedCone = c;
+          saveHistory("Move " + c.id);
           updateInspector(c);
           render();
           return;
         }
       }
 
-      // If clicked background, start panning
+      // If clicked background in select mode, start panning
       isPanning = true;
       startPanX = e.clientX - panX;
       startPanY = e.clientY - panY;
     });
 
     window.addEventListener('mousemove', (e) => {
-      // Update HUD Coordinates
       const mouse = getCanvasCoords(e);
       const geo = imgToXY(mouse.x, mouse.y);
       document.getElementById('hudCoords').innerText = geo.lat.toFixed(6) + ", " + geo.lon.toFixed(6);
       document.getElementById('hudLocal').innerText = "X=" + geo.x.toFixed(1) + "m, Y=" + geo.y.toFixed(1) + "m";
 
       if (draggedCone) {
+        hasDragged = true;
         draggedCone.x = geo.x;
         draggedCone.y = geo.y;
         updateInspector(draggedCone);
         render();
       } else if (isPanning) {
+        hasDragged = true;
         panX = e.clientX - startPanX;
         panY = e.clientY - startPanY;
         updateTransform();
@@ -821,11 +1304,11 @@
             break;
           }
         }
-        if (hovered) {
+        if (hovered && toolMode !== 'add') {
           const rect = container.getBoundingClientRect();
           tooltip.style.left = (e.clientX - rect.left + 14) + "px";
           tooltip.style.top = (e.clientY - rect.top + 14) + "px";
-          tooltip.innerHTML = "<b>" + hovered.id + "</b> (" + hovered.type + ")<br>X: " + hovered.x.toFixed(2) + "m, Y: " + hovered.y.toFixed(2) + "m";
+          tooltip.innerHTML = "<b>" + hovered.id + "</b> (" + hovered.type.replace('_', ' ') + ")<br>X: " + hovered.x.toFixed(2) + "m, Y: " + hovered.y.toFixed(2) + "m";
           tooltip.style.display = "block";
         } else {
           tooltip.style.display = "none";
@@ -847,7 +1330,7 @@
       zoomAround(mouseX, mouseY, zoomFactor);
     }, { passive: false });
 
-    // --- 7. EXPORT & RESET HANDLERS ---
+    // --- 8. EXPORT & RESET HANDLERS ---
     function exportConesJson() {
       const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(cones, null, 2));
       const downloadAnchor = document.createElement('a');
@@ -856,12 +1339,13 @@
       document.body.appendChild(downloadAnchor);
       downloadAnchor.click();
       downloadAnchor.remove();
+      showToast("Exported course_cones_adjusted.json (" + cones.length + " cones)");
     }
 
     function exportConesCsv() {
       let csv = "id,type,x,y,z,heading_deg,has_chalk_circle,sector,notes\n";
       cones.forEach(c => {
-        csv += c.id + "," + c.type + "," + c.x + "," + c.y + "," + (c.z || 0) + "," + c.heading_deg + "," + c.has_chalk_circle + "," + c.sector + ",\"" + (c.notes || "") + "\"\n";
+        csv += c.id + "," + c.type + "," + c.x + "," + c.y + "," + (c.z || 0) + "," + (c.heading_deg || 0) + "," + (c.has_chalk_circle || false) + "," + (c.sector || 1) + ",\"" + (c.notes || "") + "\"\n";
       });
       const dataStr = "data:text/csv;charset=utf-8," + encodeURIComponent(csv);
       const downloadAnchor = document.createElement('a');
@@ -870,14 +1354,18 @@
       document.body.appendChild(downloadAnchor);
       downloadAnchor.click();
       downloadAnchor.remove();
+      showToast("Exported course_cones_adjusted.csv (" + cones.length + " cones)");
     }
 
     function resetAllCones() {
       if (confirm("Reset all cones back to the initial telemetry positions?")) {
+        saveHistory("Reset to telemetry baseline");
         cones = JSON.parse(JSON.stringify(initialCones));
         selectedCone = null;
+        updateStats();
         updateInspector(null);
         render();
+        showToast("Reset all cones to initial baseline");
       }
     }
 
