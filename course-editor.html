@@ -1,9 +1,9 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Sonoma Autocross — Precision Course & Cone Calibration</title>
+  <title>Sonoma Autocross â€” Precision Course & Cone Calibration</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
     body { background: #090d16; color: #f1f5f9; display: flex; height: 100vh; overflow: hidden; user-select: none; }
@@ -441,6 +441,59 @@
       z-index: 50;
       box-shadow: 0 4px 14px rgba(0,0,0,0.6);
     }
+    /* Panoramic Photo Modal Lightbox */
+    #panoModal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(4, 7, 13, 0.94);
+      backdrop-filter: blur(12px);
+      z-index: 1000;
+      display: none;
+      flex-direction: column;
+    }
+    #panoModal.show { display: flex; }
+    .pano-modal-header {
+      padding: 12px 20px;
+      background: #0f172a;
+      border-bottom: 1px solid #1e293b;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+    .pano-nav-btn {
+      background: #1e293b;
+      border: 1px solid #334155;
+      color: #cbd5e1;
+      padding: 6px 12px;
+      border-radius: 5px;
+      font-size: 11px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .pano-nav-btn:hover { background: #334155; color: #fff; }
+    .pano-body {
+      flex: 1;
+      overflow: auto;
+      padding: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: flex-start;
+      position: relative;
+    }
+    .pano-img {
+      max-height: 85vh;
+      width: auto;
+      border-radius: 8px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.8);
+      border: 1px solid #334155;
+      transform-origin: 0 50%;
+      transition: transform 0.2s ease-out;
+    }
   </style>
 </head>
 <body>
@@ -582,6 +635,9 @@
 
     <!-- Actions -->
     <div class="actions-bar">
+      <button class="btn btn-secondary" onclick="openPanoramaModal()" style="border-color: #f97316; color: #fdba74; background: rgba(249, 115, 22, 0.15); font-weight: 800;">
+        &#128247; View Panoramic Photo Reference
+      </button>
       <button class="btn btn-primary" onclick="exportConesJson()">
         Export Updated JSON
       </button>
@@ -591,6 +647,27 @@
       <button class="btn btn-secondary" onclick="resetAllCones()">
         Reset to Telemetry Baseline
       </button>
+    </div>
+  </div>
+
+  <!-- PANORAMIC PHOTO LIGHTBOX -->
+  <div id="panoModal">
+    <div class="pano-modal-header">
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <span class="badge" style="margin: 0; background: #f97316;">VIDEO SURVEY</span>
+        <span style="font-weight: 700; font-size: 14px; color: #fff;">Sonoma Paddock Panoramic Photo Reference</span>
+      </div>
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <button class="pano-nav-btn" onclick="scrollPano(0)">Sector 1 (Start)</button>
+        <button class="pano-nav-btn" onclick="scrollPano(0.45)">Sector 2 (Slalom)</button>
+        <button class="pano-nav-btn" onclick="scrollPano(0.85)">Sector 3 (Finish)</button>
+        <button class="pano-nav-btn" onclick="zoomPano(1.25)">Zoom +</button>
+        <button class="pano-nav-btn" onclick="zoomPano(0.8)">Zoom &minus;</button>
+        <button class="pano-nav-btn" onclick="closePanoramaModal()" style="background: #ef4444; color: #fff; border: none; font-weight: bold; margin-left: 10px;">&times; Close (Esc)</button>
+      </div>
+    </div>
+    <div class="pano-body" id="panoBody">
+      <img id="panoImg" class="pano-img" src="sonoma_autocross_panorama.jpg" alt="Sonoma Autocross Panorama">
     </div>
   </div>
 
@@ -1368,6 +1445,28 @@
         showToast("Reset all cones to initial baseline");
       }
     }
+
+    // Panoramic Modal Controls
+    let panoScale = 1.0;
+    function openPanoramaModal() {
+      document.getElementById('panoModal').classList.add('show');
+    }
+    function closePanoramaModal() {
+      document.getElementById('panoModal').classList.remove('show');
+    }
+    function zoomPano(f) {
+      panoScale = Math.max(0.5, Math.min(3.0, panoScale * f));
+      document.getElementById('panoImg').style.transform = 'scale(' + panoScale + ')';
+    }
+    function scrollPano(pct) {
+      const body = document.getElementById('panoBody');
+      body.scrollLeft = (body.scrollWidth - body.clientWidth) * pct;
+    }
+
+    // Escape key closes modal
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') closePanoramaModal();
+    });
 
     // Immediate auto-fit
     resetView();
