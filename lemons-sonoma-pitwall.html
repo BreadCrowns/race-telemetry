@@ -1049,12 +1049,39 @@
       } catch (e) {}
     }
 
-    // --- LEAFLET MAP SETUP ---
+    // --- LEAFLET MAP SETUP (HIGH-RES SATELLITE & SATELLITE LABELS) ---
     const map = L.map('map', { zoomControl: true }).setView(TRACK_PRESETS.sonoma.center, TRACK_PRESETS.sonoma.zoom);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+
+    // ESRI World Imagery Satellite Layer
+    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
       maxZoom: 19,
-      attribution: '© OpenStreetMap'
+      attribution: '© Esri, Maxar, Earthstar Geographics'
     }).addTo(map);
+
+    // CartoDB Voyager Labels Overlay
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager_only_labels/{z}/{x}/{y}{r}.png', {
+      subdomains: 'abcd',
+      maxZoom: 19,
+      opacity: 0.7
+    }).addTo(map);
+
+    // Sonoma Full 12-Turn Carousel Road Course Geometry
+    const SONOMA_TRACK_OUTLINE = [
+      [38.16071, -122.45472], // Start/Finish
+      [38.16390, -122.45520], // Turn 1 (Uphill)
+      [38.16615, -122.45710], // Turn 2 (Crest)
+      [38.16520, -122.45930], // Turn 3 / 3a
+      [38.16270, -122.46110], // Turn 4 (Sector 1 Gate)
+      [38.16030, -122.46280], // Turn 5 (Carousel Entry)
+      [38.15740, -122.46260], // Turn 6 (Carousel Exit)
+      [38.15780, -122.45830], // Turn 7 Hairpin (Sector 2 Gate)
+      [38.15930, -122.45680], // Turn 8 / 8a (Esses)
+      [38.16100, -122.45610], // Turn 9 (Esses Exit)
+      [38.16290, -122.45550], // Turn 10 (Speed Trap)
+      [38.15960, -122.45445], // Turn 11 (Hairpin)
+      [38.16071, -122.45472]  // Main Straight
+    ];
+    L.polyline(SONOMA_TRACK_OUTLINE, { color: '#f97316', weight: 3, opacity: 0.85, dashArray: '6, 6' }).addTo(map);
 
     const carIcon = L.divIcon({
       className: 'custom-car-marker',
@@ -1066,43 +1093,50 @@
     let carMarker = null;
     const pathLine = L.polyline([], { color: '#f97316', weight: 4, opacity: 0.8 }).addTo(map);
 
-    function updateStartFinishCircles() {
-      if (startCircle) map.removeLayer(startCircle);
-      if (finishCircle) map.removeLayer(finishCircle);
+    // Active timing gate layers
+    let allGateLayers = [];
+    let activeGatesList = [
+      { id: "start_finish", name: "Start / Finish Line", color: "#22c55e", lat: 38.16071, lon: -122.45472, notes: "Main Straight Timing Line" },
+      { id: "sector_1", name: "Sector 1 (T4 Entry)", color: "#38bdf8", lat: 38.16270, lon: -122.46110, notes: "Uphill & Blind Crest Split" },
+      { id: "sector_2", name: "Sector 2 (T7 Hairpin Exit)", color: "#eab308", lat: 38.15780, lon: -122.45830, notes: "Carousel & Hairpin Split" },
+      { id: "speed_trap", name: "Speed Trap (T10 Sweeper)", color: "#a855f7", lat: 38.16290, lon: -122.45550, notes: "Peak Velocity Check" },
+      { id: "pit_entry", name: "Pit Lane In", color: "#f59e0b", lat: 38.15930, lon: -122.45425, notes: "Pit Entry" },
+      { id: "pit_exit", name: "Pit Lane Out", color: "#f59e0b", lat: 38.16330, lon: -122.45500, notes: "Pit Exit" }
+    ];
 
-      if (startGate) {
-        startCircle = L.circle([startGate.lat, startGate.lon], {
+    function updateStartFinishCircles() {
+      // Clear all existing gate circles & markers
+      allGateLayers.forEach(l => map.removeLayer(l));
+      allGateLayers = [];
+
+      activeGatesList.forEach(gate => {
+        const circle = L.circle([gate.lat, gate.lon], {
           radius: GATE_TRIGGER_RADIUS_METERS,
-          color: '#22c55e',
-          fillColor: '#22c55e',
+          color: gate.color,
+          fillColor: gate.color,
           fillOpacity: 0.35,
           weight: 2
         }).addTo(map);
-        startCircle.bindPopup("Start / Finish Line");
-      }
-      if (finishGate) {
-        finishCircle = L.circle([finishGate.lat, finishGate.lon], {
-          radius: GATE_TRIGGER_RADIUS_METERS,
-          color: '#ef4444',
-          fillColor: '#ef4444',
-          fillOpacity: 0.35,
-          weight: 2
-        }).addTo(map);
-        finishCircle.bindPopup("Finish Gate");
-      }
+        circle.bindPopup('<b>' + gate.name + '</b><br><small>' + (gate.notes || '') + '<br>' + gate.lat.toFixed(5) + ', ' + gate.lon.toFixed(5) + '</small>');
+        allGateLayers.push(circle);
+
+        if (gate.id === 'start_finish') startCircle = circle;
+        if (gate.id === 'finish_gate') finishCircle = circle;
+      });
     }
     updateStartFinishCircles();
 
     // Auto-sync calibrated gates from Course Editor via Firebase
     db.child('gates').on('value', (snap) => {
       const data = snap.val();
-      if (data && data.start) {
-        startGate = { lat: data.start.lat, lon: data.start.lon };
-        if (data.radiusMeters) {
-          GATE_TRIGGER_RADIUS_METERS = Number(data.radiusMeters);
+      if (data) {
+        if (data.start) startGate = { lat: data.start.lat, lon: data.start.lon };
+        if (data.radiusMeters) GATE_TRIGGER_RADIUS_METERS = Number(data.radiusMeters);
+        if (Array.isArray(data.gates) && data.gates.length > 0) {
+          activeGatesList = data.gates;
         }
         updateStartFinishCircles();
-        addLogEntry('Timing gates synced from Course Editor (' + (data.gates ? data.gates.length : 0) + ' gates)');
+        addLogEntry('Timing gates updated from Course Editor (' + activeGatesList.length + ' gates, ' + GATE_TRIGGER_RADIUS_METERS + 'm radius)');
       }
     });
 

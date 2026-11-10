@@ -537,6 +537,9 @@
             <a href="pitwall.html" class="btn-action btn-action-primary">
               📋 Pit Wall Ledger
             </a>
+            <a href="spectator.html" class="btn-action" style="border-color: rgba(168, 85, 247, 0.5); color: #c084fc;">
+              👁️ Spectator View
+            </a>
             <a href="analysis.html" class="btn-action">
               🗺️ GPS Racing Lines
             </a>
@@ -592,6 +595,7 @@
 
           <div class="archive-actions">
             <a href="pitwall.html?event=${key}" class="btn-mini">📋 View Ledger</a>
+            <a href="spectator.html?event=${key}" class="btn-mini" style="border-color: rgba(168, 85, 247, 0.4); color: #c084fc;">👁️ Spectator</a>
             <a href="analysis.html?event=${key}" class="btn-mini">🗺️ View Lines</a>
             ${!isActive ? `<button type="button" class="btn-mini btn-mini-active" onclick="setActiveEvent('${key}')">⚡ Set as Live</button>` : ''}
           </div>

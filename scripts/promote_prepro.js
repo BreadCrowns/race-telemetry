@@ -5,7 +5,7 @@
  * cleanly stripping out the experimental PREPRO badges.
  * 
  * Usage:
- *   node scripts/promote_prepro.js [analysis|pitwall|leaderboard|all]
+ *   node scripts/promote_prepro.js [analysis|pitwall|leaderboard|spectator|all]
  */
 
 const fs = require('fs');
@@ -48,6 +48,17 @@ if (target === 'all' || target === 'leaderboard') {
     content = content.replace(/ <span style="background:linear-gradient\(135deg,#a855f7,#ec4899\);color:#fff;font-size:11px;padding:2px 8px;border-radius:4px;vertical-align:middle;">🧪 PREPRO<\/span>/g, '');
     fs.writeFileSync(path.join(rootDir, 'leaderboard.html'), content, 'utf8');
     console.log('✓ Promoted prepro/leaderboard.html -> leaderboard.html');
+  }
+}
+
+// 4. Promote spectator.html
+if (target === 'all' || target === 'spectator') {
+  const preproPath = path.join(preproDir, 'spectator.html');
+  if (fs.existsSync(preproPath)) {
+    let content = fs.readFileSync(preproPath, 'utf8');
+    content = content.replace(/<!-- Top Prepro Banner -->[\s\S]*?<\/div>\s*/g, '');
+    fs.writeFileSync(path.join(rootDir, 'spectator.html'), content, 'utf8');
+    console.log('✓ Promoted prepro/spectator.html -> spectator.html');
   }
 }
 
