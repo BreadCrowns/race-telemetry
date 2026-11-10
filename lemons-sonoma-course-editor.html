@@ -1,18 +1,752 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8">
-  <title>Redirecting to AC-AutoX Course Editor...</title>
-  <meta http-equiv="refresh" content="0; url=AC-AutoX/course-editor.html">
-  <link rel="canonical" href="AC-AutoX/course-editor.html">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Sonoma Raceway - 24 Hours of Lemons Gate & Sector Editor</title>
+
+  <!-- Leaflet CSS & JS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <!-- Firebase SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+    }
+
+    :root {
+      --bg-dark: #080c16;
+      --panel-bg: #0f172a;
+      --panel-border: #1e293b;
+      --accent: #f97316;
+      --green: #22c55e;
+      --blue: #38bdf8;
+      --yellow: #eab308;
+      --red: #ef4444;
+      --purple: #a855f7;
+    }
+
+    body {
+      background: var(--bg-dark);
+      color: #f8fafc;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* Top Navigation Header */
+    header {
+      background: var(--panel-bg);
+      border-bottom: 1px solid var(--panel-border);
+      padding: 10px 18px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+      z-index: 1000;
+    }
+
+    .brand-group {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .brand-title {
+      font-size: 16px;
+      font-weight: 900;
+      letter-spacing: 1px;
+      color: var(--accent);
+      text-transform: uppercase;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .event-badge {
+      font-size: 10px;
+      font-weight: 800;
+      background: rgba(249, 115, 22, 0.2);
+      color: var(--accent);
+      border: 1px solid var(--accent);
+      padding: 2px 8px;
+      border-radius: 4px;
+      letter-spacing: 0.5px;
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      background: #1e293b;
+      border: 1px solid #334155;
+      color: #f1f5f9;
+      font-size: 12px;
+      font-weight: 700;
+      padding: 7px 13px;
+      border-radius: 6px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.15s ease;
+    }
+    .btn:hover {
+      background: #334155;
+      border-color: #475569;
+    }
+    .btn.primary {
+      background: #ea580c;
+      border-color: #f97316;
+      color: #fff;
+    }
+    .btn.primary:hover {
+      background: #c2410c;
+    }
+    .btn.success {
+      background: #15803d;
+      border-color: #22c55e;
+      color: #fff;
+    }
+    .btn.success:hover {
+      background: #166534;
+    }
+
+    /* Main Content Area: Sidebar + Map */
+    .main-container {
+      flex: 1;
+      display: flex;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* Left Control Sidebar */
+    aside {
+      width: 380px;
+      min-width: 340px;
+      max-width: 420px;
+      background: rgba(15, 23, 42, 0.95);
+      border-right: 1px solid var(--panel-border);
+      display: flex;
+      flex-direction: column;
+      z-index: 500;
+      backdrop-filter: blur(8px);
+    }
+
+    .sidebar-scroll {
+      flex: 1;
+      overflow-y: auto;
+      padding: 14px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .card {
+      background: #0b1120;
+      border: 1px solid #1e293b;
+      border-radius: 8px;
+      padding: 12px;
+    }
+
+    .card-title {
+      font-size: 11px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: #94a3b8;
+      margin-bottom: 8px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    /* Track Layout Selector */
+    .layout-toggle {
+      display: flex;
+      background: #030712;
+      border: 1px solid #1f2937;
+      border-radius: 6px;
+      padding: 3px;
+      gap: 4px;
+    }
+    .layout-btn {
+      flex: 1;
+      background: transparent;
+      border: none;
+      color: #94a3b8;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 6px 8px;
+      border-radius: 4px;
+      cursor: pointer;
+      text-align: center;
+    }
+    .layout-btn.active {
+      background: #0284c7;
+      color: #ffffff;
+    }
+
+    /* Gate List Item */
+    .gate-item {
+      background: #0e1726;
+      border: 1px solid #1e293b;
+      border-left: 4px solid var(--accent);
+      border-radius: 6px;
+      padding: 8px 10px;
+      margin-bottom: 6px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .gate-item.start-finish { border-left-color: var(--green); }
+    .gate-item.sector { border-left-color: var(--blue); }
+    .gate-item.pit { border-left-color: var(--yellow); }
+    .gate-item.speed { border-left-color: var(--purple); }
+
+    .gate-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .gate-name {
+      font-size: 12px;
+      font-weight: 800;
+      color: #f1f5f9;
+    }
+    .gate-coords {
+      font-family: ui-monospace, monospace;
+      font-size: 10px;
+      color: #64748b;
+    }
+
+    .gate-actions {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+      margin-top: 2px;
+    }
+    .btn-xs {
+      padding: 2px 6px;
+      font-size: 10px;
+      font-weight: 700;
+      border-radius: 3px;
+      background: #1e293b;
+      border: 1px solid #334155;
+      color: #94a3b8;
+      cursor: pointer;
+    }
+    .btn-xs:hover {
+      background: #334155;
+      color: #fff;
+    }
+    .btn-xs.danger:hover {
+      background: #dc2626;
+      border-color: #ef4444;
+      color: #fff;
+    }
+
+    /* Sector Distance Table */
+    .stats-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 11px;
+      margin-top: 4px;
+    }
+    .stats-table th {
+      text-align: left;
+      color: #64748b;
+      padding: 4px 6px;
+      border-bottom: 1px solid #1e293b;
+    }
+    .stats-table td {
+      padding: 5px 6px;
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+      font-family: ui-monospace, monospace;
+    }
+
+    /* Map Element */
+    #map {
+      flex: 1;
+      height: 100%;
+      background: #050811;
+    }
+
+    /* Status Toast */
+    #toast {
+      position: absolute;
+      bottom: 20px;
+      right: 20px;
+      background: rgba(15, 23, 42, 0.95);
+      border: 1px solid #22c55e;
+      color: #4ade80;
+      padding: 10px 16px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 700;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+      z-index: 2000;
+      opacity: 0;
+      transform: translateY(10px);
+      transition: all 0.25s ease;
+      pointer-events: none;
+    }
+    #toast.show {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  </style>
 </head>
-<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background: #0b0f19; color: #f8fafc; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0;">
-  <div style="text-align: center; max-width: 480px; padding: 24px; background: #131d35; border: 1px solid #1e293b; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.5);">
-    <h2 style="margin-top: 0; color: #f97316;">🏎️ AC-AutoX Course Editor</h2>
-    <p style="color: #94a3b8; font-size: 14px; line-height: 1.5;">The Course and Cone Editor has moved into the dedicated <strong>AC-AutoX</strong> package.</p>
-    <p style="margin-top: 20px;">
-      <a href="AC-AutoX/course-editor.html" style="display: inline-block; background: #f97316; color: white; padding: 10px 20px; border-radius: 6px; text-decoration: none; font-weight: 600; font-size: 14px;">Open Course Editor &rarr;</a>
-    </p>
+<body>
+
+  <!-- Top Navigation Header -->
+  <header>
+    <div class="brand-group">
+      <div class="brand-title">🏁 Sonoma Raceway Gate & Sector Calibration</div>
+      <span class="event-badge">24 Hours of Lemons • Arse-Freeze-Apalooza (Dec 5–6)</span>
+    </div>
+
+    <div class="header-actions">
+      <button type="button" class="btn" onclick="locateTrack()">🎯 Center Track</button>
+      <button type="button" class="btn primary" onclick="saveGatesToFirebase()">💾 Sync Gates to Pit Wall & Overlay</button>
+      <button type="button" class="btn success" onclick="exportGatesJson()">📥 Export JSON</button>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <div class="main-container">
+    <!-- Left Sidebar -->
+    <aside>
+      <div class="sidebar-scroll">
+
+        <!-- 1. Track Layout Selection -->
+        <div class="card">
+          <div class="card-title">Sonoma Track Configuration</div>
+          <div class="layout-toggle">
+            <button type="button" class="layout-btn active" id="btn-layout-carousel" onclick="selectLayout('carousel')">
+              Full Carousel (2.52 mi)
+            </button>
+            <button type="button" class="layout-btn" id="btn-layout-chute" onclick="selectLayout('chute')">
+              The Chute (1.99 mi)
+            </button>
+          </div>
+          <div style="font-size: 11px; color: #94a3b8; margin-top: 8px; line-height: 1.4;">
+            <strong style="color: #f1f5f9;">Arse-Freeze-Apalooza Standard:</strong> Full 12-turn course featuring Turn 6 Carousel, Turn 7 Hairpin, and the high-speed Esses.
+          </div>
+        </div>
+
+        <!-- 2. Recommended Timing Gates -->
+        <div class="card">
+          <div class="card-title">
+            <span>Calibrated Gates & Splits (<span id="gate-count">5</span>)</span>
+            <button type="button" class="btn-xs" onclick="resetToSonomaDefaults()">Reset Defaults</button>
+          </div>
+
+          <div id="gate-list-container">
+            <!-- Dynamically populated gates -->
+          </div>
+
+          <div style="margin-top: 10px; display: flex; gap: 6px;">
+            <button type="button" class="btn" style="flex: 1; font-size: 11px; justify-content: center;" onclick="addCustomGatePrompt()">
+              ➕ Add Custom Gate
+            </button>
+          </div>
+        </div>
+
+        <!-- 3. Sector & Segment Breakdown -->
+        <div class="card">
+          <div class="card-title">Segment Distance & Target Splits</div>
+          <table class="stats-table">
+            <thead>
+              <tr>
+                <th>Segment</th>
+                <th>Distance</th>
+                <th>Target (Min/Max)</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td style="color: #38bdf8; font-weight: 700;">Sector 1 (T1–T4)</td>
+                <td id="dist-s1">0.82 mi</td>
+                <td>38.5s - 43.0s</td>
+              </tr>
+              <tr>
+                <td style="color: #eab308; font-weight: 700;">Sector 2 (Carousel/T7)</td>
+                <td id="dist-s2">0.94 mi</td>
+                <td>44.0s - 49.0s</td>
+              </tr>
+              <tr>
+                <td style="color: #a855f7; font-weight: 700;">Sector 3 (Esses/T11)</td>
+                <td id="dist-s3">0.76 mi</td>
+                <td>36.5s - 41.0s</td>
+              </tr>
+              <tr style="border-top: 2px solid #334155;">
+                <td style="color: #22c55e; font-weight: 900;">Total Lap</td>
+                <td id="dist-total" style="font-weight: 900; color: #fff;">2.52 mi</td>
+                <td style="font-weight: 900; color: #4ade80;">1:59.0 - 2:13.0</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- 4. Gate Detection Settings -->
+        <div class="card">
+          <div class="card-title">GPS Detection Settings</div>
+          <div style="font-size: 11px; color: #94a3b8; display: flex; justify-content: space-between; margin-bottom: 4px;">
+            <span>Trigger Gate Radius:</span>
+            <span id="radius-val" style="color: #38bdf8; font-weight: 700;">22 meters</span>
+          </div>
+          <input type="range" id="radius-slider" min="10" max="45" value="22" style="width: 100%; accent-color: var(--accent);" oninput="updateGateRadius(this.value)">
+          <div style="font-size: 10px; color: #64748b; margin-top: 4px;">
+            Recommended 20–25m for 1Hz–5Hz phone GPS to guarantee detection at 90+ MPH.
+          </div>
+        </div>
+
+      </div>
+    </aside>
+
+    <!-- Map Viewport -->
+    <div id="map"></div>
   </div>
+
+  <div id="toast">✅ Gates synced to Firebase!</div>
+
+  <script>
+    // Firebase Realtime DB Setup
+    const firebaseConfig = {
+      apiKey: "AIzaSyCC4JUzjr5lk9zaT78wwZ1RcjUguP5Q70s",
+      authDomain: "fiero-telemetry.firebaseapp.com",
+      databaseURL: "https://fiero-telemetry-default-rtdb.firebaseio.com",
+      projectId: "fiero-telemetry",
+      storageBucket: "fiero-telemetry.firebasestorage.app",
+      messagingSenderId: "183922450878",
+      appId: "1:183922450878:web:5faabfd6d163f1c6c119ef"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database().ref("raceTelemetry");
+
+    let gateRadiusMeters = 22;
+    let activeLayout = "carousel";
+
+    // Sonoma Raceway Track Points (Full 12-Turn Carousel)
+    const SONOMA_CAROUSEL_COORDS = [
+      [38.16071, -122.45472], // Start/Finish (Front Straight)
+      [38.16390, -122.45520], // Turn 1 (Uphill Climb)
+      [38.16615, -122.45710], // Turn 2 (Highest Point / Crest)
+      [38.16520, -122.45930], // Turn 3 / 3a (Blind Left)
+      [38.16270, -122.46110], // Turn 4
+      [38.16030, -122.46280], // Turn 5 (Carousel Entry)
+      [38.15740, -122.46260], // Turn 6 (Carousel Sweeper & Exit)
+      [38.15780, -122.45830], // Turn 7 (Hairpin)
+      [38.15930, -122.45680], // Turn 8 / 8a (Esses Entry)
+      [38.16100, -122.45610], // Turn 9 (Esses Exit)
+      [38.16290, -122.45550], // Turn 10 (Fast Right Sweeper)
+      [38.15960, -122.45445], // Turn 11 (Tight Hairpin)
+      [38.16071, -122.45472]  // Return to Start/Finish
+    ];
+
+    // Sonoma The Chute Shortcut (T4 -> T7 bypass)
+    const SONOMA_CHUTE_COORDS = [
+      [38.16071, -122.45472],
+      [38.16390, -122.45520],
+      [38.16615, -122.45710],
+      [38.16520, -122.45930],
+      [38.16270, -122.46110], // T4
+      [38.15810, -122.45850], // The Chute Cut-Through directly to T7
+      [38.15780, -122.45830], // T7
+      [38.15930, -122.45680],
+      [38.16100, -122.45610],
+      [38.16290, -122.45550],
+      [38.15960, -122.45445],
+      [38.16071, -122.45472]
+    ];
+
+    // Recommended Timing Gates for 24 Hours of Lemons
+    const DEFAULT_GATES = [
+      {
+        id: "start_finish",
+        name: "Start / Finish Line",
+        type: "start-finish",
+        color: "#22c55e",
+        lat: 38.16071,
+        lon: -122.45472,
+        notes: "Main Straight Timing Line"
+      },
+      {
+        id: "sector_1",
+        name: "Sector 1 (T4 Entry)",
+        type: "sector",
+        color: "#38bdf8",
+        lat: 38.16270,
+        lon: -122.46110,
+        notes: "Measures uphill climb & technical T2/T3"
+      },
+      {
+        id: "sector_2",
+        name: "Sector 2 (T7 Hairpin Exit)",
+        type: "sector",
+        color: "#eab308",
+        lat: 38.15780,
+        lon: -122.45830,
+        notes: "Measures Carousel & heavy braking into T7"
+      },
+      {
+        id: "speed_trap",
+        name: "Speed Trap (T10 Sweeper)",
+        type: "speed",
+        color: "#a855f7",
+        lat: 38.16290,
+        lon: -122.45550,
+        notes: "Peak velocity check before T11 hairpin"
+      },
+      {
+        id: "pit_entry",
+        name: "Pit Lane In",
+        type: "pit",
+        color: "#f59e0b",
+        lat: 38.15930,
+        lon: -122.45425,
+        notes: "Triggers pit stop timer & driver swap alerts"
+      },
+      {
+        id: "pit_exit",
+        name: "Pit Lane Out",
+        type: "pit",
+        color: "#f59e0b",
+        lat: 38.16330,
+        lon: -122.45500,
+        notes: "Logs pit stop duration & re-arms stint timer"
+      }
+    ];
+
+    let currentGates = JSON.parse(JSON.stringify(DEFAULT_GATES));
+    let gateMarkers = {};
+    let gateCircles = {};
+    let trackPolyline = null;
+
+    // Initialize Map with Satellite Layer
+    const map = L.map("map", {
+      center: [38.1610, -122.4580],
+      zoom: 16,
+      maxZoom: 19
+    });
+
+    // High-Resolution ESRI World Imagery Satellite Layer
+    const esriSatellite = L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", {
+      attribution: "&copy; Esri, Maxar, Earthstar Geographics",
+      maxZoom: 19
+    }).addTo(map);
+
+    // Optional CartoDB Dark Labels Overlay
+    const labelsOverlay = L.tileLayer("https://{s}.basemaps.cartocdn.com/rastertiles/voyager_only_labels/{z}/{x}/{y}{r}.png", {
+      subdomains: "abcd",
+      maxZoom: 19,
+      opacity: 0.75
+    }).addTo(map);
+
+    function drawTrackPolyline(coords) {
+      if (trackPolyline) map.removeLayer(trackPolyline);
+      trackPolyline = L.polyline(coords, {
+        color: "#f97316",
+        weight: 4,
+        opacity: 0.85,
+        dashArray: "8, 6"
+      }).addTo(map);
+    }
+    drawTrackPolyline(SONOMA_CAROUSEL_COORDS);
+
+    function renderGates() {
+      // Clear existing markers & circles
+      Object.values(gateMarkers).forEach(m => map.removeLayer(m));
+      Object.values(gateCircles).forEach(c => map.removeLayer(c));
+      gateMarkers = {};
+      gateCircles = {};
+
+      const container = document.getElementById("gate-list-container");
+      container.innerHTML = "";
+
+      currentGates.forEach((gate, idx) => {
+        // 1. Add Leaflet Circular Detection Zone
+        const circle = L.circle([gate.lat, gate.lon], {
+          radius: gateRadiusMeters,
+          color: gate.color,
+          fillColor: gate.color,
+          fillOpacity: 0.3,
+          weight: 2
+        }).addTo(map);
+        gateCircles[gate.id] = circle;
+
+        // 2. Add Draggable Pin Marker
+        const marker = L.marker([gate.lat, gate.lon], {
+          draggable: true
+        }).addTo(map);
+        marker.bindPopup(`<b>${gate.name}</b><br>${gate.notes}<br><small>Lat: ${gate.lat.toFixed(5)}, Lon: ${gate.lon.toFixed(5)}</small>`);
+
+        marker.on("dragend", (e) => {
+          const pos = e.target.getLatLng();
+          gate.lat = pos.lat;
+          gate.lon = pos.lng;
+          circle.setLatLng(pos);
+          renderGates();
+        });
+
+        gateMarkers[gate.id] = marker;
+
+        // 3. Populate Sidebar Card Item
+        const item = document.createElement("div");
+        item.className = `gate-item ${gate.type}`;
+        item.innerHTML = `
+          <div class="gate-row">
+            <span class="gate-name" style="color: ${gate.color};">● ${gate.name}</span>
+            <span class="gate-coords">${gate.lat.toFixed(5)}, ${gate.lon.toFixed(5)}</span>
+          </div>
+          <div style="font-size: 10px; color: #94a3b8;">${gate.notes}</div>
+          <div class="gate-actions">
+            <button type="button" class="btn-xs" onclick="focusGate('${gate.id}')">🔍 Focus</button>
+            <button type="button" class="btn-xs danger" onclick="deleteGate('${gate.id}')">✕ Delete</button>
+          </div>
+        `;
+        container.appendChild(item);
+      });
+
+      document.getElementById("gate-count").textContent = currentGates.length;
+    }
+
+    renderGates();
+
+    function selectLayout(layout) {
+      activeLayout = layout;
+      document.getElementById("btn-layout-carousel").classList.toggle("active", layout === "carousel");
+      document.getElementById("btn-layout-chute").classList.toggle("active", layout === "chute");
+
+      if (layout === "carousel") {
+        drawTrackPolyline(SONOMA_CAROUSEL_COORDS);
+        document.getElementById("dist-total").textContent = "2.52 mi";
+        document.getElementById("dist-s2").textContent = "0.94 mi";
+      } else {
+        drawTrackPolyline(SONOMA_CHUTE_COORDS);
+        document.getElementById("dist-total").textContent = "1.99 mi";
+        document.getElementById("dist-s2").textContent = "0.41 mi";
+      }
+    }
+
+    function locateTrack() {
+      map.setView([38.1610, -122.4580], 16);
+    }
+
+    function focusGate(id) {
+      const gate = currentGates.find(g => g.id === id);
+      if (gate) {
+        map.setView([gate.lat, gate.lon], 18);
+        if (gateMarkers[id]) gateMarkers[id].openPopup();
+      }
+    }
+
+    function updateGateRadius(meters) {
+      gateRadiusMeters = Number(meters);
+      document.getElementById("radius-val").textContent = `${meters} meters`;
+      Object.values(gateCircles).forEach(circle => {
+        circle.setRadius(gateRadiusMeters);
+      });
+    }
+
+    function deleteGate(id) {
+      currentGates = currentGates.filter(g => g.id !== id);
+      renderGates();
+    }
+
+    function addCustomGatePrompt() {
+      const name = prompt("Enter Custom Gate Name:", "Speed Trap #2");
+      if (!name) return;
+      const center = map.getCenter();
+      const newGate = {
+        id: `gate_${Date.now()}`,
+        name: name,
+        type: "sector",
+        color: "#38bdf8",
+        lat: center.lat,
+        lon: center.lng,
+        notes: "Drag marker on map to exact position"
+      };
+      currentGates.push(newGate);
+      renderGates();
+      focusGate(newGate.id);
+    }
+
+    function resetToSonomaDefaults() {
+      if (confirm("Reset to default 24 Hours of Lemons Sonoma timing gates?")) {
+        currentGates = JSON.parse(JSON.stringify(DEFAULT_GATES));
+        renderGates();
+        locateTrack();
+      }
+    }
+
+    // Direct Firebase Sync
+    async function saveGatesToFirebase() {
+      try {
+        const payload = {
+          updatedAt: Date.now(),
+          layout: activeLayout,
+          radiusMeters: gateRadiusMeters,
+          gates: currentGates,
+          start: currentGates.find(g => g.type === "start-finish") || currentGates[0],
+          finish: currentGates.find(g => g.type === "start-finish") || currentGates[0],
+          pitIn: currentGates.find(g => g.id === "pit_entry"),
+          pitOut: currentGates.find(g => g.id === "pit_exit")
+        };
+
+        // Write directly to Firebase
+        await db.child("gates").set(payload);
+        await db.child("events/sonoma-lemons-2026/gates").set(payload);
+
+        showToast("✅ Gates successfully synced to Pit Wall & Overlay!");
+      } catch (err) {
+        alert("Error saving gates: " + err.message);
+      }
+    }
+
+    function exportGatesJson() {
+      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(currentGates, null, 2));
+      const dlAnchor = document.createElement('a');
+      dlAnchor.setAttribute("href", dataStr);
+      dlAnchor.setAttribute("download", `sonoma_lemons_gates_${activeLayout}.json`);
+      dlAnchor.click();
+      showToast("📥 Exported sonoma_lemons_gates.json");
+    }
+
+    function showToast(msg) {
+      const toast = document.getElementById("toast");
+      toast.textContent = msg;
+      toast.classList.add("show");
+      setTimeout(() => toast.classList.remove("show"), 3500);
+    }
+
+    // Auto-load existing gates from Firebase on page load if present
+    db.child("gates").once("value", (snap) => {
+      const data = snap.val();
+      if (data && data.gates && Array.isArray(data.gates) && data.gates.length > 0) {
+        currentGates = data.gates;
+        if (data.radiusMeters) {
+          gateRadiusMeters = data.radiusMeters;
+          document.getElementById("radius-slider").value = gateRadiusMeters;
+          document.getElementById("radius-val").textContent = `${gateRadiusMeters} meters`;
+        }
+        renderGates();
+      }
+    });
+  </script>
 </body>
 </html>

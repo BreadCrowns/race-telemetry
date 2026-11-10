@@ -1093,6 +1093,20 @@
     }
     updateStartFinishCircles();
 
+    // Auto-sync calibrated gates from Course Editor via Firebase
+    db.child('gates').on('value', (snap) => {
+      const data = snap.val();
+      if (data && data.start) {
+        startGate = { lat: data.start.lat, lon: data.start.lon };
+        if (data.radiusMeters) {
+          GATE_TRIGGER_RADIUS_METERS = Number(data.radiusMeters);
+        }
+        updateStartFinishCircles();
+        addLogEntry('Timing gates synced from Course Editor (' + (data.gates ? data.gates.length : 0) + ' gates)');
+      }
+    });
+
+
     function loadTrackPreset(presetKey) {
       const preset = TRACK_PRESETS[presetKey];
       if (!preset) return;
