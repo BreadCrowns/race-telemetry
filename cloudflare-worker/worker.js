@@ -16,6 +16,9 @@ const corsHeaders = {
 // In-memory cache for recent telemetry to power the /debug endpoint
 let lastReceivedPacket = null;
 let lastD1Error = null;
+let cachedLastLat = null;
+let cachedLastLon = null;
+let cachedLastSpeedMph = 0;
 
 export default {
   async fetch(request, env, ctx) {
@@ -114,28 +117,37 @@ async function handleTraccarIngestion(request, env, ctx) {
         // Support Sensor Logger batched/structured payload format
         if (json && Array.isArray(json.payload)) {
           const deviceId = json.deviceId || "sensor-logger";
-          // Separate events by type
-          const locations = json.payload.filter(p => p.name === "location" || p.name === "gps");
-          const accelerometers = json.payload.filter(p => p.name === "accelerometer");
+          // Separate events by type (support all Sensor Logger variants)
+          const locations = json.payload.filter(p => 
+            p.name === "location" || p.name === "gps" || p.name === "raw_location"
+          );
+          const accelerometers = json.payload.filter(p => 
+            p.name === "accelerometer" || 
+            p.name === "user_acceleration" || 
+            p.name === "total_acceleration" || 
+            p.name === "linear_acceleration"
+          );
 
           if (locations.length > 0 || accelerometers.length > 0) {
               // Get the most recent location to use as base params for the main packet processing
               const loc = locations[locations.length - 1];
               if (loc && loc.values) {
-                params.latitude = loc.values.latitude;
-                params.longitude = loc.values.longitude;
-                // Sensor Logger sends speed in m/s -> convert to knots for standard speed processing
+                params.latitude = loc.values.latitude !== undefined ? loc.values.latitude : loc.values.lat;
+                params.longitude = loc.values.longitude !== undefined ? loc.values.longitude : (loc.values.lon || loc.values.lng);
                 params.speed = (loc.values.speed || 0) * 1.94384;
-                params.heading = loc.values.bearing || loc.values.course || 0;
+                params.heading = loc.values.bearing || loc.values.course || loc.values.heading || 0;
                 params.altitude = loc.values.altitude || 0;
                 params.accuracy = loc.values.accuracy || 0;
                 params.timestamp = loc.time ? Math.round(loc.time / 1000000) : Date.now();
               }
               const accel = accelerometers[accelerometers.length - 1];
               if (accel && accel.values) {
-                params.ax = accel.values.x;
-                params.ay = accel.values.y;
-                params.az = accel.values.z;
+                params.ax = accel.values.x !== undefined ? accel.values.x : accel.values.ax;
+                params.ay = accel.values.y !== undefined ? accel.values.y : accel.values.ay;
+                params.az = accel.values.z !== undefined ? accel.values.z : accel.values.az;
+                if (!params.timestamp && accel.time) {
+                  params.timestamp = Math.round(accel.time / 1000000);
+                }
               }
               params.id = deviceId;
 
@@ -201,10 +213,15 @@ async function handleTraccarIngestion(request, env, ctx) {
   const deviceId = params.id || params.deviceid || "car-phone";
   const rawLat = parseFloat(params.lat || params.latitude);
   const rawLon = parseFloat(params.lon || params.lng || params.longitude || params.long);
+  const hasValidCoords = !isNaN(rawLat) && !isNaN(rawLon) && (rawLat !== 0 || rawLon !== 0);
 
-  if (isNaN(rawLat) || isNaN(rawLon)) {
-    // Return 200 OK so Traccar doesn't loop fail on probe requests
-    return new Response(`OK (No coordinates received. Parameters: ${JSON.stringify(params)})`, {
+  const hasAccel = (params.ax !== undefined && !isNaN(parseFloat(params.ax))) ||
+                   (params.ay !== undefined && !isNaN(parseFloat(params.ay))) ||
+                   (params.az !== undefined && !isNaN(parseFloat(params.az)));
+
+  // Discard only if NEITHER valid coordinates nor acceleration was provided (e.g. empty Traccar probe)
+  if (!hasValidCoords && !hasAccel) {
+    return new Response(OK (No coordinates or acceleration received. Parameters: ), {
       status: 200,
       headers: { ...corsHeaders, "Content-Type": "text/plain" }
     });
@@ -237,26 +254,42 @@ async function handleTraccarIngestion(request, env, ctx) {
   // Use current arrival time for lastGpsTimestamp to guarantee real-time watchdog is LIVE
   const arrivalTime = Date.now();
 
+  if (hasValidCoords) {
+    cachedLastLat = rawLat;
+    cachedLastLon = rawLon;
+    cachedLastSpeedMph = speedMph;
+  }
+
+  const effectiveLat = hasValidCoords ? rawLat : (cachedLastLat || 0);
+  const effectiveLon = hasValidCoords ? rawLon : (cachedLastLon || 0);
+  const effectiveSpeed = hasValidCoords ? speedMph : cachedLastSpeedMph;
+
   const packet = {
-    speed: speedMph,
-    latitude: rawLat,
-    longitude: rawLon,
-    lat: rawLat,
-    lon: rawLon,
-    accuracy: accuracy,
-    heading: heading,
-    altitude: altitude,
-    battery: battery,
-    ax: params.ax !== undefined ? parseFloat(params.ax) : 0,
-    ay: params.ay !== undefined ? parseFloat(params.ay) : 0,
-    az: params.az !== undefined ? parseFloat(params.az) : 0,
     lastGpsTimestamp: arrivalTime,
     deviceTimestamp: rawTs,
     unit: "MPH"
   };
 
+  if (hasValidCoords || cachedLastLat !== null) {
+    packet.latitude = effectiveLat;
+    packet.longitude = effectiveLon;
+    packet.lat = effectiveLat;
+    packet.lon = effectiveLon;
+    packet.speed = effectiveSpeed;
+    packet.heading = heading;
+    packet.altitude = altitude;
+    packet.accuracy = accuracy;
+    packet.battery = battery;
+  }
+
+  if (hasAccel) {
+    packet.ax = parseFloat(params.ax !== undefined ? params.ax : 0);
+    packet.ay = parseFloat(params.ay !== undefined ? params.ay : 0);
+    packet.az = parseFloat(params.az !== undefined ? params.az : 0);
+  }
+
   if (batchedPackets.length > 0) {
-      packet.batchedData = batchedPackets;
+    packet.batchedData = batchedPackets;
   }
 
   lastReceivedPacket = packet;
@@ -272,7 +305,7 @@ async function handleTraccarIngestion(request, env, ctx) {
   // 2. Archive to Cloudflare D1 Database (supports env.DB or env.db)
   const d1 = env.DB || env.db;
   let d1Promise = Promise.resolve();
-  if (d1) {
+  if (d1 && (hasValidCoords || cachedLastLat !== null)) {
     const isoTime = new Date(rawTs).toISOString();
 
     // Check if we have batched packets, otherwise just use the single packet
@@ -301,7 +334,7 @@ async function handleTraccarIngestion(request, env, ctx) {
     d1Promise = d1.prepare(`
       INSERT INTO telemetry_raw (event_id, device_id, timestamp, iso_time, latitude, longitude, speed_mph, heading, altitude_m, accuracy_m, battery_level, ax, ay, az)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `).bind(eventId, deviceId, rawTs, isoTime, rawLat, rawLon, speedMph, heading, altitude, accuracy, battery, ax, ay, az)
+    `).bind(eventId, deviceId, rawTs, isoTime, effectiveLat, effectiveLon, effectiveSpeed, heading, altitude, accuracy, battery, ax, ay, az)
       .run()
       .then(() => { lastD1Error = null; })
       .catch(e => {
@@ -310,7 +343,7 @@ async function handleTraccarIngestion(request, env, ctx) {
         return d1.prepare(`
           INSERT INTO telemetry_raw (event_id, device_id, timestamp, iso_time, latitude, longitude, speed_mph, heading, altitude_m, accuracy_m, battery_level)
           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        `).bind(eventId, deviceId, rawTs, isoTime, rawLat, rawLon, speedMph, heading, altitude, accuracy, battery)
+        `).bind(eventId, deviceId, rawTs, isoTime, effectiveLat, effectiveLon, effectiveSpeed, heading, altitude, accuracy, battery)
           .run()
           .then(() => { lastD1Error = null; })
           .catch(err => {
