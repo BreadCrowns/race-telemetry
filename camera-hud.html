@@ -80,17 +80,80 @@
        ======================================================== */
     .combined-pill {
       display: inline-flex;
-      align-items: center;
+      flex-direction: column;
       border-left: 5px solid var(--accent);
-      padding: 6px 12px;
-      gap: 10px;
+      padding: 6px 12px 5px 12px;
+      gap: 0;
       border-radius: 10px;
       box-shadow: 0 8px 30px rgba(0, 0, 0, 0.7);
       flex-shrink: 0;
       transition: transform 0.15s ease, box-shadow 0.15s ease;
+      min-width: 460px;
     }
     .combined-pill:active {
       transform: scale(0.985);
+    }
+    .cp-top-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      width: 100%;
+    }
+    .cp-status-line {
+      width: 100%;
+      border-top: 1px solid rgba(255, 255, 255, 0.12);
+      margin-top: 5px;
+      padding-top: 3px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      overflow: hidden;
+      height: 18px;
+    }
+    .cp-status-tag {
+      font-size: 7.5px;
+      font-weight: 900;
+      letter-spacing: 0.8px;
+      text-transform: uppercase;
+      color: var(--accent);
+      background: rgba(249, 115, 22, 0.18);
+      border: 1px solid rgba(249, 115, 22, 0.4);
+      padding: 1px 4px;
+      border-radius: 3px;
+      flex-shrink: 0;
+      line-height: 1.1;
+    }
+    .ticker-wrap {
+      flex: 1;
+      overflow: hidden;
+      white-space: nowrap;
+      position: relative;
+    }
+    .ticker-content {
+      display: inline-block;
+      white-space: nowrap;
+    }
+    .ticker-text {
+      font-family: ui-monospace, SFMono-Regular, monospace;
+      font-size: 9px;
+      font-weight: 800;
+      letter-spacing: 0.6px;
+      text-transform: uppercase;
+      color: #38bdf8;
+    }
+    .ticker-clone {
+      margin-left: 24px;
+    }
+    @keyframes marquee {
+      0% { transform: translateX(0); }
+      100% { transform: translateX(-50%); }
+    }
+    .animate-marquee {
+      display: inline-flex !important;
+      animation: marquee 14s linear infinite;
+    }
+    .animate-marquee:hover {
+      animation-play-state: paused;
     }
     .cp-section {
       display: flex;
@@ -206,18 +269,6 @@
       color: #ffffff;
       letter-spacing: 0.5px;
       white-space: nowrap;
-    }
-    .dp-status-badge {
-      font-size: 8px;
-      font-weight: 800;
-      padding: 1px 5px;
-      border-radius: 3px;
-      background: rgba(34, 197, 94, 0.2);
-      color: #4ade80;
-      border: 1px solid var(--green);
-      letter-spacing: 0.5px;
-      width: fit-content;
-      text-transform: uppercase;
     }
 
     /* 2. Current Speed */
@@ -602,88 +653,101 @@
       <!-- Consolidated Telemetry Command Bar (Lower-Left Corner) -->
       <div class="glass-panel combined-pill interactive" id="btn-open-settings" title="Tap to customize settings">
         
-        <!-- Car Number Badge (All the way to the left, on the same line as everything else) -->
-        <span class="car-badge" id="car-number-badge">#901</span>
+        <!-- Top Metrics Row -->
+        <div class="cp-top-row">
+          <!-- Car Number Badge (All the way to the left, on the same line as everything else) -->
+          <span class="car-badge" id="car-number-badge">#901</span>
 
-        <div class="dp-divider"></div>
+          <div class="dp-divider"></div>
 
-        <!-- Driver Name & Status -->
-        <div class="cp-section cp-driver">
-          <span class="dp-tag">DRIVER</span>
-          <div class="dp-driver-row">
-            <span class="dp-driver-val" id="dp-driver-name">MATT</span>
-            <span class="dp-status-badge" id="dp-status">ON TRACK</span>
-          </div>
-        </div>
-
-        <div class="dp-divider"></div>
-
-        <!-- Integrated Lap Times & Running Lap Clock -->
-        <div class="cp-section cp-lap-wrap">
-          <span class="dp-tag">LAP TIME</span>
-          <div class="running-lap-clock" id="running-lap-clock">00:00.00</div>
-          <div class="lap-comparison-row">
-            <span>LAST: <strong id="last-lap-val" style="color:#f8fafc;">01:53.40</strong></span>
-            <span style="opacity: 0.35;">•</span>
-            <span>BEST: <strong id="best-lap-val" style="color:#a855f7;">01:51.15</strong></span>
-          </div>
-        </div>
-
-        <div class="dp-divider"></div>
-
-        <!-- Current Speed (MPH Only) -->
-        <div class="cp-section">
-          <span class="dp-tag">SPEED</span>
-          <div class="dp-speed-wrap">
-            <span class="dp-speed-digits" id="speed-digits">0</span>
-            <span class="dp-speed-unit">MPH</span>
-          </div>
-        </div>
-
-        <div class="dp-divider"></div>
-
-        <!-- Stint Time & 2-Hour Limit Countdown -->
-        <div class="cp-section dp-stint-wrap" id="stint-box">
-          <div class="dp-stint-header">
-            <span class="dp-tag">STINT TIME</span>
-            <span class="dp-stint-clock" id="stint-clock-val">00:00:00</span>
-          </div>
-          <div class="stint-bar-wrap">
-            <div class="stint-bar-fill" id="stint-bar-fill" style="width: 15%;"></div>
-          </div>
-          <div class="dp-stint-remain">
-            <span id="stint-alert-text">NORMAL STINT</span>
-            <span id="stint-remain-text">1h 48m REM</span>
-          </div>
-        </div>
-
-        <div class="dp-divider"></div>
-
-        <!-- Driver Laps & Total Team Laps -->
-        <div class="cp-section cp-laps-pair">
-          <div class="dp-laps-wrap">
+          <!-- Driver Name -->
+          <div class="cp-section cp-driver">
             <span class="dp-tag">DRIVER</span>
-            <span class="dp-lap-num" id="driver-laps-val">15</span>
-            <span class="dp-lap-sub">LAPS</span>
+            <div class="dp-driver-row">
+              <span class="dp-driver-val" id="dp-driver-name">MATT</span>
+            </div>
           </div>
-          <div class="dp-laps-wrap">
-            <span class="dp-tag">TEAM</span>
-            <span class="dp-lap-num team" id="team-laps-val">87</span>
-            <span class="dp-lap-sub">TOTAL</span>
+
+          <div class="dp-divider"></div>
+
+          <!-- Integrated Lap Times & Running Lap Clock -->
+          <div class="cp-section cp-lap-wrap">
+            <span class="dp-tag">LAP TIME</span>
+            <div class="running-lap-clock" id="running-lap-clock">00:00.00</div>
+            <div class="lap-comparison-row">
+              <span>LAST: <strong id="last-lap-val" style="color:#f8fafc;">01:53.40</strong></span>
+              <span style="opacity: 0.35;">•</span>
+              <span>BEST: <strong id="best-lap-val" style="color:#a855f7;">01:51.15</strong></span>
+            </div>
+          </div>
+
+          <div class="dp-divider"></div>
+
+          <!-- Current Speed (MPH Only) -->
+          <div class="cp-section">
+            <span class="dp-tag">SPEED</span>
+            <div class="dp-speed-wrap">
+              <span class="dp-speed-digits" id="speed-digits">0</span>
+              <span class="dp-speed-unit">MPH</span>
+            </div>
+          </div>
+
+          <div class="dp-divider"></div>
+
+          <!-- Stint Time & 2-Hour Limit Countdown -->
+          <div class="cp-section dp-stint-wrap" id="stint-box">
+            <div class="dp-stint-header">
+              <span class="dp-tag">STINT TIME</span>
+              <span class="dp-stint-clock" id="stint-clock-val">00:00:00</span>
+            </div>
+            <div class="stint-bar-wrap">
+              <div class="stint-bar-fill" id="stint-bar-fill" style="width: 15%;"></div>
+            </div>
+            <div class="dp-stint-remain">
+              <span id="stint-alert-text">NORMAL STINT</span>
+              <span id="stint-remain-text">1h 48m REM</span>
+            </div>
+          </div>
+
+          <div class="dp-divider"></div>
+
+          <!-- Driver Laps & Total Team Laps -->
+          <div class="cp-section cp-laps-pair">
+            <div class="dp-laps-wrap">
+              <span class="dp-tag">DRIVER</span>
+              <span class="dp-lap-num" id="driver-laps-val">15</span>
+              <span class="dp-lap-sub">LAPS</span>
+            </div>
+            <div class="dp-laps-wrap">
+              <span class="dp-tag">TEAM</span>
+              <span class="dp-lap-num team" id="team-laps-val">87</span>
+              <span class="dp-lap-sub">TOTAL</span>
+            </div>
+          </div>
+
+          <div class="dp-divider"></div>
+
+          <!-- Event Watermark, REC Timecode & GPS Status Lock -->
+          <div class="cp-section cp-meta">
+            <div class="watermark-title" id="watermark-event-title">24H LEMONS • SONOMA</div>
+            <div class="watermark-sub">
+              <span class="rec-indicator"><span class="rec-dot"></span>REC</span>
+              <span>&bull;</span>
+              <span id="live-timecode-val">00:00:00 UTC</span>
+            </div>
+            <span class="gps-lock-badge" id="gps-status-pill">DB GPS LOCK</span>
           </div>
         </div>
 
-        <div class="dp-divider"></div>
-
-        <!-- Event Watermark, REC Timecode & GPS Status Lock -->
-        <div class="cp-section cp-meta">
-          <div class="watermark-title" id="watermark-event-title">24H LEMONS • SONOMA</div>
-          <div class="watermark-sub">
-            <span class="rec-indicator"><span class="rec-dot"></span>REC</span>
-            <span>&bull;</span>
-            <span id="live-timecode-val">00:00:00 UTC</span>
+        <!-- Custom Text Status Line Under Entire Widget -->
+        <div class="cp-status-line" id="cp-status-line">
+          <span class="cp-status-tag">STATUS</span>
+          <div class="ticker-wrap" id="ticker-wrap">
+            <div class="ticker-content" id="ticker-content">
+              <span class="ticker-text" id="custom-status-text">ON TRACK</span>
+              <span class="ticker-text ticker-clone" id="custom-status-clone"></span>
+            </div>
           </div>
-          <span class="gps-lock-badge" id="gps-status-pill">DB GPS LOCK</span>
         </div>
 
       </div>
@@ -726,6 +790,12 @@
         <input type="text" class="form-input" id="cfg-car-number" value="#901" style="width: 70px; text-align: center;" />
         <input type="text" class="form-input" id="cfg-event-title" value="24 HOURS OF LEMONS • SONOMA RACEWAY" style="flex: 1;" />
       </div>
+    </div>
+
+    <!-- Custom Status Text / Pit Wall Broadcast -->
+    <div class="form-group">
+      <label class="form-label">Pit Wall Status / Broadcast Message</label>
+      <input type="text" class="form-input" id="cfg-custom-status" placeholder="e.g. BOX THIS LAP" value="ON TRACK" />
     </div>
 
     <!-- Driver Laps & Team Laps Manual Adjust -->
@@ -791,9 +861,13 @@
     const liveTimecodeVal = document.getElementById("live-timecode-val");
     const gpsStatusPill = document.getElementById("gps-status-pill");
 
-    // Driver Pill Elements
+    // Driver & Custom Status Elements
     const dpDriverName = document.getElementById("dp-driver-name");
-    const dpStatus = document.getElementById("dp-status");
+    const cpStatusLine = document.getElementById("cp-status-line");
+    const tickerWrap = document.getElementById("ticker-wrap");
+    const tickerContent = document.getElementById("ticker-content");
+    const customStatusText = document.getElementById("custom-status-text");
+    const customStatusClone = document.getElementById("custom-status-clone");
     const speedDigits = document.getElementById("speed-digits");
     const stintBox = document.getElementById("stint-box");
     const stintClockVal = document.getElementById("stint-clock-val");
@@ -822,6 +896,7 @@
     const cfgDriver = document.getElementById("cfg-driver");
     const cfgCarNumber = document.getElementById("cfg-car-number");
     const cfgEventTitle = document.getElementById("cfg-event-title");
+    const cfgCustomStatus = document.getElementById("cfg-custom-status");
     const cfgDriverLaps = document.getElementById("cfg-driver-laps");
     const cfgTeamLaps = document.getElementById("cfg-team-laps");
     const cfgMapCorner = document.getElementById("cfg-map-corner");
@@ -1186,13 +1261,42 @@
     let lastFreshDataWallTime = 0;
     const FIREBASE_REST_URL = "https://fiero-telemetry-default-rtdb.firebaseio.com/raceTelemetry.json";
 
+    // Custom Text Status Ticker (Auto-scrolls when text exceeds width)
+    let currentCustomStatus = "ON TRACK";
+    function updateCustomStatus(text) {
+      const clean = (text || "ON TRACK").trim();
+      currentCustomStatus = clean;
+      customStatusText.textContent = clean.toUpperCase();
+
+      requestAnimationFrame(() => {
+        const textWidth = customStatusText.scrollWidth;
+        const containerWidth = tickerWrap ? tickerWrap.clientWidth : 0;
+
+        if (containerWidth > 0 && textWidth > containerWidth) {
+          customStatusClone.textContent = `• • • ${clean.toUpperCase()}`;
+          customStatusClone.style.display = "inline";
+          tickerContent.classList.add("animate-marquee");
+          const duration = Math.max(10, Math.round(clean.length * 0.25));
+          tickerContent.style.animationDuration = `${duration}s`;
+        } else {
+          customStatusClone.textContent = "";
+          customStatusClone.style.display = "none";
+          tickerContent.classList.remove("animate-marquee");
+        }
+      });
+    }
+
+    window.addEventListener("resize", () => {
+      updateCustomStatus(currentCustomStatus);
+    });
+
     function ingestTelemetryRoot(root) {
       if (!root || isDemoMode) return;
 
       const now = Date.now();
       lastDbPacketTime = now;
 
-      // 1. Driver Name & Status from Firebase
+      // 1. Driver Name from Firebase
       const driver = root.driver || (root.autox && root.autox.driver) || activeDriver;
       if (driver && driver.toUpperCase() !== activeDriver) {
         activeDriver = driver.toUpperCase();
@@ -1200,13 +1304,12 @@
         cfgDriver.value = activeDriver;
       }
 
-      // Live Status update from Pit Wall text box
-      const statusText = (root.statusText || root.status || root.notes || (root.autox && (root.autox.statusText || root.autox.status || root.autox.notes)) || "").trim();
+      // Live Custom Status update from Pit Wall text box / Firebase
+      const statusText = (root.statusText || root.status || root.notes || root.customStatus || root.customText || root.message || (root.autox && (root.autox.statusText || root.autox.status || root.autox.notes)) || "").trim();
       if (statusText) {
-        dpStatus.textContent = statusText.toUpperCase();
-        dpStatus.style.display = "inline-block";
+        updateCustomStatus(statusText);
       } else {
-        dpStatus.textContent = "ON TRACK";
+        updateCustomStatus("ON TRACK");
       }
 
       // 2. Lap Counts (Driver Stint & Team Total)
@@ -1418,6 +1521,12 @@
       cfgMapCorner.addEventListener("change", (e) => applyMapCorner(e.target.value));
     }
 
+    if (cfgCustomStatus) {
+      cfgCustomStatus.addEventListener("input", (e) => {
+        updateCustomStatus(e.target.value);
+      });
+    }
+
     btnResetStint.addEventListener("click", () => {
       stintStartTime = Date.now();
       driverLaps = 0;
@@ -1463,6 +1572,11 @@
     if (urlParams.get("teamLaps")) {
       teamLaps = parseInt(urlParams.get("teamLaps")) || teamLaps;
       cfgTeamLaps.value = teamLaps;
+    }
+    if (urlParams.get("status")) {
+      const s = urlParams.get("status");
+      updateCustomStatus(s);
+      if (cfgCustomStatus) cfgCustomStatus.value = s;
     }
     if (urlParams.get("map")) {
       const m = urlParams.get("map").toLowerCase();
