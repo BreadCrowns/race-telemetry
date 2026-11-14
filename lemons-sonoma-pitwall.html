@@ -128,6 +128,10 @@
       box-shadow: 0 0 10px var(--accent-bright);
       animation: pulse-gold 1.6s infinite;
     }
+    .status-beacon.warning {
+      background: #facc15;
+      box-shadow: 0 0 10px #facc15;
+    }
     @keyframes pulse-gold {
       0%, 100% { opacity: 1; transform: scale(1); }
       50% { opacity: 0.55; transform: scale(0.9); }
@@ -1023,6 +1027,16 @@
     const valSpeed = document.getElementById("val-speed");
     const valMiles = document.getElementById("val-miles");
     const valFuelGal = document.getElementById("val-fuel-gal");
+    const telemSource = document.getElementById("telem-source");
+
+    // Continuous Watchdog & Speed State (Exact parity with Streamlabs HUD)
+    let lastGpsFixTimestamp = 0;
+    let lastGpsPacketWallTime = 0;
+    let latestGpsLat = 0;
+    let latestGpsLon = 0;
+    let latestGpsAcc = 0;
+    const SPEED_CUTOFF_MPH = 2.5;
+    let targetSpeed = 0;
 
     const lapTableBody = document.getElementById("lap-table-body");
     const tableLapCount = document.getElementById("table-lap-count");
@@ -1164,7 +1178,7 @@
       updateDriverUI();
 
       // Update Firebase (instantly updates driver name on live YouTube HUD)
-      db.update({ driver: name });
+      db.update({ driver: name, stintStartTime: Date.now() });
       db.child("autox").update({ driver: name });
 
       playChime(880, 0.25);
@@ -1301,12 +1315,7 @@
       lapMaxSpeed = 0;
       lapSpeedSum = 0;
       lapSpeedCount = 0;
-
-      clearInterval(lapInterval);
-      lapInterval = setInterval(() => {
-        const elapsed = Date.now() - currentLapStartTime;
-        lapClock.textContent = formatTimeMs(elapsed);
-      }, 30);
+      db.update({ lapStartTime: now });
     }
 
     function finishAutomatedLap(lapTimeMs, now) {
@@ -1355,7 +1364,7 @@
 
       addLogEntry(`🏁 Lap #${record.lapNum} finished by ${activeDriver}: ${record.timeFormatted} (${topMph} MPH max)`);
 
-      // Push to Firebase for Streamlabs live HUD
+      // Push to Firebase for Streamlabs live HUD & all team devices
       db.child("laps").push(record);
       db.update({
         lastLapTimeMs: lapTimeMs,
@@ -1363,7 +1372,12 @@
         bestLapTimeMs: bestLapTimeMs,
         bestLapFormatted: formatTimeMs(bestLapTimeMs),
         lapNum: lapDatabase.length,
-        driver: activeDriver
+        driver: activeDriver,
+        lapStartTime: now,
+        totalMiles: Number(totalMiles.toFixed(1))
+      });
+      db.child("fuel").update({
+        currentFuel: Number(currentFuelGal.toFixed(2))
       });
     }
 
@@ -1457,71 +1471,265 @@
       }
     }, 1000);
 
-    // --- FIREBASE TELEMETRY LISTENER ---
-    db.on("value", (snap) => {
-      const root = snap.val();
+    // --- INGEST TELEMETRY FROM FIREBASE DATABASE (EXACT HUD PARITY) ---
+    function ingestTelemetryRoot(root) {
       if (!root) return;
 
-      // Ingest live status update if changed by another device
-      if (root.statusText && root.statusText !== currentStatusText) {
-        currentStatusText = root.statusText;
-        liveStatusText.textContent = currentStatusText;
-      }
+      const autox = root.autox || {};
 
-      // Ingest driver if changed by another device
-      if (root.driver && root.driver !== activeDriver) {
-        activeDriver = root.driver;
+      // 1. Driver Name from DB
+      const incomingDriver = (root.driver || autox.driver || "").trim();
+      if (incomingDriver && incomingDriver.toUpperCase() !== activeDriver.toUpperCase()) {
+        const matched = ["Matt", "Jeff", "Liam", "Ryan", "Tony"].find(d => d.toLowerCase() === incomingDriver.toLowerCase());
+        activeDriver = matched || incomingDriver;
+        localStorage.setItem("pitwall_active_driver", activeDriver);
         updateDriverUI();
       }
 
-      // Telemetry ingestion
+      // Sync Stint Start Time from DB
+      if (root.stintStartTime) {
+        const sTime = Number(root.stintStartTime);
+        if (sTime > 0 && Math.abs(sTime - stintStartTime) > 5000) {
+          stintStartTime = sTime;
+          localStorage.setItem("pitwall_stint_start", stintStartTime.toString());
+        }
+      }
+
+      // 2. Status Updates / Notes from DB
+      const statusUpdate = (root.statusText || root.status || root.notes || (autox && (autox.notes || autox.statusText || autox.status)) || "").trim();
+      if (statusUpdate && statusUpdate !== currentStatusText) {
+        currentStatusText = statusUpdate;
+        liveStatusText.textContent = currentStatusText;
+        localStorage.setItem("pitwall_status_text", currentStatusText);
+      } else if (!statusUpdate && currentStatusText) {
+        currentStatusText = "";
+        liveStatusText.textContent = "No dispatch set";
+        localStorage.removeItem("pitwall_status_text");
+      }
+
+      // 3. Fuel Provisions from DB
+      if (root.fuel) {
+        if (root.fuel.currentFuel !== undefined) {
+          currentFuelGal = Number(root.fuel.currentFuel);
+          localStorage.setItem("pitwall_current_fuel", currentFuelGal.toString());
+        }
+        if (root.fuel.galPerLap !== undefined && Number(root.fuel.galPerLap) > 0) {
+          measuredGalPerLap = Number(root.fuel.galPerLap);
+          localStorage.setItem("pitwall_gal_per_lap", measuredGalPerLap.toString());
+        }
+        if (root.fuel.mpg !== undefined && Number(root.fuel.mpg) > 0) {
+          measuredMpg = Number(root.fuel.mpg);
+          localStorage.setItem("pitwall_mpg", measuredMpg.toString());
+        }
+        updateFuelUI();
+      }
+
+      // 4. Lap Timing & Running Stopwatch from DB (exact HUD parity)
+      if (root.lapStartTime) {
+        currentLapStartTime = Number(root.lapStartTime);
+        timingRunning = true;
+      } else if (autox.startTime && autox.state === "RUNNING") {
+        currentLapStartTime = Number(autox.startTime);
+        timingRunning = true;
+      } else if (autox.state === "STOPPED" || autox.state === "SAVED" || autox.rawFormatted || autox.finalFormatted) {
+        timingRunning = false;
+        lapClock.textContent = autox.finalFormatted || autox.rawFormatted || formatTimeMs(autox.finalTimeMs || autox.rawTimeMs || 0);
+      }
+
+      // 5. Chronicle of Laps from DB
+      if (root.laps && typeof root.laps === "object") {
+        const entries = Object.entries(root.laps);
+        if (entries.length > 0) {
+          const parsed = entries.map(([key, val], idx) => {
+            const ms = Number(val.timeMs || val.finalTimeMs || val.rawTimeMs || 0);
+            const formatted = val.timeFormatted || val.finalFormatted || val.rawFormatted || formatTimeMs(ms);
+            const num = Number(val.lapNum || val.runNum || (idx + 1));
+            const drv = val.driver || "Fellowship";
+            const top = val.topSpeed || val.topMph || val.speed || "--";
+            const fuel = val.fuelUsed || val.fuel || (measuredGalPerLap ? measuredGalPerLap.toFixed(2) : "0.45");
+            const ts = Number(val.timestamp || 0);
+            return {
+              key,
+              lapNum: num,
+              driver: drv,
+              timeMs: ms,
+              timeFormatted: formatted,
+              topSpeed: top,
+              fuelUsed: fuel,
+              timestamp: ts
+            };
+          });
+
+          // Sort newest first
+          parsed.sort((a, b) => (b.timestamp || b.lapNum) - (a.timestamp || a.lapNum));
+
+          // Determine best valid lap
+          const validTimes = parsed.filter(p => p.timeMs > 25000 && p.timeMs < 600000);
+          if (validTimes.length > 0) {
+            bestLapTimeMs = Math.min(...validTimes.map(p => p.timeMs));
+            parsed.forEach(p => { p.isBest = (p.timeMs === bestLapTimeMs); });
+          }
+
+          lapDatabase = parsed;
+          valLapCount.textContent = lapDatabase.length;
+          valLastLap.textContent = lapDatabase[0].timeFormatted;
+          valBestLap.textContent = (bestLapTimeMs !== Infinity) ? formatTimeMs(bestLapTimeMs) : (root.bestLapFormatted || "--:--.--");
+          renderLapTable();
+        }
+      } else if (root.lapNum !== undefined || root.runNum !== undefined) {
+        valLapCount.textContent = root.lapNum || root.runNum;
+      }
+      if (root.lastLapFormatted) valLastLap.textContent = root.lastLapFormatted;
+      if (root.bestLapFormatted) valBestLap.textContent = root.bestLapFormatted;
+
+      // 6. Ingest Speed & GPS Fix (Sorted newest first, unit conversion, cutoff)
       let telem = root;
       if (root.lat === undefined && root.latitude === undefined) {
-        const keys = Object.keys(root).filter(k => typeof root[k] === 'object' && root[k] !== null && k !== 'laps' && k !== 'fuel' && k !== 'gates');
+        const keys = Object.keys(root).filter(k => typeof root[k] === 'object' && root[k] !== null && k !== 'autox' && k !== 'laps' && k !== 'fuel' && k !== 'gates' && k !== 'stints' && k !== 'pitstops');
         if (keys.length > 0) {
+          keys.sort((a, b) => {
+            const timeA = Number(root[a].lastGpsTimestamp || root[a].deviceTimestamp || (root[a].tst ? root[a].tst * 1000 : 0) || root[a].timestamp || 0);
+            const timeB = Number(root[b].lastGpsTimestamp || root[b].deviceTimestamp || (root[b].tst ? root[b].tst * 1000 : 0) || root[b].timestamp || 0);
+            return timeA - timeB;
+          });
           telem = root[keys[keys.length - 1]];
         }
       }
 
+      // Speed calculation
+      let calcMph = 0;
+      if (telem.speed !== undefined && telem.speed !== null) {
+        calcMph = Number(telem.speed);
+      } else if (telem.vel !== undefined && telem.vel !== null) {
+        calcMph = Number(telem.vel) * 0.621371;
+      }
+      if (calcMph < SPEED_CUTOFF_MPH || isNaN(calcMph)) {
+        calcMph = 0;
+      }
+      targetSpeed = calcMph;
+      valSpeed.innerHTML = `${Math.round(calcMph)} <span class="hero-unit">MPH</span>`;
+
+      if (telemSource && (telem.source || telem.topic || telem.tid)) {
+        telemSource.textContent = (telem.source || telem.tid || "Palant&iacute;r").toUpperCase();
+      }
+
+      // Total Miles / Odometer from DB
+      if (root.totalMiles !== undefined && Number(root.totalMiles) > 0) {
+        totalMiles = Number(root.totalMiles);
+        valMiles.textContent = totalMiles.toFixed(1);
+      }
+
+      // GPS Coordinates & Status
       const rawLat = telem.latitude !== undefined ? telem.latitude : telem.lat;
       const rawLon = telem.longitude !== undefined ? telem.longitude : telem.lon;
-      const speed = parseFloat(telem.speed || 0);
-      const ts = telem.lastGpsTimestamp || telem.deviceTimestamp || Date.now();
+      const rawAcc = telem.accuracy !== undefined ? telem.accuracy : (telem.acc || 0);
+      const accNum = Math.round(Number(rawAcc) || 0);
+      const ts = Number(telem.lastGpsTimestamp || telem.deviceTimestamp || (telem.tst ? telem.tst * 1000 : 0) || Date.now());
 
-      if (rawLat && rawLon) {
-        // Watchdog active
-        gpsBeacon.className = "status-beacon online";
-        gpsStatusText.textContent = "GPS LIVE 100%";
-        const ping = Math.max(0, Date.now() - ts);
-        gpsPing.textContent = `${ping}ms`;
+      if (rawLat && rawLon && !isNaN(rawLat) && !isNaN(rawLon) && Number(rawLat) !== 0 && Number(rawLon) !== 0) {
+        lastGpsFixTimestamp = ts;
+        lastGpsPacketWallTime = Date.now();
+        latestGpsLat = Number(rawLat);
+        latestGpsLon = Number(rawLon);
+        latestGpsAcc = accNum;
 
-        valSpeed.innerHTML = `${Math.round(speed)} <span style="font-size:11px; color:#94a3b8;">MPH</span>`;
-
-        // Update car marker on map
-        const pos = [rawLat, rawLon];
+        const pos = [latestGpsLat, latestGpsLon];
         if (!carMarker) {
           carMarker = L.marker(pos, { icon: carIcon }).addTo(map);
         } else {
           carMarker.setLatLng(pos);
         }
         pathLine.addLatLng(pos);
-
-        // Keep path line to last 200 points
-        if (pathLine.getLatLngs().length > 200) {
-          pathLine.setLatLngs(pathLine.getLatLngs().slice(-200));
+        if (pathLine.getLatLngs().length > 300) {
+          pathLine.setLatLngs(pathLine.getLatLngs().slice(-300));
         }
 
         // Pass to automated timing loop
-        evaluateAutomatedGpsTiming(rawLat, rawLon, speed, ts);
+        evaluateAutomatedGpsTiming(latestGpsLat, latestGpsLon, calcMph, ts);
       }
+
+      checkGpsWatchdog();
+    }
+
+    // --- 1. REALTIME WEBSOCKET LISTENER ---
+    db.on("value", (snap) => {
+      ingestTelemetryRoot(snap.val());
+    }, (err) => {
+      console.error("Firebase DB read error:", err);
+      gpsBeacon.className = "status-beacon";
+      gpsStatusText.textContent = "PALANT&Iacute;R AUTH ERROR";
+      gpsPing.textContent = "ERR";
     });
+
+    // --- 2. HTTP REST POLLING FALLBACK (BYPASSES WEBSOCKET SLEEP IN MOBILE/BACKGROUND) ---
+    const FIREBASE_REST_URL = "https://fiero-telemetry-default-rtdb.firebaseio.com/raceTelemetry.json";
+    let isFetchingFallback = false;
+    async function fetchTelemetryFallback() {
+      if (isFetchingFallback) return;
+      isFetchingFallback = true;
+      try {
+        const res = await fetch(FIREBASE_REST_URL, { cache: "no-store" });
+        if (res.ok) {
+          const data = await res.json();
+          ingestTelemetryRoot(data);
+        }
+      } catch (e) {
+      } finally {
+        isFetchingFallback = false;
+      }
+    }
+    setInterval(fetchTelemetryFallback, 2000);
+
+    // --- 3. CONTINUOUS GPS WATCHDOG (GREEN < 3.5s, YELLOW < 7.5s, RED > 7.5s) ---
+    function checkGpsWatchdog() {
+      const now = Date.now();
+      if (!lastGpsFixTimestamp && !lastGpsPacketWallTime) {
+        gpsBeacon.className = "status-beacon";
+        gpsStatusText.textContent = "PALANT&Iacute;R FEED SEARCHING";
+        gpsPing.textContent = "--ms";
+        return;
+      }
+
+      const ageSincePacket = now - lastGpsPacketWallTime;
+      const ageSinceFix = now - lastGpsFixTimestamp;
+      const effectiveAge = Math.min(ageSincePacket, ageSinceFix);
+
+      if (effectiveAge < 3500) {
+        gpsBeacon.className = "status-beacon online";
+        gpsStatusText.textContent = `PALANT&Iacute;R LIVE &plusmn;${latestGpsAcc}m`;
+        gpsPing.textContent = `${effectiveAge}ms`;
+        gpsPing.style.color = "#4ade80";
+      } else if (effectiveAge < 7500) {
+        const lagSec = Math.round(effectiveAge / 1000);
+        gpsBeacon.className = "status-beacon warning";
+        gpsStatusText.textContent = `PALANT&Iacute;R DELAY (${lagSec}s)`;
+        gpsPing.textContent = `${effectiveAge}ms`;
+        gpsPing.style.color = "#facc15";
+      } else {
+        gpsBeacon.className = "status-beacon";
+        gpsStatusText.textContent = "PALANT&Iacute;R OFFLINE";
+        gpsPing.textContent = "OFFLINE";
+        gpsPing.style.color = "#f87171";
+      }
+    }
+    setInterval(checkGpsWatchdog, 500);
+
+    // --- 4. 60 FPS STOPWATCH TICKER (IDENTICAL TO HUD ANIMATE LOOP) ---
+    function timerTick() {
+      if (timingRunning && currentLapStartTime > 0) {
+        const elapsed = Math.max(0, Date.now() - currentLapStartTime);
+        lapClock.textContent = formatTimeMs(elapsed);
+      }
+      requestAnimationFrame(timerTick);
+    }
+    requestAnimationFrame(timerTick);
 
     // --- INITIALIZATION ---
     updateDriverUI();
     updateFuelUI();
     renderLapTable();
     valMiles.textContent = totalMiles.toFixed(1);
-    liveStatusText.textContent = currentStatusText || "No status set";
+    liveStatusText.textContent = currentStatusText || "No dispatch set";
     if (lapDatabase.length > 0) {
       valLapCount.textContent = lapDatabase.length;
       valLastLap.textContent = lapDatabase[0].timeFormatted;
