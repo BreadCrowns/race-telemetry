@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+  <title>Race Telemetry - Live Satellite GPS Map Widget</title>
+
+  <!-- Leaflet CSS & JS for Live Satellite GPS Map -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    /* Streamlabs Transparent Background */
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: transparent !important;
+      background-color: transparent !important;
+      position: fixed;
+      padding: 4px;
+    }
+
+    /* Scalable GPS Map Window */
+    .live-map-panel {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      border-radius: 12px;
+      overflow: hidden;
+      position: relative;
+      border: 1.5px solid rgba(255, 255, 255, 0.22);
+      box-shadow: 0 4px 18px rgba(0, 0, 0, 0.55);
+      background: #0f172a;
+    }
+    #live-gps-map {
+      width: 100%;
+      height: 100%;
+      background: #0b0f19;
+    }
+
+    /* Google Maps Style Pulsing GPS Puck (High Contrast Satellite) */
+    .gps-puck-container {
+      position: relative;
+      width: 24px;
+      height: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .gps-puck-core {
+      width: 11px;
+      height: 11px;
+      background: #38bdf8;
+      border: 2px solid #ffffff;
+      border-radius: 50%;
+      box-shadow: 0 0 10px rgba(56, 189, 248, 0.9);
+      z-index: 2;
+    }
+    .gps-puck-radar {
+      position: absolute;
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      background: rgba(56, 189, 248, 0.35);
+      animation: puckPulse 1.8s infinite ease-out;
+      z-index: 1;
+    }
+    @keyframes puckPulse {
+      0% {
+        transform: scale(0.4);
+        opacity: 0.9;
+      }
+      70% {
+        transform: scale(1.4);
+        opacity: 0;
+      }
+      100% {
+        transform: scale(1.4);
+        opacity: 0;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Live Satellite GPS Map Window -->
+  <div class="live-map-panel" id="live-map-card">
+    <div id="live-gps-map"></div>
+  </div>
+
+  <!-- Firebase SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+
+  <script>
+    // --- FIREBASE CONFIGURATION ---
+    const firebaseConfig = {
+      apiKey: "AIzaSyCC4JUzjr5lk9zaT78wwZ1RcjUguP5Q70s",
+      authDomain: "fiero-telemetry.firebaseapp.com",
+      databaseURL: "https://fiero-telemetry-default-rtdb.firebaseio.com",
+      projectId: "fiero-telemetry",
+      storageBucket: "fiero-telemetry.firebasestorage.app",
+      messagingSenderId: "183922450878",
+      appId: "1:183922450878:web:5faabfd6d163f1c6c119ef"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database().ref("raceTelemetry");
+
+    let isDemoMode = false;
+
+    // --- INITIALIZE LEAFLET SATELLITE GPS MAP ---
+    const initialLat = 38.16071;
+    const initialLon = -122.45472;
+    let targetLat = initialLat;
+    let targetLon = initialLon;
+    let currentMapLat = initialLat;
+    let currentMapLon = initialLon;
+
+    const liveMap = L.map('live-gps-map', {
+      zoomControl: false,
+      attributionControl: false,
+      dragging: false,
+      scrollWheelZoom: false,
+      doubleClickZoom: false,
+      touchZoom: false,
+      boxZoom: false,
+      keyboard: false
+    }).setView([initialLat, initialLon], 16);
+
+    // Esri World Imagery Satellite Tiles
+    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+      maxZoom: 19
+    }).addTo(liveMap);
+
+    // Google Maps Style Pulsing GPS Puck
+    const gpsPuckIcon = L.divIcon({
+      className: 'gps-puck-container',
+      html: '<div class="gps-puck-radar"></div><div class="gps-puck-core"></div>',
+      iconSize: [24, 24],
+      iconAnchor: [12, 12]
+    });
+    const carGpsMarker = L.marker([initialLat, initialLon], { icon: gpsPuckIcon }).addTo(liveMap);
+
+    // GPS Breadcrumb Path
+    const gpsBreadcrumbs = L.polyline([[initialLat, initialLon]], {
+      color: '#ea580c',
+      weight: 3.5,
+      opacity: 0.90,
+      lineCap: 'round',
+      lineJoin: 'round'
+    }).addTo(liveMap);
+
+    // Ensure map tiles render without gray tile glitch
+    setTimeout(() => {
+      liveMap.invalidateSize();
+    }, 250);
+
+    window.addEventListener('resize', () => {
+      if (liveMap) liveMap.invalidateSize();
+    });
+
+    // --- SONOMA RACEWAY ROAD COURSE GEOMETRY (DEMO) ---
+    const SONOMA_COORDS = [
+      [38.16071, -122.45472], // Start/Finish
+      [38.16390, -122.45520], // Turn 1 (Uphill)
+      [38.16615, -122.45710], // Turn 2 (Crest)
+      [38.16520, -122.45930], // Turn 3 / 3a
+      [38.16270, -122.46110], // Turn 4 (Sector 1 Gate)
+      [38.16030, -122.46280], // Turn 5 (Carousel Entry)
+      [38.15740, -122.46260], // Turn 6 (Carousel Exit)
+      [38.15780, -122.45830], // Turn 7 Hairpin (Sector 2 Gate)
+      [38.16050, -122.45710], // The Chute / Turn 8
+      [38.16190, -122.45660], // Turn 9 (Esses)
+      [38.16340, -122.45600], // Turn 10
+      [38.16071, -122.45472]  // Turn 11 Hairpin into Start/Finish
+    ];
+
+    // --- 60 FPS ANIMATION LOOP ---
+    function render() {
+      const now = Date.now();
+
+      if (isDemoMode) {
+        runDemoSimulation(now);
+      }
+
+      // 60 FPS Follow-Cam & Puck Smoothing
+      currentMapLat += (targetLat - currentMapLat) * 0.08;
+      currentMapLon += (targetLon - currentMapLon) * 0.08;
+
+      if (Math.abs(currentMapLat - targetLat) > 0.000001 || Math.abs(currentMapLon - targetLon) > 0.000001) {
+        liveMap.panTo([currentMapLat, currentMapLon], { animate: false });
+        carGpsMarker.setLatLng([currentMapLat, currentMapLon]);
+      }
+
+      requestAnimationFrame(render);
+    }
+    requestAnimationFrame(render);
+
+    // --- LIVE GPS POSITION UPDATER ---
+    function updateGpsPosition(lat, lon) {
+      if (!lat || !lon || isNaN(lat) || isNaN(lon)) return;
+      targetLat = lat;
+      targetLon = lon;
+
+      gpsBreadcrumbs.addLatLng([lat, lon]);
+      const latLngs = gpsBreadcrumbs.getLatLngs();
+      if (latLngs.length > 60) {
+        latLngs.shift();
+        gpsBreadcrumbs.setLatLngs(latLngs);
+      }
+    }
+
+    // --- DEMO SIMULATION ENGINE ---
+    function runDemoSimulation(now) {
+      const loopDuration = 112000;
+      const t = (now % loopDuration) / loopDuration;
+
+      const totalPoints = SONOMA_COORDS.length - 1;
+      const indexFloat = t * totalPoints;
+      const idx1 = Math.floor(indexFloat);
+      const idx2 = Math.min(idx1 + 1, totalPoints);
+      const fraction = indexFloat - idx1;
+
+      const p1 = SONOMA_COORDS[idx1];
+      const p2 = SONOMA_COORDS[idx2];
+      const curLat = p1[0] + (p2[0] - p1[0]) * fraction;
+      const curLon = p1[1] + (p2[1] - p1[1]) * fraction;
+
+      updateGpsPosition(curLat, curLon);
+    }
+
+    // --- FIREBASE RTDB INGESTION ---
+    const FIREBASE_REST_URL = "https://fiero-telemetry-default-rtdb.firebaseio.com/raceTelemetry.json";
+    let lastFreshDataWallTime = 0;
+
+    function ingestTelemetryRoot(root) {
+      if (!root || typeof root !== 'object') return;
+      const now = Date.now();
+
+      let telem = root;
+      if (root.latitude === undefined && root.lat === undefined) {
+        const keys = Object.keys(root).filter(k => typeof root[k] === 'object' && root[k] !== null && k !== 'autox');
+        if (keys.length > 0) telem = root[keys[keys.length - 1]];
+      }
+
+      const lat = Number(telem.latitude || telem.lat);
+      const lon = Number(telem.longitude || telem.lon);
+      if (lat && lon && lat !== 0 && lon !== 0) {
+        updateGpsPosition(lat, lon);
+        lastFreshDataWallTime = now;
+      }
+    }
+
+    db.on("value", (snap) => ingestTelemetryRoot(snap.val()));
+
+    let isFetchingFallback = false;
+    async function fetchTelemetryFallback() {
+      if (isFetchingFallback || isDemoMode) return;
+      isFetchingFallback = true;
+      try {
+        const res = await fetch(FIREBASE_REST_URL, { cache: "no-store" });
+        if (res.ok) {
+          const data = await res.json();
+          ingestTelemetryRoot(data);
+        }
+      } catch (e) {
+      } finally {
+        isFetchingFallback = false;
+      }
+    }
+
+    setInterval(() => {
+      const now = Date.now();
+      if (!isDemoMode && (!lastFreshDataWallTime || (now - lastFreshDataWallTime) > 2000)) {
+        fetchTelemetryFallback();
+      }
+    }, 1000);
+
+    function handleAppWakeup() {
+      if (typeof firebase !== "undefined" && firebase.database) {
+        try { firebase.database().goOnline(); } catch (e) {}
+      }
+      fetchTelemetryFallback();
+    }
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState === "visible") handleAppWakeup();
+    });
+    window.addEventListener("focus", handleAppWakeup);
+    window.addEventListener("pageshow", handleAppWakeup);
+
+    firebase.database().ref(".info/connected").on("value", (snap) => {
+      if (!snap.val() && !isDemoMode) {
+        try { firebase.database().goOnline(); } catch (e) {}
+        fetchTelemetryFallback();
+      }
+    });
+
+    // URL Parameters
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get("demo") === "1" || urlParams.get("demo") === "true") {
+      isDemoMode = true;
+    }
+  </script>
+</body>
+</html>
