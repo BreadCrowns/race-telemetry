@@ -51,11 +51,11 @@
       pointer-events: none;
       display: flex;
       flex-direction: column;
-      justify-content: space-between;
-      padding: max(10px, env(safe-area-inset-top, 10px)) 
-               max(14px, env(safe-area-inset-right, 14px)) 
+      justify-content: flex-end;
+      padding: max(8px, env(safe-area-inset-top, 8px)) 
+               max(12px, env(safe-area-inset-right, 12px)) 
                max(10px, env(safe-area-inset-bottom, 10px)) 
-               max(14px, env(safe-area-inset-left, 14px));
+               max(12px, env(safe-area-inset-left, 12px));
       gap: 10px;
     }
 
@@ -75,31 +75,56 @@
     }
 
     /* ========================================================
-       TOP ROW: OFFICIAL BROADCAST WATERMARK
+       CONSOLIDATED COMMAND PILL (CENTERED ON BOTTOM OF SCREEN)
+       Unifies Top Watermark + Driver Telemetry into 1 Widget
        ======================================================== */
-    .hud-top-row {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      width: 100%;
-      gap: 10px;
-    }
-
-    .watermark-card {
+    .combined-pill {
       display: inline-flex;
       align-items: center;
-      gap: 10px;
-      padding: 6px 12px;
       border-left: 5px solid var(--accent);
-      border-radius: 8px;
+      padding: 6px 12px;
+      gap: 10px;
+      border-radius: 10px;
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.7);
+      flex-shrink: 0;
+      transition: transform 0.15s ease, box-shadow 0.15s ease;
+    }
+    .combined-pill:active {
+      transform: scale(0.985);
+    }
+    .cp-section {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .cp-car-driver {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .cp-col {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .cp-laps-pair {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .cp-meta {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      min-width: 110px;
     }
     .car-badge {
       background: var(--accent);
-      color: #fff;
+      color: #000;
       font-weight: 900;
       font-size: 13px;
-      letter-spacing: 0.5px;
-      padding: 3px 8px;
+      letter-spacing: -0.5px;
+      padding: 4px 7px;
       border-radius: 5px;
       font-family: ui-monospace, SFMono-Regular, monospace;
       box-shadow: 0 0 10px var(--accent-glow);
@@ -110,9 +135,9 @@
       gap: 1px;
     }
     .watermark-title {
-      font-size: 11px;
+      font-size: 9px;
       font-weight: 900;
-      letter-spacing: 1.2px;
+      letter-spacing: 0.8px;
       text-transform: uppercase;
       color: #ffffff;
       white-space: nowrap;
@@ -120,22 +145,22 @@
     .watermark-sub {
       display: flex;
       align-items: center;
-      gap: 8px;
-      font-size: 9px;
+      gap: 5px;
+      font-size: 8px;
       color: #94a3b8;
       font-family: ui-monospace, SFMono-Regular, monospace;
     }
     .rec-indicator {
       display: inline-flex;
       align-items: center;
-      gap: 4px;
+      gap: 3px;
       color: #ef4444;
       font-weight: 800;
       letter-spacing: 0.5px;
     }
     .rec-dot {
-      width: 6px;
-      height: 6px;
+      width: 5px;
+      height: 5px;
       background: #ef4444;
       border-radius: 50%;
       box-shadow: 0 0 8px #ef4444;
@@ -145,27 +170,23 @@
       0%, 100% { opacity: 1; }
       50% { opacity: 0.25; }
     }
-
-    /* ========================================================
-       DRIVER PILL (CONSOLIDATED 5-IN-1 METRICS CARD)
-       ======================================================== */
-    .driver-pill {
-      display: inline-flex;
-      align-items: center;
-      border-left: 5px solid var(--accent);
-      padding: 6px 14px;
-      gap: 12px;
-      border-radius: 10px;
-      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.7);
-    }
-    .dp-section {
-      display: flex;
-      flex-direction: column;
-      gap: 2px;
+    .gps-lock-badge {
+      font-size: 7.5px;
+      font-weight: 800;
+      padding: 1px 5px;
+      border-radius: 3px;
+      background: rgba(34, 197, 94, 0.18);
+      color: #4ade80;
+      border: 1px solid rgba(74, 222, 128, 0.4);
+      letter-spacing: 0.5px;
+      width: fit-content;
+      text-transform: uppercase;
+      font-family: ui-monospace, monospace;
+      transition: color 0.3s ease, border-color 0.3s ease;
     }
     .dp-divider {
       width: 1px;
-      height: 38px;
+      height: 36px;
       background: rgba(255, 255, 255, 0.14);
     }
     .dp-tag {
@@ -593,38 +614,37 @@
   <!-- Main Streamlabs HUD Layer -->
   <div class="hud-layer" id="hud-ui">
     
-    <!-- ==================== TOP ROW ==================== -->
-    <div class="hud-top-row">
+    <!-- ==================== HUD BOTTOM ROW (ALL METRICS CONSOLIDATED ALONG BOTTOM) ==================== -->
+    <div class="hud-bottom-row">
       
-      <!-- 1. Official Broadcast Watermark (Tap to open Settings) -->
-      <div class="glass-panel watermark-card interactive" id="btn-open-settings" title="Tap to customize settings">
-        <span class="car-badge" id="car-number-badge">#42</span>
-        <div class="watermark-meta">
-          <div class="watermark-title" id="watermark-event-title">24 HOURS OF LEMONS • SONOMA RACEWAY</div>
-          <div class="watermark-sub">
-            <span class="rec-indicator"><span class="rec-dot"></span>REC</span>
-            <span>&bull;</span>
-            <span id="live-timecode-val">00:00:00 UTC</span>
-            <span>&bull;</span>
-            <span id="gps-status-pill" style="color: #4ade80;">GPS LOCK</span>
-          </div>
+      <!-- 1. Lap Timing (Bottom-Left) -->
+      <div class="glass-panel timer-panel">
+        <span class="dp-tag" style="letter-spacing: 1.5px;">LAP TIME</span>
+        <div class="running-lap-clock" id="running-lap-clock">00:00.00</div>
+        <div class="lap-comparison-row">
+          <span>LAST: <strong id="last-lap-val" style="color:#f8fafc;">01:53.40</strong></span>
+          <span style="opacity: 0.35;">•</span>
+          <span>BEST: <strong id="best-lap-val" style="color:#a855f7;">01:51.15</strong></span>
         </div>
       </div>
 
-      <!-- 2. Consolidated Driver Pill (Driver, Speed, Stint Time, Driver Laps, Team Laps) -->
-      <div class="glass-panel driver-pill" id="driver-pill">
+      <!-- 2. Consolidated Telemetry Command Bar (Combined Top Widgets, Centered Bottom) -->
+      <div class="glass-panel combined-pill interactive" id="btn-open-settings" title="Tap to customize settings">
         
-        <!-- Driver Name & Status -->
-        <div class="dp-section">
-          <span class="dp-tag">DRIVER</span>
-          <span class="dp-driver-val" id="dp-driver-name">MATT</span>
-          <span class="dp-status-badge" id="dp-status">ON TRACK</span>
+        <!-- Car Badge & Driver Name/Status -->
+        <div class="cp-section cp-car-driver">
+          <span class="car-badge" id="car-number-badge">#42</span>
+          <div class="cp-col">
+            <span class="dp-tag">DRIVER</span>
+            <span class="dp-driver-val" id="dp-driver-name">MATT</span>
+            <span class="dp-status-badge" id="dp-status">ON TRACK</span>
+          </div>
         </div>
 
         <div class="dp-divider"></div>
 
         <!-- Current Speed (MPH Only) -->
-        <div class="dp-section">
+        <div class="cp-section">
           <span class="dp-tag">SPEED</span>
           <div class="dp-speed-wrap">
             <span class="dp-speed-digits" id="speed-digits">0</span>
@@ -635,7 +655,7 @@
         <div class="dp-divider"></div>
 
         <!-- Stint Time & 2-Hour Limit Countdown -->
-        <div class="dp-section dp-stint-wrap" id="stint-box">
+        <div class="cp-section dp-stint-wrap" id="stint-box">
           <div class="dp-stint-header">
             <span class="dp-tag">STINT TIME</span>
             <span class="dp-stint-clock" id="stint-clock-val">00:00:00</span>
@@ -651,41 +671,36 @@
 
         <div class="dp-divider"></div>
 
-        <!-- Driver Laps (This Stint) -->
-        <div class="dp-section dp-laps-wrap">
-          <span class="dp-tag">DRIVER</span>
-          <span class="dp-lap-num" id="driver-laps-val">15</span>
-          <span class="dp-lap-sub">LAPS</span>
+        <!-- Driver Laps & Total Team Laps -->
+        <div class="cp-section cp-laps-pair">
+          <div class="dp-laps-wrap">
+            <span class="dp-tag">DRIVER</span>
+            <span class="dp-lap-num" id="driver-laps-val">15</span>
+            <span class="dp-lap-sub">LAPS</span>
+          </div>
+          <div class="dp-laps-wrap">
+            <span class="dp-tag">TEAM</span>
+            <span class="dp-lap-num team" id="team-laps-val">87</span>
+            <span class="dp-lap-sub">TOTAL</span>
+          </div>
         </div>
 
         <div class="dp-divider"></div>
 
-        <!-- Total Team Laps (Race Total) -->
-        <div class="dp-section dp-laps-wrap">
-          <span class="dp-tag">TEAM</span>
-          <span class="dp-lap-num team" id="team-laps-val">87</span>
-          <span class="dp-lap-sub">TOTAL</span>
+        <!-- Event Watermark, REC Timecode & GPS Status Lock -->
+        <div class="cp-section cp-meta">
+          <div class="watermark-title" id="watermark-event-title">24H LEMONS • SONOMA</div>
+          <div class="watermark-sub">
+            <span class="rec-indicator"><span class="rec-dot"></span>REC</span>
+            <span>&bull;</span>
+            <span id="live-timecode-val">00:00:00 UTC</span>
+          </div>
+          <span class="gps-lock-badge" id="gps-status-pill">DB GPS LOCK</span>
         </div>
 
       </div>
 
-    </div>
-
-    <!-- ==================== BOTTOM ROW ==================== -->
-    <div class="hud-bottom-row">
-      
-      <!-- Lap Timing (Bottom-Left) -->
-      <div class="glass-panel timer-panel">
-        <span class="dp-tag" style="letter-spacing: 1.5px;">LAP TIME</span>
-        <div class="running-lap-clock" id="running-lap-clock">00:00.00</div>
-        <div class="lap-comparison-row">
-          <span>LAST: <strong id="last-lap-val" style="color:#f8fafc;">01:53.40</strong></span>
-          <span style="opacity: 0.35;">•</span>
-          <span>BEST: <strong id="best-lap-val" style="color:#a855f7;">01:51.15</strong></span>
-        </div>
-      </div>
-
-      <!-- Bottom-Right Cluster: Minimalist Floating G-Meter + Light Mode Google Maps Style Window -->
+      <!-- 3. Bottom-Right Cluster: Minimalist Floating G-Meter + Satellite GPS Map Window -->
       <div class="bottom-right-cluster">
         
         <!-- Minimalist Floating Friction Circle (No square background) -->
@@ -697,7 +712,7 @@
           </div>
         </div>
 
-        <!-- Small Google Maps Style Window in Corner (Light Mode Live GPS Map) -->
+        <!-- Small Google Maps Style Window in Corner (Satellite Live GPS Map) -->
         <div class="live-map-panel">
           <div class="live-map-header">
             <span class="live-map-title">📍 GPS MAP</span>
@@ -852,6 +867,8 @@
     // --- VERTICAL LANDSCAPE G-FORCE CALIBRATION ---
     let rawLateralG = 0;
     let rawLongitudinalG = 0;
+    let smoothLateralG = 0;
+    let smoothLongitudinalG = 0;
     let peakG = 1.2;
 
     const gHistory = [];
@@ -859,9 +876,13 @@
 
     let isDemoMode = false;
 
-    // --- INITIALIZE LEAFLET DARK MODE GPS MAP ---
+    // --- INITIALIZE LEAFLET SATELLITE GPS MAP ---
     const initialLat = 38.16071;
     const initialLon = -122.45472;
+    let targetLat = initialLat;
+    let targetLon = initialLon;
+    let currentMapLat = initialLat;
+    let currentMapLon = initialLon;
 
     const liveMap = L.map('live-gps-map', {
       zoomControl: false,
@@ -949,14 +970,29 @@
         runDemoSimulation(now);
       }
 
-      // 3. Speed Smoothing (Tabular Digits, Rapid Zero Snap)
+      // 3. Smooth Speed Transitions (Continuous 60FPS Lerp between 1Hz GPS Packets)
       if (targetSpeedMph === 0) {
-        smoothSpeedMph += (0 - smoothSpeedMph) * 0.35;
-        if (smoothSpeedMph < 0.4) smoothSpeedMph = 0;
+        smoothSpeedMph += (0 - smoothSpeedMph) * 0.20;
+        if (smoothSpeedMph < 0.3) smoothSpeedMph = 0;
       } else {
-        smoothSpeedMph += (targetSpeedMph - smoothSpeedMph) * 0.18;
+        smoothSpeedMph += (targetSpeedMph - smoothSpeedMph) * 0.08;
       }
       speedDigits.textContent = Math.round(smoothSpeedMph);
+
+      // Smooth Map Follow-Cam & Car Puck (Continuous 60FPS Glide between 1Hz GPS Fixes)
+      const latDelta = targetLat - currentMapLat;
+      const lonDelta = targetLon - currentMapLon;
+      if (Math.abs(latDelta) > 0.0000001 || Math.abs(lonDelta) > 0.0000001) {
+        if (Math.abs(latDelta) > 0.01 || Math.abs(lonDelta) > 0.01) {
+          currentMapLat = targetLat;
+          currentMapLon = targetLon;
+        } else {
+          currentMapLat += latDelta * 0.07;
+          currentMapLon += lonDelta * 0.07;
+        }
+        carGpsMarker.setLatLng([currentMapLat, currentMapLon]);
+        liveMap.panTo([currentMapLat, currentMapLon], { animate: false });
+      }
 
       // 4. Stint Clock & 2-Hour Limit Countdown Bar
       const stintElapsed = Math.max(0, now - stintStartTime);
@@ -1067,8 +1103,12 @@
       gCtx.fillText("L", 4, cy);
       gCtx.fillText("R", w - 4, cy);
 
-      const curGx = Math.max(-1.5, Math.min(1.5, rawLateralG));
-      const curGy = Math.max(-1.5, Math.min(1.5, rawLongitudinalG));
+      // Smooth G-Force Lerp (Continuous fluid movement between 1Hz accelerometer ticks)
+      smoothLateralG += (rawLateralG - smoothLateralG) * 0.10;
+      smoothLongitudinalG += (rawLongitudinalG - smoothLongitudinalG) * 0.10;
+
+      const curGx = Math.max(-1.5, Math.min(1.5, smoothLateralG));
+      const curGy = Math.max(-1.5, Math.min(1.5, smoothLongitudinalG));
 
       const activePx = cx + (curGx / 1.5) * maxRadius;
       const activePy = cy - (curGy / 1.5) * maxRadius;
@@ -1117,8 +1157,8 @@
     // --- LIVE GPS POSITION UPDATER (FOLLOW-CAM & BREADCRUMBS) ---
     function updateGpsPosition(lat, lon) {
       if (!lat || !lon || isNaN(lat) || isNaN(lon)) return;
-      carGpsMarker.setLatLng([lat, lon]);
-      liveMap.panTo([lat, lon], { animate: false });
+      targetLat = lat;
+      targetLon = lon;
       liveMapCoords.textContent = `${lat.toFixed(4)}°, ${lon.toFixed(4)}°`;
 
       // Update path breadcrumbs (keep last 60 points)
@@ -1331,6 +1371,10 @@
     // Zero G-Force Calibration
     btnZeroG.addEventListener("click", () => {
       peakG = 0;
+      smoothLateralG = 0;
+      smoothLongitudinalG = 0;
+      rawLateralG = 0;
+      rawLongitudinalG = 0;
       gPeakVal.textContent = "0.0G";
       closeDrawer();
     });
