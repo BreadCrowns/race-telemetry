@@ -310,7 +310,7 @@
     }
 
     /* ========================================================
-       BOTTOM ROW: LAP TIMER | FRICTION CIRCLE | LIVE GPS MAP
+       BOTTOM ROW: CONSOLIDATED COMMAND BAR (LOWER-LEFT) & G-METER
        ======================================================== */
     .hud-bottom-row {
       display: flex;
@@ -321,32 +321,30 @@
       flex-wrap: nowrap;
     }
 
-    /* Lap Timer Sub-Block (Bottom-Left) */
-    .timer-panel {
-      display: inline-flex;
+    /* Lap Timer Sub-Section in Combined Pill */
+    .cp-lap-wrap {
+      display: flex;
       flex-direction: column;
-      gap: 2px;
-      padding: 8px 14px;
-      border-left: 5px solid var(--accent);
-      min-width: 170px;
-      flex-shrink: 0;
+      gap: 1px;
+      min-width: 115px;
     }
     .running-lap-clock {
       font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
       font-variant-numeric: tabular-nums;
       font-weight: 900;
-      font-size: 32px;
-      line-height: 1.05;
+      font-size: 20px;
+      line-height: 1.1;
       color: #ffffff;
       letter-spacing: -0.5px;
     }
     .lap-comparison-row {
       display: flex;
       align-items: center;
-      gap: 8px;
+      gap: 5px;
       font-family: ui-monospace, SFMono-Regular, monospace;
-      font-size: 10px;
+      font-size: 8.5px;
       color: #94a3b8;
+      white-space: nowrap;
     }
 
     /* Bottom-Right Cluster */
@@ -634,30 +632,32 @@
       <div id="live-gps-map"></div>
     </div>
 
-    <!-- ==================== HUD BOTTOM ROW (BALANCED ALONG BOTTOM EDGE) ==================== -->
+    <!-- ==================== HUD BOTTOM ROW (LOWER-LEFT ANCHORED) ==================== -->
     <div class="hud-bottom-row" id="hud-bottom-row">
       
-      <!-- 1. Lap Timing (Bottom-Left) -->
-      <div class="glass-panel timer-panel">
-        <span class="dp-tag" style="letter-spacing: 1.5px;">LAP TIME</span>
-        <div class="running-lap-clock" id="running-lap-clock">00:00.00</div>
-        <div class="lap-comparison-row">
-          <span>LAST: <strong id="last-lap-val" style="color:#f8fafc;">01:53.40</strong></span>
-          <span style="opacity: 0.35;">•</span>
-          <span>BEST: <strong id="best-lap-val" style="color:#a855f7;">01:51.15</strong></span>
-        </div>
-      </div>
-
-      <!-- 2. Consolidated Telemetry Command Bar (Combined Top Widgets, Centered Bottom) -->
+      <!-- Consolidated Telemetry Command Bar (Lower-Left Corner) -->
       <div class="glass-panel combined-pill interactive" id="btn-open-settings" title="Tap to customize settings">
         
         <!-- Car Badge & Driver Name/Status -->
         <div class="cp-section cp-car-driver">
-          <span class="car-badge" id="car-number-badge">#42</span>
+          <span class="car-badge" id="car-number-badge">#901</span>
           <div class="cp-col">
             <span class="dp-tag">DRIVER</span>
             <span class="dp-driver-val" id="dp-driver-name">MATT</span>
             <span class="dp-status-badge" id="dp-status">ON TRACK</span>
+          </div>
+        </div>
+
+        <div class="dp-divider"></div>
+
+        <!-- Integrated Lap Times & Running Lap Clock -->
+        <div class="cp-section cp-lap-wrap">
+          <span class="dp-tag">LAP TIME</span>
+          <div class="running-lap-clock" id="running-lap-clock">00:00.00</div>
+          <div class="lap-comparison-row">
+            <span>LAST: <strong id="last-lap-val" style="color:#f8fafc;">01:53.40</strong></span>
+            <span style="opacity: 0.35;">•</span>
+            <span>BEST: <strong id="best-lap-val" style="color:#a855f7;">01:51.15</strong></span>
           </div>
         </div>
 
@@ -755,7 +755,7 @@
     <div class="form-group">
       <label class="form-label">Car Number & Event Title</label>
       <div style="display: flex; gap: 8px;">
-        <input type="text" class="form-input" id="cfg-car-number" value="#42" style="width: 70px; text-align: center;" />
+        <input type="text" class="form-input" id="cfg-car-number" value="#901" style="width: 70px; text-align: center;" />
         <input type="text" class="form-input" id="cfg-event-title" value="24 HOURS OF LEMONS • SONOMA RACEWAY" style="flex: 1;" />
       </div>
     </div>
@@ -863,7 +863,7 @@
 
     // --- STATE & TELEMETRY VARIABLES ---
     let activeDriver = "MATT";
-    let carNumber = "#42";
+    let carNumber = "#901";
     let eventTitle = "24 HOURS OF LEMONS • SONOMA RACEWAY";
 
     let stintStartTime = Date.now() - (62 * 60 * 1000); // 62 mins into stint
