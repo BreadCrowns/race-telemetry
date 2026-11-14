@@ -85,43 +85,6 @@
       flex-wrap: wrap;
     }
 
-    /* Race Flag Controls */
-    .flag-group {
-      display: inline-flex;
-      background: #020617;
-      border: 1px solid #334155;
-      border-radius: 6px;
-      padding: 2px;
-      gap: 4px;
-    }
-    .flag-btn {
-      border: none;
-      padding: 5px 12px;
-      font-size: 11px;
-      font-weight: 800;
-      border-radius: 4px;
-      cursor: pointer;
-      letter-spacing: 0.5px;
-      text-transform: uppercase;
-      opacity: 0.5;
-      transition: all 0.15s ease;
-      background: #1e293b;
-      color: #cbd5e1;
-    }
-    .flag-btn.green { color: #4ade80; }
-    .flag-btn.yellow { color: #fde047; }
-    .flag-btn.red { color: #f87171; }
-    .flag-btn.checkered { color: #ffffff; }
-
-    .flag-btn.active {
-      opacity: 1;
-      box-shadow: 0 0 10px currentColor;
-    }
-    .flag-btn.green.active { background: #15803d; color: #fff; }
-    .flag-btn.yellow.active { background: #a16207; color: #fff; }
-    .flag-btn.red.active { background: #b91c1c; color: #fff; }
-    .flag-btn.checkered.active { background: #334155; color: #fff; }
-
     /* Telemetry Watchdog Pill */
     .watchdog-pill {
       display: flex;
@@ -234,6 +197,22 @@
     }
     .btn-action:hover {
       background: #ea580c;
+    }
+    .btn-action-clear {
+      background: #1e293b;
+      border: 1px solid #334155;
+      color: #94a3b8;
+      font-weight: 700;
+      font-size: 11px;
+      padding: 8px 10px;
+      border-radius: 6px;
+      cursor: pointer;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .btn-action-clear:hover {
+      background: #334155;
+      color: #fff;
     }
     .live-status-banner {
       background: rgba(15, 23, 42, 0.9);
@@ -580,23 +559,6 @@
     }
     .log-time { color: #64748b; font-weight: 700; white-space: nowrap; }
     .log-msg { color: #e2e8f0; }
-
-    /* Status Badges */
-    .status-badge {
-      font-size: 9px;
-      font-weight: 900;
-      padding: 2px 6px;
-      border-radius: 4px;
-      text-transform: uppercase;
-      background: #14532d;
-      color: #4ade80;
-      border: 1px solid #22c55e;
-    }
-    .status-badge.in-pits {
-      background: #713f12;
-      color: #fde047;
-      border-color: #eab308;
-    }
   </style>
 </head>
 <body>
@@ -609,14 +571,6 @@
     </div>
 
     <div class="header-controls">
-      <!-- Race Flag Buttons -->
-      <div class="flag-group">
-        <button type="button" class="flag-btn green active" onclick="setFlag('GREEN')">GREEN</button>
-        <button type="button" class="flag-btn yellow" onclick="setFlag('YELLOW')">YELLOW</button>
-        <button type="button" class="flag-btn red" onclick="setFlag('RED')">RED</button>
-        <button type="button" class="flag-btn checkered" onclick="setFlag('CHECKERED')">CHEQ</button>
-      </div>
-
       <!-- Live Telemetry Watchdog Pill -->
       <div class="watchdog-pill">
         <div class="status-beacon" id="gps-beacon"></div>
@@ -638,12 +592,13 @@
         <span class="action-step">Live on Stream Overlay</span>
       </div>
       <div class="status-input-row">
-        <input type="text" id="status-input" class="text-input" placeholder="Type status (e.g. In P3, slight vibration in T6, box in 2 laps)..." onkeydown="if(event.key==='Enter') updateCurrentStatus()" />
+        <input type="text" id="status-input" class="text-input" placeholder="Type status update (e.g. In P3, running clean, box in 2 laps)..." onkeydown="if(event.key==='Enter') updateCurrentStatus()" />
         <button type="button" class="btn-action" onclick="updateCurrentStatus()">Post</button>
+        <button type="button" class="btn-action-clear" onclick="clearCurrentStatus()">Clear</button>
       </div>
       <div class="live-status-banner">
         <span>📢</span>
-        <span id="live-status-text">Car on track. All systems green.</span>
+        <span id="live-status-text">No status set</span>
       </div>
     </div>
 
@@ -714,7 +669,6 @@
       <div class="panel">
         <div class="panel-header">
           <span class="panel-title">⏱️ Automated GPS Lap Timer</span>
-          <span class="status-badge" id="car-status-badge">ON TRACK</span>
         </div>
         <div class="timer-display-box">
           <div class="timer-mode-tag">● AUTOMATED GPS TIMING (SONOMA S/F BEAM)</div>
@@ -891,7 +845,7 @@
 
     let activeDriver = localStorage.getItem("pitwall_active_driver") || "Matt";
     let stintStartTime = parseInt(localStorage.getItem("pitwall_stint_start") || Date.now().toString());
-    let currentStatusText = localStorage.getItem("pitwall_status_text") || "Car on track. All systems green.";
+    let currentStatusText = localStorage.getItem("pitwall_status_text") || "";
 
     // Lap timing state (Automated continuous loop)
     let timingRunning = false;
@@ -905,7 +859,6 @@
     let lastLapFinishTime = 0;
 
     let lapDatabase = JSON.parse(localStorage.getItem("race_team_laps") || "[]");
-    let currentFlag = "GREEN";
 
     // --- DOM REFERENCES ---
     const gpsBeacon = document.getElementById("gps-beacon");
@@ -930,7 +883,6 @@
     const valLapCount = document.getElementById("val-lap-count");
     const valLastLap = document.getElementById("val-last-lap");
     const valBestLap = document.getElementById("val-best-lap");
-    const carStatusBadge = document.getElementById("car-status-badge");
 
     const valSpeed = document.getElementById("val-speed");
     const valMiles = document.getElementById("val-miles");
@@ -1013,12 +965,38 @@
       db.update({
         statusText: text,
         notes: text,
+        status: text,
         statusUpdatedAt: Date.now()
       });
-      db.child("autox").update({ notes: text });
+      db.child("autox").update({
+        notes: text,
+        statusText: text,
+        status: text
+      });
 
       addLogEntry(`💬 Status Update: "${text}"`);
       playChime(659.25, 0.15);
+    }
+
+    function clearCurrentStatus() {
+      currentStatusText = "";
+      liveStatusText.textContent = "No status set";
+      statusInput.value = "";
+      localStorage.removeItem("pitwall_status_text");
+
+      db.update({
+        statusText: "",
+        notes: "",
+        status: "",
+        statusUpdatedAt: Date.now()
+      });
+      db.child("autox").update({
+        notes: "",
+        statusText: "",
+        status: ""
+      });
+
+      addLogEntry(`💬 Status cleared`);
     }
 
     // --- ACTION 2: CHOOSING THE DRIVER ---
@@ -1155,15 +1133,6 @@
         lapSpeedCount++;
       }
 
-      // Auto-detect car state (Pits vs On Track)
-      if (speedMph < 5) {
-        carStatusBadge.textContent = "IN PITS";
-        carStatusBadge.className = "status-badge in-pits";
-      } else if (speedMph > 15) {
-        carStatusBadge.textContent = "ON TRACK";
-        carStatusBadge.className = "status-badge";
-      }
-
       // Check crossing Start/Finish Line
       const distToLine = getDistanceMeters(lat, lon, SONOMA_CONFIG.startGate.lat, SONOMA_CONFIG.startGate.lon);
 
@@ -1288,16 +1257,6 @@
       logList.prepend(row);
     }
 
-    function setFlag(flag) {
-      currentFlag = flag;
-      document.querySelectorAll(".flag-btn").forEach(btn => btn.classList.remove("active"));
-      const btn = document.querySelector(`.flag-btn.${flag.toLowerCase()}`);
-      if (btn) btn.classList.add("active");
-
-      db.update({ flag: flag });
-      addLogEntry(`🚩 Race Flag: ${flag}`);
-    }
-
     function exportLapsCsv() {
       if (lapDatabase.length === 0) {
         alert("No laps to export yet.");
@@ -1353,11 +1312,6 @@
         updateDriverUI();
       }
 
-      // Ingest flag
-      if (root.flag && root.flag !== currentFlag) {
-        setFlag(root.flag);
-      }
-
       // Telemetry ingestion
       let telem = root;
       if (root.lat === undefined && root.latitude === undefined) {
@@ -1405,7 +1359,7 @@
     updateFuelUI();
     renderLapTable();
     valMiles.textContent = totalMiles.toFixed(1);
-    liveStatusText.textContent = currentStatusText;
+    liveStatusText.textContent = currentStatusText || "No status set";
     if (lapDatabase.length > 0) {
       valLapCount.textContent = lapDatabase.length;
       valLastLap.textContent = lapDatabase[0].timeFormatted;

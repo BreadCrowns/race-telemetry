@@ -101,44 +101,6 @@
       color: #ffffff;
       line-height: 1.1;
     }
-    .status-badge {
-      font-size: 9px;
-      font-weight: 800;
-      padding: 2px 6px;
-      border-radius: 4px;
-      background: #334155;
-      color: #cbd5e1;
-      align-self: flex-start;
-      margin-top: 3px;
-      letter-spacing: 0.5px;
-      text-transform: uppercase;
-    }
-    .status-badge.ready {
-      background: rgba(56, 189, 248, 0.2);
-      color: #38bdf8;
-      border: 1px solid rgba(56, 189, 248, 0.4);
-    }
-    .status-badge.running {
-      background: rgba(34, 197, 94, 0.25);
-      color: #4ade80;
-      border: 1px solid #22c55e;
-      animation: pulse-green 1.2s infinite;
-    }
-    .status-badge.finished {
-      background: rgba(234, 179, 8, 0.25);
-      color: #facc15;
-      border: 1px solid #eab308;
-    }
-    .status-badge.saved {
-      background: rgba(168, 85, 247, 0.25);
-      color: #c084fc;
-      border: 1px solid #a855f7;
-    }
-    .status-badge.inpits {
-      background: rgba(245, 158, 11, 0.25);
-      color: #f59e0b;
-      border: 1px solid #f59e0b;
-    }
 
     @keyframes pulse-green {
       0%, 100% { opacity: 1; }
@@ -355,15 +317,13 @@
           <span class="tag-label">Driver</span>
           <span class="run-badge" id="run-val">STANDBY</span>
         </div>
-        <span class="driver-name" id="driver-val">IN PITS</span>
-        <span class="status-badge inpits" id="status-val">IN PITS</span>
+        <span class="driver-name" id="driver-val">STANDBY</span>
       </div>
 
-      <!-- 2. Autocross Timer & Penalty -->
+      <!-- 2. Lap Timer -->
       <div class="timer-col">
-        <span class="tag-label">Autocross Time</span>
-        <div class="timer-readout ready" id="timer-val">STANDBY</div>
-        <span class="penalty-pill" id="penalty-val" style="display: none;">CLEAN</span>
+        <span class="tag-label">Lap Time</span>
+        <div class="timer-readout ready" id="timer-val">00:00.00</div>
       </div>
 
       <!-- 3. Live Speed -->
@@ -376,9 +336,9 @@
       </div>
     </div>
 
-    <!-- Notes Banner (Appears once submitted) -->
+    <!-- Live Status / Notes Banner from Pit Wall Text Box -->
     <div class="notes-banner" id="notes-banner" style="display: none;">
-      <span class="notes-icon">💬</span>
+      <span class="notes-icon">📢</span>
       <span class="notes-text" id="notes-val"></span>
     </div>
 
@@ -412,9 +372,7 @@
     // UI DOM Elements
     const driverEl = document.getElementById("driver-val");
     const runEl = document.getElementById("run-val");
-    const statusEl = document.getElementById("status-val");
     const timerEl = document.getElementById("timer-val");
-    const penaltyEl = document.getElementById("penalty-val");
     const speedEl = document.getElementById("speed-val");
     const notesBanner = document.getElementById("notes-banner");
     const notesEl = document.getElementById("notes-val");
@@ -423,7 +381,7 @@
     const gpsAcc = document.getElementById("gps-acc");
 
     // State
-    let autoxState = "IN PITS";
+    let autoxState = "RUNNING";
     let runStartTime = 0;
     let targetSpeed = 0;
     let smoothSpeed = 0;
@@ -456,7 +414,7 @@
       speedEl.textContent = Math.round(smoothSpeed);
 
       // Smooth running stopwatch
-      if (autoxState === "RUNNING" && runStartTime > 0) {
+      if (runStartTime > 0) {
         const elapsed = Math.max(0, Date.now() - runStartTime);
         timerEl.textContent = formatTimeMs(elapsed);
       }
@@ -465,98 +423,37 @@
     }
     requestAnimationFrame(animate);
 
-    // Listen to Firebase Telemetry & Autocross timing
+    // Listen to Firebase Telemetry
     db.on("value", (snap) => {
       const root = snap.val();
       if (!root) return;
 
       const autox = root.autox || {};
 
-      // 1. Driver Name & Run Number
-      const driver = autox.driver || root.driver || "In Pits";
-      const isInPits = driver.toLowerCase().includes("in pits") || driver.toLowerCase().includes("standby") || autox.state === "IN PITS";
+      // 1. Driver Name & Run/Lap Number
+      const driver = root.driver || autox.driver || "STANDBY";
+      driverEl.textContent = driver.toUpperCase();
 
-      if (isInPits) {
-        driverEl.textContent = "IN PITS";
-        runEl.textContent = "STANDBY";
-      } else {
-        driverEl.textContent = driver.toUpperCase();
-        const runNum = autox.runNum || root.runNum || 1;
-        runEl.textContent = `RUN #${runNum}`;
+      const lapCount = (root.laps ? Object.keys(root.laps).length : (root.lapNum || 0));
+      runEl.textContent = lapCount > 0 ? `LAP #${lapCount}` : "SONOMA";
+
+      // 2. Lap Timing
+      if (root.lapStartTime) {
+        runStartTime = Number(root.lapStartTime);
+        timerEl.className = "timer-readout running";
+      } else if (autox.rawTimeMs || autox.rawFormatted) {
+        runStartTime = 0;
+        timerEl.textContent = autox.rawFormatted || formatTimeMs(autox.rawTimeMs);
+        timerEl.className = "timer-readout saved";
       }
 
-      // 3. Autocross Timing State: "READY" | "RUNNING" | "STOPPED" | "SAVED" | "IN PITS"
-      autoxState = autox.state || (root.status === "ON TRACK" ? "RUNNING" : (root.status === "FINISHED" ? "STOPPED" : (isInPits ? "IN PITS" : "READY")));
-
-      if (isInPits && autoxState !== "RUNNING" && autoxState !== "STOPPED" && autoxState !== "SAVED") {
-        runStartTime = 0;
-        timerEl.textContent = "STANDBY";
-        timerEl.className = "timer-readout ready";
-        statusEl.textContent = "IN PITS";
-        statusEl.className = "status-badge inpits";
-        penaltyEl.style.display = "none";
+      // 3. Status Updates directly from Pit Wall Text Box
+      const statusUpdate = (root.statusText || root.notes || autox.notes || autox.statusText || "").trim();
+      if (statusUpdate) {
+        notesEl.textContent = statusUpdate;
+        notesBanner.style.display = "flex";
+      } else {
         notesBanner.style.display = "none";
-
-      } else if (autoxState === "READY") {
-        runStartTime = 0;
-        timerEl.textContent = "READY";
-        timerEl.className = "timer-readout ready";
-        statusEl.textContent = "STAGED";
-        statusEl.className = "status-badge ready";
-        penaltyEl.style.display = "none";
-        notesBanner.style.display = "none";
-
-      } else if (autoxState === "RUNNING") {
-        runStartTime = Number(autox.startTime) || Date.now();
-        timerEl.className = "timer-readout running";
-        statusEl.textContent = "⚡ ON COURSE";
-        statusEl.className = "status-badge running";
-        penaltyEl.style.display = "none";
-        notesBanner.style.display = "none";
-
-      } else if (autoxState === "STOPPED") {
-        runStartTime = 0;
-        const stoppedDisplay = autox.rawFormatted || (autox.rawTimeMs ? formatTimeMs(autox.rawTimeMs) : "00:00.00");
-        timerEl.textContent = stoppedDisplay;
-        timerEl.className = "timer-readout stopped";
-        statusEl.textContent = "🏁 FINISHED";
-        statusEl.className = "status-badge finished";
-        penaltyEl.style.display = "none";
-        notesBanner.style.display = "none";
-
-      } else if (autoxState === "SAVED") {
-        runStartTime = 0;
-        const isDnf = !!autox.isDnf;
-        const cones = Number(autox.cones || 0);
-        const finalDisplay = autox.finalFormatted || (isDnf ? "DNF" : (autox.finalTimeMs ? formatTimeMs(autox.finalTimeMs) : "00:00.00"));
-
-        timerEl.textContent = finalDisplay;
-        timerEl.className = isDnf ? "timer-readout dnf" : "timer-readout saved";
-        statusEl.textContent = "SAVED";
-        statusEl.className = "status-badge saved";
-
-        // Show Penalties
-        if (isDnf) {
-          penaltyEl.textContent = "❌ DNF";
-          penaltyEl.className = "penalty-pill dnf";
-          penaltyEl.style.display = "inline-flex";
-        } else if (cones > 0) {
-          penaltyEl.textContent = `⚠️ +${cones} CONE${cones > 1 ? 'S' : ''} (+${cones * 2}s)`;
-          penaltyEl.className = "penalty-pill cone";
-          penaltyEl.style.display = "inline-flex";
-        } else {
-          penaltyEl.textContent = "✅ CLEAN RUN";
-          penaltyEl.className = "penalty-pill clean";
-          penaltyEl.style.display = "inline-flex";
-        }
-
-        // Show Driver Notes
-        if (autox.notes && autox.notes.trim()) {
-          notesEl.textContent = autox.notes.trim();
-          notesBanner.style.display = "flex";
-        } else {
-          notesBanner.style.display = "none";
-        }
       }
 
       // 4. Ingest Speed & GPS Fix
