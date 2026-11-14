@@ -1055,13 +1055,15 @@
           penaltyEl.style.display = "inline-flex";
         }
 
-        // Show Driver Notes
-        if (autox.notes && autox.notes.trim()) {
-          notesEl.textContent = autox.notes.trim();
-          notesBanner.style.display = "flex";
-        } else {
-          notesBanner.style.display = "none";
-        }
+      }
+
+      // Show Driver Notes / Pit Wall Status
+      const statusNote = (root.statusText || root.status || root.notes || (autox && (autox.notes || autox.statusText || autox.status)) || "").trim();
+      if (statusNote) {
+        notesEl.textContent = statusNote;
+        notesBanner.style.display = "flex";
+      } else {
+        notesBanner.style.display = "none";
       }
 
       // 4. Ingest Speed & GPS Fix

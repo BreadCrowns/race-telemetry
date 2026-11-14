@@ -101,6 +101,23 @@
       color: #ffffff;
       line-height: 1.1;
     }
+    .status-pill {
+      font-size: 10px;
+      font-weight: 800;
+      padding: 2px 7px;
+      border-radius: 4px;
+      background: rgba(56, 189, 248, 0.15);
+      border: 1px solid rgba(56, 189, 248, 0.4);
+      color: #38bdf8;
+      align-self: flex-start;
+      margin-top: 3px;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      max-width: 130px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
 
     @keyframes pulse-green {
       0%, 100% { opacity: 1; }
@@ -318,6 +335,7 @@
           <span class="run-badge" id="run-val">STANDBY</span>
         </div>
         <span class="driver-name" id="driver-val">STANDBY</span>
+        <span class="status-pill" id="status-val" style="display: none;"></span>
       </div>
 
       <!-- 2. Lap Timer -->
@@ -371,6 +389,7 @@
 
     // UI DOM Elements
     const driverEl = document.getElementById("driver-val");
+    const statusEl = document.getElementById("status-val");
     const runEl = document.getElementById("run-val");
     const timerEl = document.getElementById("timer-val");
     const speedEl = document.getElementById("speed-val");
@@ -448,11 +467,18 @@
       }
 
       // 3. Status Updates directly from Pit Wall Text Box
-      const statusUpdate = (root.statusText || root.notes || autox.notes || autox.statusText || "").trim();
+      const statusUpdate = (root.statusText || root.status || root.notes || (autox && (autox.notes || autox.statusText || autox.status)) || "").trim();
       if (statusUpdate) {
+        if (statusEl) {
+          statusEl.textContent = statusUpdate.toUpperCase();
+          statusEl.style.display = "inline-block";
+        }
         notesEl.textContent = statusUpdate;
         notesBanner.style.display = "flex";
       } else {
+        if (statusEl) {
+          statusEl.style.display = "none";
+        }
         notesBanner.style.display = "none";
       }
 

@@ -1164,12 +1164,21 @@
       const now = Date.now();
       lastDbPacketTime = now;
 
-      // 1. Driver Name
+      // 1. Driver Name & Status from Firebase
       const driver = root.driver || (root.autox && root.autox.driver) || activeDriver;
       if (driver && driver.toUpperCase() !== activeDriver) {
         activeDriver = driver.toUpperCase();
         dpDriverName.textContent = activeDriver;
         cfgDriver.value = activeDriver;
+      }
+
+      // Live Status update from Pit Wall text box
+      const statusText = (root.statusText || root.status || root.notes || (root.autox && (root.autox.statusText || root.autox.status || root.autox.notes)) || "").trim();
+      if (statusText) {
+        dpStatus.textContent = statusText.toUpperCase();
+        dpStatus.style.display = "inline-block";
+      } else {
+        dpStatus.textContent = "ON TRACK";
       }
 
       // 2. Lap Counts (Driver Stint & Team Total)

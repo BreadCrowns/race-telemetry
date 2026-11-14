@@ -962,19 +962,28 @@
       localStorage.setItem("pitwall_status_text", text);
 
       // Instantly sync to Firebase for Streamlabs live HUD overlay & team devices
-      db.update({
+      const payload = {
         statusText: text,
         notes: text,
         status: text,
         statusUpdatedAt: Date.now()
-      });
+      };
+
+      db.update(payload)
+        .then(() => {
+          addLogEntry(`✅ Status updated on Firebase: "${text}"`);
+        })
+        .catch(err => {
+          console.error("Firebase status update failed:", err);
+          addLogEntry(`⚠️ Firebase status error: ${err.message}`);
+        });
+
       db.child("autox").update({
         notes: text,
         statusText: text,
         status: text
       });
 
-      addLogEntry(`💬 Status Update: "${text}"`);
       playChime(659.25, 0.15);
     }
 
