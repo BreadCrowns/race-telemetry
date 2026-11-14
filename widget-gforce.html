@@ -38,7 +38,8 @@
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      padding: 4px;
+      padding: 0;
+      margin: 0;
     }
 
     .interactive {
@@ -46,23 +47,23 @@
       cursor: pointer;
     }
 
-    /* Minimalist Friction Circle (Floating target, no square background) */
+    /* Minimalist Friction Circle (Responsive & Zero Distortion) */
     .g-meter-minimal {
+      width: 100%;
+      height: 100%;
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 4px;
+      justify-content: center;
       position: relative;
-      flex-shrink: 0;
       background: transparent !important;
       border: none !important;
       box-shadow: none !important;
-      padding: 0;
+      padding: 2px;
       user-select: none;
+      box-sizing: border-box;
     }
     canvas#g-canvas {
-      width: 130px;
-      height: 130px;
       display: block;
       filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.7));
     }
@@ -75,12 +76,14 @@
       -webkit-backdrop-filter: blur(8px);
       border: 1px solid rgba(255, 255, 255, 0.18);
       border-radius: 9999px;
-      padding: 2px 8px;
+      padding: 2px 10px;
       font-family: ui-monospace, SFMono-Regular, monospace;
       font-size: 11px;
       font-weight: 800;
       color: #f8fafc;
       box-shadow: 0 2px 8px rgba(0, 0, 0, 0.45);
+      white-space: nowrap;
+      margin-top: 4px;
     }
     .g-minimal-peak {
       color: var(--accent);
@@ -131,6 +134,21 @@
     const gPeakVal = document.getElementById("g-peak-val");
     const gMeterBox = document.getElementById("g-meter-box");
 
+    // Dynamic Responsive Resizing (Enforces 1:1 Aspect Ratio to Prevent Any Distortion)
+    function resizeGCanvas() {
+      const availW = window.innerWidth || 140;
+      const availH = window.innerHeight || 160;
+      const size = Math.max(60, Math.floor(Math.min(availW - 8, availH - 32)));
+
+      const dpr = window.devicePixelRatio || 1;
+      gCanvas.width = size * dpr;
+      gCanvas.height = size * dpr;
+      gCanvas.style.width = size + "px";
+      gCanvas.style.height = size + "px";
+    }
+    window.addEventListener("resize", resizeGCanvas);
+    resizeGCanvas();
+
     // --- VERTICAL LANDSCAPE G-FORCE CALIBRATION ---
     let rawLateralG = 0;
     let rawLongitudinalG = 0;
@@ -175,6 +193,7 @@
       const cx = w / 2;
       const cy = h / 2;
       const maxRadius = w * 0.42; // 1.5G boundary
+      const scaleRatio = w / 130;
 
       gCtx.clearRect(0, 0, w, h);
 
@@ -189,25 +208,26 @@
       gCtx.fill();
 
       // Thin Crosshairs with Center Notch
+      const notch = Math.max(3, 5 * scaleRatio);
       gCtx.strokeStyle = "rgba(255, 255, 255, 0.18)";
-      gCtx.lineWidth = 1;
+      gCtx.lineWidth = Math.max(1, 1 * scaleRatio);
       gCtx.setLineDash([]);
       gCtx.beginPath();
       gCtx.moveTo(cx - maxRadius, cy);
-      gCtx.lineTo(cx - 5, cy);
-      gCtx.moveTo(cx + 5, cy);
+      gCtx.lineTo(cx - notch, cy);
+      gCtx.moveTo(cx + notch, cy);
       gCtx.lineTo(cx + maxRadius, cy);
       gCtx.moveTo(cx, cy - maxRadius);
-      gCtx.lineTo(cx, cy - 5);
-      gCtx.moveTo(cx, cy + 5);
+      gCtx.lineTo(cx, cy - notch);
+      gCtx.moveTo(cx, cy + notch);
       gCtx.lineTo(cx, cy + maxRadius);
       gCtx.stroke();
 
       // 0.5G Inner Ring (Subtle Dash)
       const r05 = (0.5 / 1.5) * maxRadius;
       gCtx.strokeStyle = "rgba(255, 255, 255, 0.22)";
-      gCtx.lineWidth = 1;
-      gCtx.setLineDash([3, 3]);
+      gCtx.lineWidth = Math.max(1, 1 * scaleRatio);
+      gCtx.setLineDash([3 * scaleRatio, 3 * scaleRatio]);
       gCtx.beginPath();
       gCtx.arc(cx, cy, r05, 0, Math.PI * 2);
       gCtx.stroke();
@@ -216,27 +236,29 @@
       // 1.0G Primary Traction Circle
       const r10 = (1.0 / 1.5) * maxRadius;
       gCtx.strokeStyle = "rgba(249, 115, 22, 0.65)";
-      gCtx.lineWidth = 1.5;
+      gCtx.lineWidth = Math.max(1.5, 1.5 * scaleRatio);
       gCtx.beginPath();
       gCtx.arc(cx, cy, r10, 0, Math.PI * 2);
       gCtx.stroke();
 
       // 1.5G Outer Boundary
       gCtx.strokeStyle = "rgba(255, 255, 255, 0.35)";
-      gCtx.lineWidth = 1;
+      gCtx.lineWidth = Math.max(1, 1 * scaleRatio);
       gCtx.beginPath();
       gCtx.arc(cx, cy, maxRadius, 0, Math.PI * 2);
       gCtx.stroke();
 
       // Cardinal Indicators (Minimalist B / A / L / R)
-      gCtx.font = "800 8.5px ui-monospace, sans-serif";
+      const fontSize = Math.max(7, Math.round(8.5 * scaleRatio));
+      const cardOffset = Math.max(5, 7 * scaleRatio);
+      gCtx.font = `800 ${fontSize}px ui-monospace, sans-serif`;
       gCtx.fillStyle = "rgba(255, 255, 255, 0.45)";
       gCtx.textAlign = "center";
       gCtx.textBaseline = "middle";
-      gCtx.fillText("B", cx, cy - maxRadius + 7);
-      gCtx.fillText("A", cx, cy + maxRadius - 7);
-      gCtx.fillText("L", cx - maxRadius + 7, cy);
-      gCtx.fillText("R", cx + maxRadius - 7, cy);
+      gCtx.fillText("B", cx, cy - maxRadius + cardOffset);
+      gCtx.fillText("A", cx, cy + maxRadius - cardOffset);
+      gCtx.fillText("L", cx - maxRadius + cardOffset, cy);
+      gCtx.fillText("R", cx + maxRadius - cardOffset, cy);
 
       // Smooth G-Force Momentum Lerp
       smoothLateralG += (rawLateralG - smoothLateralG) * 0.10;
@@ -261,7 +283,7 @@
           const life = Math.max(0, 1 - (age / COMET_WINDOW_MS));
 
           gCtx.strokeStyle = `rgba(249, 115, 22, ${(life * 0.65).toFixed(3)})`;
-          gCtx.lineWidth = 1 + life * 2.5;
+          gCtx.lineWidth = Math.max(1, (1 + life * 2.5) * scaleRatio);
           gCtx.beginPath();
           gCtx.moveTo(pPrev.x, pPrev.y);
           gCtx.lineTo(pCurr.x, pCurr.y);
@@ -270,18 +292,20 @@
       }
 
       // Current G-Force Puck (High-Intensity Neon Core)
-      const puckGlow = gCtx.createRadialGradient(px, py, 1, px, py, 10);
+      const glowR = Math.max(6, 10 * scaleRatio);
+      const coreR = Math.max(2.5, 3.5 * scaleRatio);
+      const puckGlow = gCtx.createRadialGradient(px, py, 1, px, py, glowR);
       puckGlow.addColorStop(0, "rgba(255, 255, 255, 1.0)");
       puckGlow.addColorStop(0.3, "rgba(249, 115, 22, 0.9)");
       puckGlow.addColorStop(1, "rgba(249, 115, 22, 0)");
       gCtx.fillStyle = puckGlow;
       gCtx.beginPath();
-      gCtx.arc(px, py, 10, 0, Math.PI * 2);
+      gCtx.arc(px, py, glowR, 0, Math.PI * 2);
       gCtx.fill();
 
       gCtx.fillStyle = "#ffffff";
       gCtx.beginPath();
-      gCtx.arc(px, py, 3.5, 0, Math.PI * 2);
+      gCtx.arc(px, py, coreR, 0, Math.PI * 2);
       gCtx.fill();
 
       // Total Combined Vector G & Peak Tracking

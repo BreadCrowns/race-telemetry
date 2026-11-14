@@ -26,7 +26,8 @@
       background: transparent !important;
       background-color: transparent !important;
       position: fixed;
-      padding: 4px;
+      padding: 0;
+      margin: 0;
     }
 
     /* Scalable GPS Map Window */
@@ -127,6 +128,12 @@
     let currentMapLat = initialLat;
     let currentMapLon = initialLon;
 
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get("demo") === "1" || urlParams.get("demo") === "true") {
+      isDemoMode = true;
+    }
+    const initialZoom = parseFloat(urlParams.get("zoom")) || 18;
+
     const liveMap = L.map('live-gps-map', {
       zoomControl: false,
       attributionControl: false,
@@ -135,8 +142,9 @@
       doubleClickZoom: false,
       touchZoom: false,
       boxZoom: false,
-      keyboard: false
-    }).setView([initialLat, initialLon], 16);
+      keyboard: false,
+      zoomSnap: 0.25
+    }).setView([initialLat, initialLon], initialZoom);
 
     // Esri World Imagery Satellite Tiles
     L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
@@ -305,12 +313,6 @@
         fetchTelemetryFallback();
       }
     });
-
-    // URL Parameters
-    const urlParams = new URLSearchParams(window.location.search);
-    if (urlParams.get("demo") === "1" || urlParams.get("demo") === "true") {
-      isDemoMode = true;
-    }
   </script>
 </body>
 </html>

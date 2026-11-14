@@ -952,8 +952,9 @@
       doubleClickZoom: false,
       touchZoom: false,
       boxZoom: false,
-      keyboard: false
-    }).setView([initialLat, initialLon], 16);
+      keyboard: false,
+      zoomSnap: 0.25
+    }).setView([initialLat, initialLon], 18);
 
     // Esri World Imagery Satellite Tiles
     L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
@@ -1585,6 +1586,27 @@
         applyMapCorner("bottom-right");
       }
     }
+    if (urlParams.get("zoom")) {
+      const z = parseFloat(urlParams.get("zoom"));
+      if (!isNaN(z) && liveMap) liveMap.setZoom(z);
+    }
+
+    // Auto-scale bottom command bar if mobile viewport is narrower than widget width
+    function autoScaleHud() {
+      const pill = document.getElementById("btn-open-settings");
+      if (!pill) return;
+      const availWidth = window.innerWidth - 130; // leave room for G-meter
+      const natW = 690;
+      if (availWidth < natW && availWidth > 320) {
+        pill.style.transformOrigin = "bottom left";
+        pill.style.transform = `scale(${(availWidth / natW).toFixed(3)})`;
+      } else {
+        pill.style.transform = "none";
+      }
+    }
+    window.addEventListener("resize", autoScaleHud);
+    autoScaleHud();
+    setTimeout(autoScaleHud, 200);
   </script>
 </body>
 </html>
