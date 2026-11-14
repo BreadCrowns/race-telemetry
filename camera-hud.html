@@ -426,40 +426,6 @@
     body.map-at-bottom .g-meter-minimal {
       margin-right: 185px;
     }
-    .live-map-header {
-      position: absolute;
-      top: 5px;
-      left: 6px;
-      right: 6px;
-      z-index: 999;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      background: rgba(10, 15, 29, 0.84);
-      backdrop-filter: blur(8px);
-      -webkit-backdrop-filter: blur(8px);
-      border: 1px solid rgba(255, 255, 255, 0.20);
-      border-radius: 5px;
-      padding: 2px 6px;
-      pointer-events: none;
-      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5);
-    }
-    .live-map-title {
-      font-size: 8px;
-      font-weight: 800;
-      color: #38bdf8;
-      letter-spacing: 1px;
-      text-transform: uppercase;
-      display: flex;
-      align-items: center;
-      gap: 3px;
-    }
-    .live-map-coords {
-      font-size: 8px;
-      font-weight: 700;
-      color: #f1f5f9;
-      font-family: ui-monospace, SFMono-Regular, monospace;
-    }
     #live-gps-map {
       width: 100%;
       height: 100%;
@@ -627,10 +593,6 @@
     
     <!-- Satellite Live GPS Map (Corner-Anchored Window, Never Pushed Off Screen) -->
     <div class="live-map-panel" id="live-map-card">
-      <div class="live-map-header">
-        <span class="live-map-title">📍 GPS MAP</span>
-        <span class="live-map-coords" id="live-map-coords">38.1607°, -122.4547°</span>
-      </div>
       <div id="live-gps-map"></div>
     </div>
 
@@ -1182,7 +1144,7 @@
       if (!lat || !lon || isNaN(lat) || isNaN(lon)) return;
       targetLat = lat;
       targetLon = lon;
-      liveMapCoords.textContent = `${lat.toFixed(4)}°, ${lon.toFixed(4)}°`;
+      if (liveMapCoords) liveMapCoords.textContent = `${lat.toFixed(4)}°, ${lon.toFixed(4)}°`;
 
       // Update path breadcrumbs (keep last 60 points)
       gpsBreadcrumbs.addLatLng([lat, lon]);
