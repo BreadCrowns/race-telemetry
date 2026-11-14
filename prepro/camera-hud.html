@@ -331,68 +331,54 @@
     /* Bottom-Right Cluster */
     .bottom-right-cluster {
       display: inline-flex;
-      align-items: stretch;
+      align-items: flex-end;
       gap: 10px;
       flex-shrink: 0;
     }
 
-    /* Friction Circle (Vertical in Landscape with Gravity Pointing Down) */
-    .g-meter-panel {
-      padding: 6px 8px;
+    /* Minimalist Friction Circle (Floating target, no square background) */
+    .g-meter-minimal {
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 2px;
+      gap: 3px;
       position: relative;
-      width: 124px;
       flex-shrink: 0;
-    }
-    .g-meter-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      width: 100%;
-    }
-    .g-meter-title {
-      font-size: 8px;
-      font-weight: 800;
-      color: #94a3b8;
-      letter-spacing: 1px;
-      text-transform: uppercase;
-    }
-    .g-peak-badge {
-      font-size: 8px;
-      background: rgba(249, 115, 22, 0.2);
-      color: var(--accent);
-      padding: 1px 3px;
-      border-radius: 3px;
-      border: 1px solid var(--accent);
-      font-family: ui-monospace, monospace;
+      background: transparent !important;
+      border: none !important;
+      box-shadow: none !important;
+      padding: 0;
     }
     canvas#g-canvas {
-      width: 108px;
-      height: 108px;
+      width: 104px;
+      height: 104px;
       display: block;
+      filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.6));
     }
-    .g-meter-footer {
+    .g-minimal-readout {
       display: flex;
-      justify-content: space-between;
       align-items: center;
-      width: 100%;
+      gap: 6px;
+      background: rgba(10, 15, 29, 0.85);
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      border-radius: 9999px;
+      padding: 1px 7px;
       font-family: ui-monospace, SFMono-Regular, monospace;
-      font-size: 10px;
+      font-size: 9px;
       font-weight: 800;
       color: #f8fafc;
-      padding: 0 4px;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
     }
-    .g-axis-hint {
-      font-size: 7px;
-      color: #64748b;
-      letter-spacing: 0.5px;
+    .g-minimal-peak {
+      color: var(--accent);
+      font-size: 8px;
+      font-weight: 700;
     }
 
     /* ========================================================
-       LIVE DARK MODE GPS MAP WINDOW (GOOGLE MAPS STYLE)
+       LIVE LIGHT MODE GPS MAP WINDOW (GOOGLE MAPS STYLE)
        ======================================================== */
     .live-map-panel {
       width: 195px;
@@ -404,7 +390,9 @@
       position: relative;
       flex-shrink: 0;
       padding: 0 !important;
-      border: 1px solid var(--glass-border);
+      border: 1.5px solid rgba(255, 255, 255, 0.28);
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+      background: #e2e8f0;
     }
     .live-map-header {
       position: absolute;
@@ -415,18 +403,19 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
-      background: rgba(10, 15, 29, 0.85);
+      background: rgba(255, 255, 255, 0.90);
       backdrop-filter: blur(8px);
       -webkit-backdrop-filter: blur(8px);
-      border: 1px solid rgba(255, 255, 255, 0.16);
+      border: 1px solid rgba(0, 0, 0, 0.12);
       border-radius: 5px;
       padding: 2px 6px;
       pointer-events: none;
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);
     }
     .live-map-title {
       font-size: 8px;
       font-weight: 800;
-      color: var(--accent);
+      color: #ea580c;
       letter-spacing: 1px;
       text-transform: uppercase;
       display: flex;
@@ -436,16 +425,16 @@
     .live-map-coords {
       font-size: 8px;
       font-weight: 700;
-      color: #cbd5e1;
+      color: #334155;
       font-family: ui-monospace, SFMono-Regular, monospace;
     }
     #live-gps-map {
       width: 100%;
       height: 100%;
-      background: #090d16;
+      background: #e2e8f0;
     }
 
-    /* Google Maps Style Pulsing GPS Puck */
+    /* Google Maps Style Pulsing GPS Puck (Light Mode) */
     .gps-puck-container {
       position: relative;
       width: 24px;
@@ -459,8 +448,8 @@
       width: 22px;
       height: 22px;
       border-radius: 50%;
-      background: rgba(249, 115, 22, 0.35);
-      border: 1px solid var(--accent);
+      background: rgba(37, 99, 235, 0.3);
+      border: 1.5px solid #2563eb;
       animation: radar-pulse 1.8s infinite ease-out;
     }
     @keyframes radar-pulse {
@@ -471,10 +460,10 @@
       position: relative;
       width: 10px;
       height: 10px;
-      background: var(--accent);
+      background: #2563eb;
       border: 2px solid #ffffff;
       border-radius: 50%;
-      box-shadow: 0 0 10px var(--accent);
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
     }
 
     /* ========================================================
@@ -689,24 +678,20 @@
         </div>
       </div>
 
-      <!-- Bottom-Right Cluster: Friction Circle + Small Dark Mode Google Maps Style Window -->
+      <!-- Bottom-Right Cluster: Minimalist Floating G-Meter + Light Mode Google Maps Style Window -->
       <div class="bottom-right-cluster">
         
-        <!-- Friction Circle Canvas (Calibrated for vertical phone in landscape, gravity down) -->
-        <div class="glass-panel g-meter-panel">
-          <div class="g-meter-header">
-            <span class="g-meter-title">G-METER</span>
-            <span class="g-peak-badge" id="g-peak-val">1.2G</span>
-          </div>
-          <canvas id="g-canvas" width="108" height="108"></canvas>
-          <div class="g-meter-footer">
+        <!-- Minimalist Floating Friction Circle (No square background) -->
+        <div class="g-meter-minimal">
+          <canvas id="g-canvas" width="104" height="104"></canvas>
+          <div class="g-minimal-readout">
             <span id="g-val-text">0.0 G</span>
-            <span class="g-axis-hint">G-G TRAIL</span>
+            <span class="g-minimal-peak" id="g-peak-val">1.2G</span>
           </div>
         </div>
 
-        <!-- Small Google Maps Style Window in Corner (Dark Mode Live GPS Map) -->
-        <div class="glass-panel live-map-panel">
+        <!-- Small Google Maps Style Window in Corner (Light Mode Live GPS Map) -->
+        <div class="live-map-panel">
           <div class="live-map-header">
             <span class="live-map-title">📍 GPS MAP</span>
             <span class="live-map-coords" id="live-map-coords">38.1607°, -122.4547°</span>
@@ -882,8 +867,8 @@
       keyboard: false
     }).setView([initialLat, initialLon], 16);
 
-    // CartoDB Dark Matter Tiles (High contrast dark mode map)
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+    // CartoDB Positron Tiles (High clarity light mode Google Maps style)
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
       subdomains: 'abcd',
       maxZoom: 20
     }).addTo(liveMap);
@@ -899,9 +884,9 @@
 
     // GPS Breadcrumb Path
     const gpsBreadcrumbs = L.polyline([[initialLat, initialLon]], {
-      color: '#f97316',
+      color: '#ea580c',
       weight: 3.5,
-      opacity: 0.85,
+      opacity: 0.90,
       lineCap: 'round',
       lineJoin: 'round'
     }).addTo(liveMap);
@@ -1010,59 +995,71 @@
     }
     requestAnimationFrame(render);
 
-    // --- FRICTION CIRCLE (G-G) COMET TAIL RENDERER ---
+    // --- FRICTION CIRCLE (G-G) MINIMALIST COMET TAIL RENDERER ---
     function renderFrictionCircle(now) {
       const w = gCanvas.width;
       const h = gCanvas.height;
       const cx = w / 2;
       const cy = h / 2;
-      const maxRadius = w * 0.40; // 1.5G boundary
+      const maxRadius = w * 0.42; // 1.5G boundary
 
       gCtx.clearRect(0, 0, w, h);
 
-      // Outer 1.0G Circle
+      // Subtle dark circular vignette backing so reticle pops over daylight track or dark cockpit
+      gCtx.beginPath();
+      gCtx.arc(cx, cy, maxRadius + 2, 0, Math.PI * 2);
+      gCtx.fillStyle = "rgba(10, 15, 29, 0.52)";
+      gCtx.fill();
+
+      // Outer 1.0G Circle (Solid thin boundary)
       const r1G = (1.0 / 1.5) * maxRadius;
       gCtx.beginPath();
       gCtx.arc(cx, cy, r1G, 0, Math.PI * 2);
-      gCtx.strokeStyle = "rgba(255, 255, 255, 0.28)";
-      gCtx.lineWidth = 1.5;
+      gCtx.strokeStyle = "rgba(255, 255, 255, 0.45)";
+      gCtx.lineWidth = 1.2;
       gCtx.stroke();
 
       // Inner 0.5G Dashed Circle
       const rHalfG = (0.5 / 1.5) * maxRadius;
       gCtx.beginPath();
       gCtx.arc(cx, cy, rHalfG, 0, Math.PI * 2);
-      gCtx.setLineDash([3, 3]);
-      gCtx.strokeStyle = "rgba(255, 255, 255, 0.15)";
+      gCtx.setLineDash([2, 3]);
+      gCtx.strokeStyle = "rgba(255, 255, 255, 0.22)";
       gCtx.lineWidth = 1;
       gCtx.stroke();
       gCtx.setLineDash([]);
 
-      // Crosshairs
+      // Minimal Crosshairs with Center Notch
       gCtx.beginPath();
+      // Horizontal
       gCtx.moveTo(cx - maxRadius, cy);
+      gCtx.lineTo(cx - 5, cy);
+      gCtx.moveTo(cx + 5, cy);
       gCtx.lineTo(cx + maxRadius, cy);
+      // Vertical
       gCtx.moveTo(cx, cy - maxRadius);
+      gCtx.lineTo(cx, cy - 5);
+      gCtx.moveTo(cx, cy + 5);
       gCtx.lineTo(cx, cy + maxRadius);
-      gCtx.strokeStyle = "rgba(255, 255, 255, 0.14)";
+      gCtx.strokeStyle = "rgba(255, 255, 255, 0.28)";
       gCtx.lineWidth = 1;
       gCtx.stroke();
 
-      // Cardinal Labels (BRAKE UP, ACCEL DOWN, L, R)
+      // Minimal Cardinal Indicators (B, A, L, R)
       gCtx.font = "800 7px ui-monospace, sans-serif";
       gCtx.textAlign = "center";
       gCtx.textBaseline = "top";
       gCtx.fillStyle = "#ef4444"; // Brake Red
-      gCtx.fillText("BRAKE", cx, 3);
+      gCtx.fillText("B", cx, 2);
 
       gCtx.textBaseline = "bottom";
       gCtx.fillStyle = "#22c55e"; // Accel Green
-      gCtx.fillText("ACCEL", cx, h - 2);
+      gCtx.fillText("A", cx, h - 2);
 
       gCtx.textBaseline = "middle";
-      gCtx.fillStyle = "#94a3b8";
-      gCtx.fillText("L", 5, cy);
-      gCtx.fillText("R", w - 5, cy);
+      gCtx.fillStyle = "rgba(255, 255, 255, 0.55)";
+      gCtx.fillText("L", 4, cy);
+      gCtx.fillText("R", w - 4, cy);
 
       const curGx = Math.max(-1.5, Math.min(1.5, rawLateralG));
       const curGy = Math.max(-1.5, Math.min(1.5, rawLongitudinalG));
@@ -1082,13 +1079,13 @@
           const p1 = gHistory[i];
           const p2 = gHistory[i + 1];
           const age = now - p1.time;
-          const alpha = Math.max(0, 1 - (age / COMET_WINDOW_MS)) * 0.75;
+          const alpha = Math.max(0, 1 - (age / COMET_WINDOW_MS)) * 0.85;
 
           gCtx.beginPath();
           gCtx.moveTo(p1.x, p1.y);
           gCtx.lineTo(p2.x, p2.y);
           gCtx.strokeStyle = `rgba(249, 115, 22, ${alpha})`;
-          gCtx.lineWidth = 2.8 * (1 - age / COMET_WINDOW_MS);
+          gCtx.lineWidth = 2.4 * (1 - age / COMET_WINDOW_MS);
           gCtx.lineCap = "round";
           gCtx.stroke();
         }
@@ -1096,10 +1093,10 @@
 
       // Draw Active G-Dot
       gCtx.beginPath();
-      gCtx.arc(activePx, activePy, 5.0, 0, Math.PI * 2);
+      gCtx.arc(activePx, activePy, 4.5, 0, Math.PI * 2);
       gCtx.fillStyle = "#ffffff";
       gCtx.shadowColor = "#f97316";
-      gCtx.shadowBlur = 9;
+      gCtx.shadowBlur = 8;
       gCtx.fill();
       gCtx.shadowBlur = 0;
 
