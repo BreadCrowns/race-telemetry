@@ -97,15 +97,28 @@
       flex-direction: column;
       gap: 2px;
     }
-    .cp-car-driver {
+    .car-badge {
+      background: var(--accent);
+      color: #000;
+      font-weight: 900;
+      font-size: 15px;
+      letter-spacing: -0.5px;
+      padding: 5px 8px;
+      border-radius: 6px;
+      font-family: ui-monospace, SFMono-Regular, monospace;
+      box-shadow: 0 0 10px var(--accent-glow);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      line-height: 1;
+      flex-shrink: 0;
+      height: 32px;
+      box-sizing: border-box;
+    }
+    .dp-driver-row {
       display: flex;
       align-items: center;
-      gap: 8px;
-    }
-    .cp-col {
-      display: flex;
-      flex-direction: column;
-      gap: 2px;
+      gap: 6px;
     }
     .cp-laps-pair {
       display: flex;
@@ -117,17 +130,6 @@
       flex-direction: column;
       gap: 2px;
       min-width: 110px;
-    }
-    .car-badge {
-      background: var(--accent);
-      color: #000;
-      font-weight: 900;
-      font-size: 13px;
-      letter-spacing: -0.5px;
-      padding: 4px 7px;
-      border-radius: 5px;
-      font-family: ui-monospace, SFMono-Regular, monospace;
-      box-shadow: 0 0 10px var(--accent-glow);
     }
     .watermark-meta {
       display: flex;
@@ -638,11 +640,15 @@
       <!-- Consolidated Telemetry Command Bar (Lower-Left Corner) -->
       <div class="glass-panel combined-pill interactive" id="btn-open-settings" title="Tap to customize settings">
         
-        <!-- Car Badge & Driver Name/Status -->
-        <div class="cp-section cp-car-driver">
-          <span class="car-badge" id="car-number-badge">#901</span>
-          <div class="cp-col">
-            <span class="dp-tag">DRIVER</span>
+        <!-- Car Number Badge (All the way to the left, on the same line as everything else) -->
+        <span class="car-badge" id="car-number-badge">#901</span>
+
+        <div class="dp-divider"></div>
+
+        <!-- Driver Name & Status -->
+        <div class="cp-section cp-driver">
+          <span class="dp-tag">DRIVER</span>
+          <div class="dp-driver-row">
             <span class="dp-driver-val" id="dp-driver-name">MATT</span>
             <span class="dp-status-badge" id="dp-status">ON TRACK</span>
           </div>
