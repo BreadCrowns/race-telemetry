@@ -1152,14 +1152,17 @@
       rawLongitudinalG = Math.cos(t * Math.PI * 8) * 0.95;
     }
 
-    // --- FIREBASE LIVE INGESTION (READS DIRECTLY FROM DATABASE ONLY) ---
+    // --- FIREBASE LIVE INGESTION WITH HYBRID WEBSOCKET + REST FALLBACK ---
     let lastDbPacketTime = 0;
+    let prevServerGpsTime = 0;
+    let lastFreshDataWallTime = 0;
+    const FIREBASE_REST_URL = "https://fiero-telemetry-default-rtdb.firebaseio.com/raceTelemetry.json";
 
-    db.on("value", (snap) => {
-      const root = snap.val();
+    function ingestTelemetryRoot(root) {
       if (!root || isDemoMode) return;
 
-      lastDbPacketTime = Date.now();
+      const now = Date.now();
+      lastDbPacketTime = now;
 
       // 1. Driver Name
       const driver = root.driver || (root.autox && root.autox.driver) || activeDriver;
@@ -1185,6 +1188,26 @@
         }
       }
 
+      // Capture Server GPS Timestamp for True Freshness Detection
+      const ts = Number(telem.lastGpsTimestamp || telem.deviceTimestamp || (telem.tst ? telem.tst * 1000 : 0));
+      if (ts && ts > 0) {
+        if (prevServerGpsTime === 0) {
+          // Initial packet on load: only fresh if recent (< 5s)
+          if (Math.abs(now - ts) < 5000) {
+            lastFreshDataWallTime = now;
+          }
+          prevServerGpsTime = ts;
+        } else if (ts !== prevServerGpsTime) {
+          // New packet timestamp received from server: actively streaming!
+          prevServerGpsTime = ts;
+          lastFreshDataWallTime = now;
+        } else if (Math.abs(now - ts) < 4000) {
+          lastFreshDataWallTime = now;
+        }
+      } else {
+        lastFreshDataWallTime = now;
+      }
+
       // Speed from Database
       let calcMph = 0;
       if (telem.speed !== undefined && telem.speed !== null) {
@@ -1204,7 +1227,6 @@
         const ay = Number(telem.ay || 0);
         const az = Number(telem.az || 0);
         if (Math.abs(az) > 0.1 && Math.abs(ay) > 0.1) {
-          // Phone mounted vertical in landscape: ay = lateral, az = longitudinal
           rawLateralG = ay / 9.81;
           rawLongitudinalG = az / 9.81;
         } else {
@@ -1218,26 +1240,81 @@
       const lon = Number(telem.longitude || telem.lon);
       if (lat && lon && lat !== 0 && lon !== 0) {
         updateGpsPosition(lat, lon);
-        gpsStatusPill.textContent = "DB GPS LOCK";
-        gpsStatusPill.style.color = "#4ade80";
       }
+
+      checkGpsStatusFreshness();
+    }
+
+    // 1. Primary Realtime WebSocket Listener
+    db.on("value", (snap) => {
+      ingestTelemetryRoot(snap.val());
     });
 
-    // Database Connection Watchdog (Verifies incoming stream from DB)
-    setInterval(() => {
+    // 2. HTTP REST Polling Fallback (Bypasses WebSocket sleep/hang in mobile WebViews)
+    let isFetchingFallback = false;
+    async function fetchTelemetryFallback() {
+      if (isFetchingFallback || isDemoMode) return;
+      isFetchingFallback = true;
+      try {
+        const res = await fetch(FIREBASE_REST_URL, { cache: "no-store" });
+        if (res.ok) {
+          const data = await res.json();
+          ingestTelemetryRoot(data);
+        }
+      } catch (e) {
+      } finally {
+        isFetchingFallback = false;
+      }
+    }
+
+    // Check freshness & update status pill (Green / Yellow / Red)
+    function checkGpsStatusFreshness() {
       if (isDemoMode) return;
-      const age = Date.now() - lastDbPacketTime;
-      if (!lastDbPacketTime || age > 8000) {
-        gpsStatusPill.textContent = "WAITING FOR DB";
-        gpsStatusPill.style.color = "#f87171";
-      } else if (age > 4000) {
+      const now = Date.now();
+      const age = lastFreshDataWallTime ? (now - lastFreshDataWallTime) : Infinity;
+
+      if (age < 4000) {
+        gpsStatusPill.textContent = "DB GPS LOCK";
+        gpsStatusPill.style.color = "#4ade80";
+      } else if (age < 8000) {
         gpsStatusPill.textContent = "DB DELAY";
         gpsStatusPill.style.color = "#facc15";
       } else {
-        gpsStatusPill.textContent = "DB GPS LOCK";
-        gpsStatusPill.style.color = "#4ade80";
+        gpsStatusPill.textContent = "WAITING FOR DB";
+        gpsStatusPill.style.color = "#f87171";
+      }
+    }
+
+    // Watchdog: runs every 1000ms. Checks freshness and polls REST if fresh data hasn't arrived in > 2000ms
+    setInterval(() => {
+      checkGpsStatusFreshness();
+      const now = Date.now();
+      if (!isDemoMode && (!lastFreshDataWallTime || (now - lastFreshDataWallTime) > 2000)) {
+        fetchTelemetryFallback();
       }
     }, 1000);
+
+    // Immediate auto-reconnect when app is resumed / focused (e.g. returning from Sensor Logger app)
+    function handleAppWakeup() {
+      if (typeof firebase !== "undefined" && firebase.database) {
+        try { firebase.database().goOnline(); } catch (e) {}
+      }
+      fetchTelemetryFallback();
+    }
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState === "visible") handleAppWakeup();
+    });
+    window.addEventListener("focus", handleAppWakeup);
+    window.addEventListener("pageshow", handleAppWakeup);
+
+    // Monitor Firebase Connection State
+    firebase.database().ref(".info/connected").on("value", (snap) => {
+      const connected = !!snap.val();
+      if (!connected && !isDemoMode) {
+        try { firebase.database().goOnline(); } catch (e) {}
+        fetchTelemetryFallback();
+      }
+    });
 
     // Zero G-Force Calibration
     btnZeroG.addEventListener("click", () => {
