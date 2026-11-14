@@ -399,21 +399,32 @@
     }
 
     /* ========================================================
-       LIVE SATELLITE IMAGERY GPS MAP WINDOW
+       LIVE SATELLITE IMAGERY GPS MAP WINDOW (CORNER ANCHORED)
        ======================================================== */
     .live-map-panel {
-      width: 195px;
-      height: 140px;
+      position: absolute;
+      top: max(10px, env(safe-area-inset-top, 10px));
+      right: max(12px, env(safe-area-inset-right, 12px));
+      width: 175px;
+      height: 125px;
       display: flex;
       flex-direction: column;
       border-radius: 10px;
       overflow: hidden;
-      position: relative;
-      flex-shrink: 0;
-      padding: 0 !important;
+      z-index: 25;
+      pointer-events: auto;
       border: 1.5px solid rgba(255, 255, 255, 0.22);
-      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+      box-shadow: 0 4px 18px rgba(0, 0, 0, 0.55);
       background: #0f172a;
+      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .live-map-panel.pos-bottom {
+      top: auto;
+      bottom: max(10px, env(safe-area-inset-bottom, 10px));
+      right: max(12px, env(safe-area-inset-right, 12px));
+    }
+    body.map-at-bottom .g-meter-minimal {
+      margin-right: 185px;
     }
     .live-map-header {
       position: absolute;
@@ -614,8 +625,17 @@
   <!-- Main Streamlabs HUD Layer -->
   <div class="hud-layer" id="hud-ui">
     
-    <!-- ==================== HUD BOTTOM ROW (ALL METRICS CONSOLIDATED ALONG BOTTOM) ==================== -->
-    <div class="hud-bottom-row">
+    <!-- Satellite Live GPS Map (Corner-Anchored Window, Never Pushed Off Screen) -->
+    <div class="live-map-panel" id="live-map-card">
+      <div class="live-map-header">
+        <span class="live-map-title">📍 GPS MAP</span>
+        <span class="live-map-coords" id="live-map-coords">38.1607°, -122.4547°</span>
+      </div>
+      <div id="live-gps-map"></div>
+    </div>
+
+    <!-- ==================== HUD BOTTOM ROW (BALANCED ALONG BOTTOM EDGE) ==================== -->
+    <div class="hud-bottom-row" id="hud-bottom-row">
       
       <!-- 1. Lap Timing (Bottom-Left) -->
       <div class="glass-panel timer-panel">
@@ -700,27 +720,13 @@
 
       </div>
 
-      <!-- 3. Bottom-Right Cluster: Minimalist Floating G-Meter + Satellite GPS Map Window -->
-      <div class="bottom-right-cluster">
-        
-        <!-- Minimalist Floating Friction Circle (No square background) -->
-        <div class="g-meter-minimal">
-          <canvas id="g-canvas" width="104" height="104"></canvas>
-          <div class="g-minimal-readout">
-            <span id="g-val-text">0.0 G</span>
-            <span class="g-minimal-peak" id="g-peak-val">1.2G</span>
-          </div>
+      <!-- 3. Minimalist Floating G-Meter (Bottom-Right) -->
+      <div class="g-meter-minimal">
+        <canvas id="g-canvas" width="104" height="104"></canvas>
+        <div class="g-minimal-readout">
+          <span id="g-val-text">0.0 G</span>
+          <span class="g-minimal-peak" id="g-peak-val">1.2G</span>
         </div>
-
-        <!-- Small Google Maps Style Window in Corner (Satellite Live GPS Map) -->
-        <div class="live-map-panel">
-          <div class="live-map-header">
-            <span class="live-map-title">📍 GPS MAP</span>
-            <span class="live-map-coords" id="live-map-coords">38.1607°, -122.4547°</span>
-          </div>
-          <div id="live-gps-map"></div>
-        </div>
-
       </div>
 
     </div>
@@ -761,6 +767,15 @@
         <input type="number" class="form-input" id="cfg-driver-laps" value="15" style="flex: 1;" placeholder="Driver Laps" />
         <input type="number" class="form-input" id="cfg-team-laps" value="87" style="flex: 1;" placeholder="Team Total" />
       </div>
+    </div>
+
+    <!-- Satellite Map Corner Position -->
+    <div class="form-group">
+      <label class="form-label">Satellite Map Position</label>
+      <select class="form-select" id="cfg-map-corner">
+        <option value="top-right" selected>Top-Right Corner (Recommended)</option>
+        <option value="bottom-right">Bottom-Right Corner</option>
+      </select>
     </div>
 
     <!-- Stint Reset -->
@@ -832,6 +847,7 @@
     const gPeakVal = document.getElementById("g-peak-val");
 
     // Live GPS Map Elements
+    const liveMapCard = document.getElementById("live-map-card");
     const liveMapCoords = document.getElementById("live-map-coords");
 
     // Settings Drawer Elements
@@ -840,6 +856,7 @@
     const cfgEventTitle = document.getElementById("cfg-event-title");
     const cfgDriverLaps = document.getElementById("cfg-driver-laps");
     const cfgTeamLaps = document.getElementById("cfg-team-laps");
+    const cfgMapCorner = document.getElementById("cfg-map-corner");
     const btnResetStint = document.getElementById("btn-reset-stint");
     const btnZeroG = document.getElementById("btn-zero-g");
     const btnToggleDemo = document.getElementById("btn-toggle-demo");
@@ -1416,6 +1433,23 @@
       teamLaps = parseInt(e.target.value) || 0;
     });
 
+    function applyMapCorner(corner) {
+      if (corner === "bottom-right") {
+        liveMapCard.classList.add("pos-bottom");
+        document.body.classList.add("map-at-bottom");
+      } else {
+        liveMapCard.classList.remove("pos-bottom");
+        document.body.classList.remove("map-at-bottom");
+      }
+      setTimeout(() => {
+        if (typeof liveMap !== "undefined" && liveMap) liveMap.invalidateSize();
+      }, 300);
+    }
+
+    if (cfgMapCorner) {
+      cfgMapCorner.addEventListener("change", (e) => applyMapCorner(e.target.value));
+    }
+
     btnResetStint.addEventListener("click", () => {
       stintStartTime = Date.now();
       driverLaps = 0;
@@ -1461,6 +1495,13 @@
     if (urlParams.get("teamLaps")) {
       teamLaps = parseInt(urlParams.get("teamLaps")) || teamLaps;
       cfgTeamLaps.value = teamLaps;
+    }
+    if (urlParams.get("map")) {
+      const m = urlParams.get("map").toLowerCase();
+      if (m === "bottom" || m === "bottom-right") {
+        if (cfgMapCorner) cfgMapCorner.value = "bottom-right";
+        applyMapCorner("bottom-right");
+      }
     }
   </script>
 </body>
