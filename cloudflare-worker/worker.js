@@ -221,7 +221,7 @@ async function handleTraccarIngestion(request, env, ctx) {
 
   // Discard only if NEITHER valid coordinates nor acceleration was provided (e.g. empty Traccar probe)
   if (!hasValidCoords && !hasAccel) {
-    return new Response(OK (No coordinates or acceleration received. Parameters: ), {
+    return new Response("OK (No coordinates or acceleration received)", {
       status: 200,
       headers: { ...corsHeaders, "Content-Type": "text/plain" }
     });
