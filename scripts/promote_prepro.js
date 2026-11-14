@@ -62,4 +62,15 @@ if (target === 'all' || target === 'spectator') {
   }
 }
 
+// 5. Promote camera-hud.html
+if (target === 'all' || target === 'camera-hud') {
+  const preproPath = path.join(preproDir, 'camera-hud.html');
+  if (fs.existsSync(preproPath)) {
+    let content = fs.readFileSync(preproPath, 'utf8');
+    content = content.replace(/ \[PREPRO\]/g, '');
+    fs.writeFileSync(path.join(rootDir, 'camera-hud.html'), content, 'utf8');
+    console.log('✓ Promoted prepro/camera-hud.html -> camera-hud.html');
+  }
+}
+
 console.log('\nPromotion complete! Test your production files and push to git.');

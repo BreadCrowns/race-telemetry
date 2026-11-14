@@ -1,0 +1,1372 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+  <title>Streamlabs Cockpit Telemetry HUD [PREPRO]</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+      -webkit-tap-highlight-color: transparent;
+    }
+    :root {
+      --accent: #f97316;
+      --accent-glow: rgba(249, 115, 22, 0.45);
+      --glass-bg: rgba(10, 15, 29, 0.90);
+      --glass-border: rgba(255, 255, 255, 0.16);
+      --green: #22c55e;
+      --yellow: #eab308;
+      --red: #ef4444;
+      --blue: #38bdf8;
+      --purple: #a855f7;
+    }
+
+    /* Streamlabs Transparent Background */
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: transparent !important;
+      background-color: transparent !important;
+      position: fixed;
+      color: #f8fafc;
+    }
+
+    /* Primary HUD Overlay Container with Mobile Safe Area Insets */
+    .hud-layer {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 10;
+      pointer-events: none;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: max(10px, env(safe-area-inset-top, 10px)) 
+               max(14px, env(safe-area-inset-right, 14px)) 
+               max(10px, env(safe-area-inset-bottom, 10px)) 
+               max(14px, env(safe-area-inset-left, 14px));
+      gap: 10px;
+    }
+
+    .interactive {
+      pointer-events: auto;
+      cursor: pointer;
+    }
+
+    /* Common Glass Card Styling */
+    .glass-panel {
+      background: var(--glass-bg);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      border: 1px solid var(--glass-border);
+      border-radius: 10px;
+      box-shadow: 0 8px 28px rgba(0, 0, 0, 0.65);
+    }
+
+    /* ========================================================
+       TOP ROW: OFFICIAL BROADCAST WATERMARK
+       ======================================================== */
+    .hud-top-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      width: 100%;
+      gap: 10px;
+    }
+
+    .watermark-card {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      padding: 6px 12px;
+      border-left: 5px solid var(--accent);
+      border-radius: 8px;
+    }
+    .car-badge {
+      background: var(--accent);
+      color: #fff;
+      font-weight: 900;
+      font-size: 13px;
+      letter-spacing: 0.5px;
+      padding: 3px 8px;
+      border-radius: 5px;
+      font-family: ui-monospace, SFMono-Regular, monospace;
+      box-shadow: 0 0 10px var(--accent-glow);
+    }
+    .watermark-meta {
+      display: flex;
+      flex-direction: column;
+      gap: 1px;
+    }
+    .watermark-title {
+      font-size: 11px;
+      font-weight: 900;
+      letter-spacing: 1.2px;
+      text-transform: uppercase;
+      color: #ffffff;
+      white-space: nowrap;
+    }
+    .watermark-sub {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 9px;
+      color: #94a3b8;
+      font-family: ui-monospace, SFMono-Regular, monospace;
+    }
+    .rec-indicator {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      color: #ef4444;
+      font-weight: 800;
+      letter-spacing: 0.5px;
+    }
+    .rec-dot {
+      width: 6px;
+      height: 6px;
+      background: #ef4444;
+      border-radius: 50%;
+      box-shadow: 0 0 8px #ef4444;
+      animation: blink 1s infinite;
+    }
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.25; }
+    }
+
+    /* ========================================================
+       DRIVER PILL (CONSOLIDATED 5-IN-1 METRICS CARD)
+       ======================================================== */
+    .driver-pill {
+      display: inline-flex;
+      align-items: center;
+      border-left: 5px solid var(--accent);
+      padding: 6px 14px;
+      gap: 12px;
+      border-radius: 10px;
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.7);
+    }
+    .dp-section {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .dp-divider {
+      width: 1px;
+      height: 38px;
+      background: rgba(255, 255, 255, 0.14);
+    }
+    .dp-tag {
+      font-size: 8px;
+      font-weight: 800;
+      color: #94a3b8;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+    
+    /* 1. Driver Name */
+    .dp-driver-val {
+      font-size: 15px;
+      font-weight: 900;
+      color: #ffffff;
+      letter-spacing: 0.5px;
+      white-space: nowrap;
+    }
+    .dp-status-badge {
+      font-size: 8px;
+      font-weight: 800;
+      padding: 1px 5px;
+      border-radius: 3px;
+      background: rgba(34, 197, 94, 0.2);
+      color: #4ade80;
+      border: 1px solid var(--green);
+      letter-spacing: 0.5px;
+      width: fit-content;
+      text-transform: uppercase;
+    }
+
+    /* 2. Current Speed */
+    .dp-speed-wrap {
+      display: flex;
+      align-items: baseline;
+      gap: 3px;
+    }
+    .dp-speed-digits {
+      font-size: 32px;
+      font-weight: 900;
+      font-variant-numeric: tabular-nums;
+      letter-spacing: -1.5px;
+      line-height: 1;
+      color: #ffffff;
+      min-width: 42px;
+      text-align: right;
+    }
+    .dp-speed-unit {
+      font-size: 10px;
+      font-weight: 900;
+      color: #94a3b8;
+      letter-spacing: 0.5px;
+    }
+
+    /* 3. Stint Time & 2-Hour Limit Countdown */
+    .dp-stint-wrap {
+      min-width: 130px;
+    }
+    .dp-stint-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 6px;
+    }
+    .dp-stint-clock {
+      font-family: ui-monospace, SFMono-Regular, monospace;
+      font-variant-numeric: tabular-nums;
+      font-size: 13px;
+      font-weight: 800;
+      color: #f8fafc;
+    }
+    .stint-bar-wrap {
+      width: 100%;
+      height: 5px;
+      background: rgba(255, 255, 255, 0.12);
+      border-radius: 3px;
+      overflow: hidden;
+      margin-top: 3px;
+    }
+    .stint-bar-fill {
+      height: 100%;
+      width: 15%;
+      background: var(--green);
+      transition: width 0.5s ease, background 0.3s ease;
+      border-radius: 3px;
+    }
+    .stint-bar-fill.warn-amber { background: var(--yellow); }
+    .stint-bar-fill.alert-red { background: var(--red); }
+    .dp-stint-remain {
+      font-size: 8px;
+      font-weight: 800;
+      color: #cbd5e1;
+      text-transform: uppercase;
+      margin-top: 2px;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    /* 4 & 5. Driver Laps & Total Team Laps */
+    .dp-laps-wrap {
+      text-align: center;
+      min-width: 55px;
+    }
+    .dp-lap-num {
+      font-family: ui-monospace, SFMono-Regular, monospace;
+      font-variant-numeric: tabular-nums;
+      font-size: 18px;
+      font-weight: 900;
+      color: #ffffff;
+      line-height: 1.1;
+    }
+    .dp-lap-num.team {
+      color: var(--blue);
+    }
+    .dp-lap-sub {
+      font-size: 7px;
+      font-weight: 800;
+      color: #64748b;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+    }
+
+    /* ========================================================
+       BOTTOM ROW: LAP TIMER | FRICTION CIRCLE | SONOMA MINIMAP
+       ======================================================== */
+    .hud-bottom-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      width: 100%;
+      gap: 12px;
+      flex-wrap: nowrap; /* Never wrap off screen */
+    }
+
+    /* Lap Timer Sub-Block (Bottom-Left) */
+    .timer-panel {
+      display: inline-flex;
+      flex-direction: column;
+      gap: 3px;
+      padding: 8px 12px;
+      border-left: 5px solid var(--accent);
+      min-width: 210px;
+      flex-shrink: 0;
+    }
+    .lap-header-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .lap-pill {
+      font-size: 9px;
+      font-weight: 800;
+      background: rgba(249, 115, 22, 0.2);
+      color: var(--accent);
+      border: 1px solid var(--accent);
+      padding: 1px 6px;
+      border-radius: 4px;
+      letter-spacing: 0.5px;
+      font-family: ui-monospace, monospace;
+    }
+    .lap-status-text {
+      font-size: 8px;
+      font-weight: 800;
+      color: #94a3b8;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+    .running-lap-clock {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-variant-numeric: tabular-nums;
+      font-weight: 900;
+      font-size: 30px;
+      line-height: 1.05;
+      color: #ffffff;
+      letter-spacing: -0.5px;
+    }
+    .lap-comparison-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-family: ui-monospace, SFMono-Regular, monospace;
+      font-size: 9px;
+      color: #94a3b8;
+    }
+    .delta-pill {
+      font-size: 9px;
+      font-weight: 900;
+      padding: 1px 5px;
+      border-radius: 3px;
+      letter-spacing: 0.3px;
+      display: inline-flex;
+      align-items: center;
+    }
+    .delta-pill.ahead {
+      background: rgba(34, 197, 94, 0.25);
+      color: #4ade80;
+      border: 1px solid var(--green);
+    }
+    .delta-pill.behind {
+      background: rgba(239, 68, 68, 0.25);
+      color: #f87171;
+      border: 1px solid var(--red);
+    }
+
+    /* Bottom-Right Cluster */
+    .bottom-right-cluster {
+      display: inline-flex;
+      align-items: stretch;
+      gap: 10px;
+      flex-shrink: 0;
+    }
+
+    /* Friction Circle (Vertical in Landscape with Gravity Pointing Down) */
+    .g-meter-panel {
+      padding: 6px 8px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2px;
+      position: relative;
+      width: 124px;
+      flex-shrink: 0;
+    }
+    .g-meter-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      width: 100%;
+    }
+    .g-meter-title {
+      font-size: 8px;
+      font-weight: 800;
+      color: #94a3b8;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+    .g-peak-badge {
+      font-size: 8px;
+      background: rgba(249, 115, 22, 0.2);
+      color: var(--accent);
+      padding: 1px 3px;
+      border-radius: 3px;
+      border: 1px solid var(--accent);
+      font-family: ui-monospace, monospace;
+    }
+    canvas#g-canvas {
+      width: 108px;
+      height: 108px;
+      display: block;
+    }
+    .g-meter-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      width: 100%;
+      font-family: ui-monospace, SFMono-Regular, monospace;
+      font-size: 10px;
+      font-weight: 800;
+      color: #f8fafc;
+      padding: 0 4px;
+    }
+    .g-axis-hint {
+      font-size: 7px;
+      color: #64748b;
+      letter-spacing: 0.5px;
+    }
+
+    /* Sonoma Vector Minimap Panel (Guaranteed 100% Always Visible) */
+    .minimap-panel {
+      padding: 6px 10px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2px;
+      width: 180px;
+      min-width: 180px;
+      position: relative;
+      flex-shrink: 0;
+    }
+    .minimap-title-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      width: 100%;
+    }
+    .minimap-title {
+      font-size: 8px;
+      font-weight: 800;
+      color: var(--accent);
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+    }
+    .minimap-corner-tag {
+      font-size: 8px;
+      font-weight: 700;
+      color: #94a3b8;
+      font-family: ui-monospace, SFMono-Regular, monospace;
+    }
+    svg#minimap-svg {
+      width: 165px;
+      height: 105px;
+      overflow: visible;
+      display: block;
+    }
+
+    /* Track SVG Stylings */
+    .track-road {
+      stroke: #334155;
+      stroke-width: 11;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      fill: none;
+    }
+    .track-line {
+      stroke: #f97316;
+      stroke-width: 3.5;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      fill: none;
+      filter: drop-shadow(0 0 6px rgba(249, 115, 22, 0.7));
+    }
+    .track-finish {
+      stroke: #ffffff;
+      stroke-width: 3.5;
+      stroke-dasharray: 2 2;
+    }
+    .turn-label {
+      fill: #cbd5e1;
+      font-size: 8px;
+      font-weight: 800;
+      font-family: ui-monospace, monospace;
+      text-shadow: 0 1px 3px #000;
+    }
+    .car-beacon {
+      fill: #ffffff;
+      stroke: #f97316;
+      stroke-width: 3;
+      filter: drop-shadow(0 0 8px #f97316);
+      transition: transform 0.08s linear;
+    }
+
+    /* ========================================================
+       SETTINGS FLYOUT DRAWER (TOUCH-TESTING)
+       ======================================================== */
+    .drawer-overlay {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: rgba(0, 0, 0, 0.65);
+      z-index: 100;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.25s ease;
+    }
+    .drawer-overlay.open {
+      opacity: 1;
+      pointer-events: auto;
+    }
+    .settings-drawer {
+      position: fixed;
+      bottom: 0; left: 50%;
+      transform: translate(-50%, 100%);
+      width: 100%;
+      max-width: 480px;
+      background: rgba(15, 23, 42, 0.96);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border-top: 2px solid var(--accent);
+      border-radius: 16px 16px 0 0;
+      padding: 18px 20px;
+      z-index: 101;
+      transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      max-height: 85vh;
+      overflow-y: auto;
+      pointer-events: auto;
+    }
+    .settings-drawer.open {
+      transform: translate(-50%, 0);
+    }
+    .drawer-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-bottom: 4px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    .drawer-title {
+      font-size: 13px;
+      font-weight: 800;
+      color: var(--accent);
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+    }
+    .btn-close {
+      background: #334155;
+      color: #fff;
+      border: none;
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      font-size: 14px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .form-label {
+      font-size: 10px;
+      font-weight: 700;
+      color: #94a3b8;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .form-select, .form-input {
+      background: #020617;
+      border: 1px solid #334155;
+      color: #f8fafc;
+      padding: 8px 10px;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 600;
+      outline: none;
+    }
+    .form-select:focus, .form-input:focus { border-color: var(--accent); }
+    .btn-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+    .drawer-btn {
+      background: #1e293b;
+      color: #f8fafc;
+      border: 1px solid #334155;
+      padding: 9px 10px;
+      font-size: 12px;
+      font-weight: 700;
+      border-radius: 8px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+    .drawer-btn.active {
+      border-color: var(--accent);
+      color: var(--accent);
+      background: #020617;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Main Streamlabs HUD Layer -->
+  <div class="hud-layer" id="hud-ui">
+    
+    <!-- ==================== TOP ROW ==================== -->
+    <div class="hud-top-row">
+      
+      <!-- 1. Official Broadcast Watermark (Tap to open Settings) -->
+      <div class="glass-panel watermark-card interactive" id="btn-open-settings" title="Tap to customize settings">
+        <span class="car-badge" id="car-number-badge">#42</span>
+        <div class="watermark-meta">
+          <div class="watermark-title" id="watermark-event-title">24 HOURS OF LEMONS • SONOMA RACEWAY</div>
+          <div class="watermark-sub">
+            <span class="rec-indicator"><span class="rec-dot"></span>REC</span>
+            <span>&bull;</span>
+            <span id="live-timecode-val">00:00:00 UTC</span>
+            <span>&bull;</span>
+            <span id="gps-status-pill" style="color: #4ade80;">GPS LOCK</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 2. Consolidated Driver Pill (Driver, Speed, Stint Time, Driver Laps, Team Laps) -->
+      <div class="glass-panel driver-pill" id="driver-pill">
+        
+        <!-- Driver Name & Status -->
+        <div class="dp-section">
+          <span class="dp-tag">DRIVER</span>
+          <span class="dp-driver-val" id="dp-driver-name">DAVE</span>
+          <span class="dp-status-badge" id="dp-status">ON TRACK</span>
+        </div>
+
+        <div class="dp-divider"></div>
+
+        <!-- Current Speed (MPH Only) -->
+        <div class="dp-section">
+          <span class="dp-tag">SPEED</span>
+          <div class="dp-speed-wrap">
+            <span class="dp-speed-digits" id="speed-digits">0</span>
+            <span class="dp-speed-unit">MPH</span>
+          </div>
+        </div>
+
+        <div class="dp-divider"></div>
+
+        <!-- Stint Time & 2-Hour Limit Countdown -->
+        <div class="dp-section dp-stint-wrap" id="stint-box">
+          <div class="dp-stint-header">
+            <span class="dp-tag">STINT TIME</span>
+            <span class="dp-stint-clock" id="stint-clock-val">00:00:00</span>
+          </div>
+          <div class="stint-bar-wrap">
+            <div class="stint-bar-fill" id="stint-bar-fill" style="width: 15%;"></div>
+          </div>
+          <div class="dp-stint-remain">
+            <span id="stint-alert-text">NORMAL STINT</span>
+            <span id="stint-remain-text">1h 48m REM</span>
+          </div>
+        </div>
+
+        <div class="dp-divider"></div>
+
+        <!-- Driver Laps (This Stint) -->
+        <div class="dp-section dp-laps-wrap">
+          <span class="dp-tag">DRIVER</span>
+          <span class="dp-lap-num" id="driver-laps-val">14</span>
+          <span class="dp-lap-sub">LAPS</span>
+        </div>
+
+        <div class="dp-divider"></div>
+
+        <!-- Total Team Laps (Race Total) -->
+        <div class="dp-section dp-laps-wrap">
+          <span class="dp-tag">TEAM</span>
+          <span class="dp-lap-num team" id="team-laps-val">87</span>
+          <span class="dp-lap-sub">TOTAL</span>
+        </div>
+
+      </div>
+
+    </div>
+
+    <!-- ==================== BOTTOM ROW ==================== -->
+    <div class="hud-bottom-row">
+      
+      <!-- Lap Timing & Split Comparison (Bottom-Left) -->
+      <div class="glass-panel timer-panel">
+        <div class="lap-header-row">
+          <span class="lap-pill" id="lap-num-pill">LAP 14</span>
+          <span class="lap-status-text" id="lap-status-text">HOT LAP</span>
+        </div>
+        <div class="running-lap-clock" id="running-lap-clock">01:54.82</div>
+        <div class="lap-comparison-row">
+          <span>LAST: <strong id="last-lap-val" style="color:#f8fafc;">01:53.40</strong></span>
+          <span>BEST: <strong id="best-lap-val" style="color:#a855f7;">01:51.15</strong></span>
+          <span class="delta-pill ahead" id="lap-delta-pill">&Delta; -0.42s</span>
+        </div>
+      </div>
+
+      <!-- Bottom-Right Cluster: Friction Circle + Sonoma Minimap -->
+      <div class="bottom-right-cluster">
+        
+        <!-- Friction Circle Canvas (Calibrated for vertical phone in landscape, gravity down) -->
+        <div class="glass-panel g-meter-panel">
+          <div class="g-meter-header">
+            <span class="g-meter-title">G-METER</span>
+            <span class="g-peak-badge" id="g-peak-val">1.2G</span>
+          </div>
+          <canvas id="g-canvas" width="108" height="108"></canvas>
+          <div class="g-meter-footer">
+            <span id="g-val-text">0.0 G</span>
+            <span class="g-axis-hint">G-G TRAIL</span>
+          </div>
+        </div>
+
+        <!-- Sonoma Dynamic Vector Minimap (Pre-Rendered SVG Points) -->
+        <div class="glass-panel minimap-panel">
+          <div class="minimap-title-bar">
+            <span class="minimap-title">SONOMA RACEWAY</span>
+            <span class="minimap-corner-tag" id="current-sector-tag">S2 &bull; T7</span>
+          </div>
+          <svg id="minimap-svg" viewBox="0 0 220 150">
+            <!-- Road Gray Backing -->
+            <polyline class="track-road" points="191.9,88.9 181.6,47.3 140.7,18 93.3,30.4 54.6,62.9 18,94.2 22.3,132 114.8,126.8 147.1,107.2 162.2,85.1 175.1,60.3 197.7,103.3 191.9,88.9"></polyline>
+            <!-- Vibrant Neon Orange Track Line -->
+            <polyline class="track-line" points="191.9,88.9 181.6,47.3 140.7,18 93.3,30.4 54.6,62.9 18,94.2 22.3,132 114.8,126.8 147.1,107.2 162.2,85.1 175.1,60.3 197.7,103.3 191.9,88.9"></polyline>
+            <!-- White Start / Finish Line -->
+            <line class="track-finish" x1="184" y1="86" x2="198" y2="92"></line>
+            
+            <!-- Turn Labels -->
+            <text class="turn-label" x="186" y="44">T1</text>
+            <text class="turn-label" x="140" y="14">T2</text>
+            <text class="turn-label" x="86" y="26">T3</text>
+            <text class="turn-label" x="22" y="112">Carousel</text>
+            <text class="turn-label" x="108" y="142">T7 Hairpin</text>
+            <text class="turn-label" x="150" y="104">Esses</text>
+            <text class="turn-label" x="198" y="118">T11</text>
+
+            <!-- Live Car Beacon -->
+            <circle class="car-beacon" id="svg-car-beacon" cx="191.9" cy="88.9" r="5.5"></circle>
+          </svg>
+        </div>
+
+      </div>
+
+    </div>
+
+  </div>
+
+  <!-- ==================== SETTINGS FLYOUT DRAWER ==================== -->
+  <div class="drawer-overlay" id="drawer-overlay"></div>
+  <div class="settings-drawer" id="settings-drawer">
+    <div class="drawer-header">
+      <span class="drawer-title">⚙️ Streamlabs Overlay Settings</span>
+      <button class="btn-close" id="btn-close-drawer" type="button">✕</button>
+    </div>
+
+    <!-- Active Driver Control -->
+    <div class="form-group">
+      <label class="form-label">Active Driver</label>
+      <select class="form-select" id="cfg-driver">
+        <option value="DAVE">Dave</option>
+        <option value="MATT">Matt</option>
+        <option value="CHRIS">Chris</option>
+        <option value="IN PITS">In Pits / Standby</option>
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Car Number & Event Title</label>
+      <div style="display: flex; gap: 8px;">
+        <input type="text" class="form-input" id="cfg-car-number" value="#42" style="width: 70px; text-align: center;" />
+        <input type="text" class="form-input" id="cfg-event-title" value="24 HOURS OF LEMONS • SONOMA RACEWAY" style="flex: 1;" />
+      </div>
+    </div>
+
+    <!-- Driver Laps & Team Laps Manual Adjust -->
+    <div class="form-group">
+      <label class="form-label">Lap Counts (Driver Stint / Team Total)</label>
+      <div style="display: flex; gap: 8px;">
+        <input type="number" class="form-input" id="cfg-driver-laps" value="14" style="flex: 1;" placeholder="Driver Laps" />
+        <input type="number" class="form-input" id="cfg-team-laps" value="87" style="flex: 1;" placeholder="Team Total" />
+      </div>
+    </div>
+
+    <!-- Stint Reset -->
+    <button class="drawer-btn" id="btn-reset-stint" type="button">
+      <span>⏱️ Restart Driver Stint Clock</span>
+    </button>
+
+    <div class="btn-row">
+      <button class="drawer-btn" id="btn-zero-g" type="button">
+        <span>🎯 Zero G-Force (Calibrate Gravity)</span>
+      </button>
+      <button class="drawer-btn" id="btn-toggle-demo" type="button">
+        <span>🏎️ Demo Simulation</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Firebase SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+
+  <script>
+    // --- FIREBASE CONFIGURATION ---
+    const firebaseConfig = {
+      apiKey: "AIzaSyCC4JUzjr5lk9zaT78wwZ1RcjUguP5Q70s",
+      authDomain: "fiero-telemetry.firebaseapp.com",
+      databaseURL: "https://fiero-telemetry-default-rtdb.firebaseio.com",
+      projectId: "fiero-telemetry",
+      storageBucket: "fiero-telemetry.firebasestorage.app",
+      messagingSenderId: "183922450878",
+      appId: "1:183922450878:web:5faabfd6d163f1c6c119ef"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database().ref("raceTelemetry");
+
+    // --- DOM REFERENCES ---
+    const btnOpenSettings = document.getElementById("btn-open-settings");
+    const drawerOverlay = document.getElementById("drawer-overlay");
+    const settingsDrawer = document.getElementById("settings-drawer");
+    const btnCloseDrawer = document.getElementById("btn-close-drawer");
+
+    const carNumberBadge = document.getElementById("car-number-badge");
+    const watermarkEventTitle = document.getElementById("watermark-event-title");
+    const liveTimecodeVal = document.getElementById("live-timecode-val");
+    const gpsStatusPill = document.getElementById("gps-status-pill");
+
+    // Driver Pill Elements
+    const dpDriverName = document.getElementById("dp-driver-name");
+    const dpStatus = document.getElementById("dp-status");
+    const speedDigits = document.getElementById("speed-digits");
+    const stintBox = document.getElementById("stint-box");
+    const stintClockVal = document.getElementById("stint-clock-val");
+    const stintBarFill = document.getElementById("stint-bar-fill");
+    const stintAlertText = document.getElementById("stint-alert-text");
+    const stintRemainText = document.getElementById("stint-remain-text");
+    const driverLapsVal = document.getElementById("driver-laps-val");
+    const teamLapsVal = document.getElementById("team-laps-val");
+
+    // Lap Timer Elements
+    const lapNumPill = document.getElementById("lap-num-pill");
+    const runningLapClock = document.getElementById("running-lap-clock");
+    const lastLapVal = document.getElementById("last-lap-val");
+    const bestLapVal = document.getElementById("best-lap-val");
+    const lapDeltaPill = document.getElementById("lap-delta-pill");
+
+    // Friction Circle Elements
+    const gCanvas = document.getElementById("g-canvas");
+    const gCtx = gCanvas.getContext("2d");
+    const gValText = document.getElementById("g-val-text");
+    const gPeakVal = document.getElementById("g-peak-val");
+
+    // Minimap Elements
+    const svgCarBeacon = document.getElementById("svg-car-beacon");
+    const currentSectorTag = document.getElementById("current-sector-tag");
+
+    // Settings Drawer Elements
+    const cfgDriver = document.getElementById("cfg-driver");
+    const cfgCarNumber = document.getElementById("cfg-car-number");
+    const cfgEventTitle = document.getElementById("cfg-event-title");
+    const cfgDriverLaps = document.getElementById("cfg-driver-laps");
+    const cfgTeamLaps = document.getElementById("cfg-team-laps");
+    const btnResetStint = document.getElementById("btn-reset-stint");
+    const btnZeroG = document.getElementById("btn-zero-g");
+    const btnToggleDemo = document.getElementById("btn-toggle-demo");
+
+    // --- STATE & TELEMETRY VARIABLES ---
+    let activeDriver = "DAVE";
+    let carNumber = "#42";
+    let eventTitle = "24 HOURS OF LEMONS • SONOMA RACEWAY";
+
+    let stintStartTime = Date.now() - (62 * 60 * 1000); // Simulated 62 mins into stint
+    const MAX_STINT_MS = 2 * 60 * 60 * 1000; // 2 hours max stint
+
+    let driverLaps = 14;
+    let teamLaps = 87;
+
+    let currentLap = 14;
+    let lapStartTime = Date.now() - 48000;
+    let lastLapMs = 113400; // 1:53.40
+    let bestLapMs = 111150; // 1:51.15
+
+    let targetSpeedMph = 0;
+    let smoothSpeedMph = 0;
+    const SPEED_CUTOFF_MPH = 2.5;
+
+    // --- VERTICAL LANDSCAPE G-FORCE CALIBRATION (GRAVITY DOWN) ---
+    // When the phone is mounted vertical in landscape orientation:
+    // • Gravity (1G = 9.81 m/s²) points straight DOWN towards the road (short edge of phone screen).
+    // • Lateral cornering forces act along the horizontal screen axis (long edge of phone screen).
+    // • Longitudinal braking/acceleration forces act perpendicular to the screen (normal Z-axis).
+    let rawLateralG = 0;
+    let rawLongitudinalG = 0;
+    let calibGravityOffset = 9.81; // 1G static downward gravity offset
+    let peakG = 1.1;
+
+    // Comet trail history array: [{ x, y, timestamp }]
+    const gHistory = [];
+    const COMET_WINDOW_MS = 2000; // 2.0-second retention window
+
+    let isDemoMode = false;
+
+    // --- SONOMA RACEWAY ROAD COURSE GEOMETRY ---
+    const SONOMA_COORDS = [
+      [38.16071, -122.45472], // Start/Finish
+      [38.16390, -122.45520], // Turn 1 (Uphill)
+      [38.16615, -122.45710], // Turn 2 (Crest)
+      [38.16520, -122.45930], // Turn 3 / 3a
+      [38.16270, -122.46110], // Turn 4 (Sector 1 Gate)
+      [38.16030, -122.46280], // Turn 5 (Carousel Entry)
+      [38.15740, -122.46260], // Turn 6 (Carousel Exit)
+      [38.15780, -122.45830], // Turn 7 Hairpin (Sector 2 Gate)
+      [38.15930, -122.45680], // Turn 8 / 8a (Esses)
+      [38.16100, -122.45610], // Turn 9 (Esses Exit)
+      [38.16290, -122.45550], // Turn 10 (Speed Trap)
+      [38.15960, -122.45445], // Turn 11 (Hairpin)
+      [38.16071, -122.45472]  // Main Straight
+    ];
+
+    const minLat = 38.15740, maxLat = 38.16615;
+    const minLon = -122.46280, maxLon = -122.45425;
+    const SVG_W = 220, SVG_H = 150, SVG_PAD = 18;
+
+    const projectedSvgPoints = SONOMA_COORDS.map(([lat, lon]) => {
+      const x = SVG_PAD + ((lon - minLon) / (maxLon - minLon)) * (SVG_W - 2 * SVG_PAD);
+      const y = SVG_PAD + ((maxLat - lat) / (maxLat - minLat)) * (SVG_H - 2 * SVG_PAD);
+      return { x, y };
+    });
+
+    // --- TIME FORMATTING UTILITIES ---
+    function formatTimeMs(ms) {
+      if (ms <= 0 || isNaN(ms)) return "00:00.00";
+      const m = Math.floor(ms / 60000);
+      const s = Math.floor((ms % 60000) / 1000);
+      const hs = Math.floor((ms % 1000) / 10);
+      return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}.${String(hs).padStart(2, '0')}`;
+    }
+
+    function formatHoursMs(ms) {
+      const totalSec = Math.max(0, Math.floor(ms / 1000));
+      const h = Math.floor(totalSec / 3600);
+      const m = Math.floor((totalSec % 3600) / 60);
+      const s = totalSec % 60;
+      return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+    }
+
+    // --- 60 FPS MAIN RENDER LOOP ---
+    function render() {
+      const now = Date.now();
+
+      // 1. Live UTC Timecode Clock
+      const d = new Date();
+      liveTimecodeVal.textContent = d.toISOString().substring(11, 19) + " UTC";
+
+      // 2. Demo Simulation Progression
+      if (isDemoMode) {
+        runDemoSimulation(now);
+      }
+
+      // 3. Speed Smoothing (Tabular Digits, Rapid Zero Snap)
+      if (targetSpeedMph === 0) {
+        smoothSpeedMph += (0 - smoothSpeedMph) * 0.35;
+        if (smoothSpeedMph < 0.4) smoothSpeedMph = 0;
+      } else {
+        smoothSpeedMph += (targetSpeedMph - smoothSpeedMph) * 0.18;
+      }
+      speedDigits.textContent = Math.round(smoothSpeedMph);
+
+      // 4. Stint Clock & 2-Hour Limit Countdown Bar
+      const stintElapsed = Math.max(0, now - stintStartTime);
+      stintClockVal.textContent = formatHoursMs(stintElapsed);
+
+      const stintRemainMs = Math.max(0, MAX_STINT_MS - stintElapsed);
+      const stintPct = Math.min(100, (stintElapsed / MAX_STINT_MS) * 100);
+      stintBarFill.style.width = `${stintPct}%`;
+
+      const remainMinutes = Math.floor(stintRemainMs / 60000);
+      if (remainMinutes <= 5) {
+        stintBarFill.className = "stint-bar-fill alert-red";
+        stintAlertText.textContent = "🚨 BOX THIS LAP";
+        stintAlertText.style.color = "#ef4444";
+        stintRemainText.textContent = `${remainMinutes}m REM`;
+      } else if (remainMinutes <= 20) {
+        stintBarFill.className = "stint-bar-fill warn-amber";
+        stintAlertText.textContent = "⚠️ PIT WINDOW OPEN";
+        stintAlertText.style.color = "#facc15";
+        stintRemainText.textContent = `${remainMinutes}m REM`;
+      } else {
+        stintBarFill.className = "stint-bar-fill";
+        stintAlertText.textContent = "NORMAL STINT";
+        stintAlertText.style.color = "#cbd5e1";
+        const hRem = Math.floor(remainMinutes / 60);
+        const mRem = remainMinutes % 60;
+        stintRemainText.textContent = `${hRem}h ${mRem}m REM`;
+      }
+
+      // 5. Driver Laps & Team Total Laps Readouts
+      driverLapsVal.textContent = driverLaps;
+      teamLapsVal.textContent = teamLaps;
+
+      // 6. Running Lap Timer & Dynamic Delta Split
+      const lapElapsed = Math.max(0, now - lapStartTime);
+      runningLapClock.textContent = formatTimeMs(lapElapsed);
+
+      const liveDeltaMs = lapElapsed - (bestLapMs * (lapElapsed / Math.max(1, bestLapMs)));
+      const deltaSec = (liveDeltaMs / 1000).toFixed(2);
+      if (liveDeltaMs > 0) {
+        lapDeltaPill.className = "delta-pill behind";
+        lapDeltaPill.textContent = `Δ +${deltaSec}s`;
+      } else {
+        lapDeltaPill.className = "delta-pill ahead";
+        lapDeltaPill.textContent = `Δ ${deltaSec}s`;
+      }
+
+      // 7. Friction Circle G-Meter with 2-Second Retention Comet Tail
+      renderFrictionCircle(now);
+
+      requestAnimationFrame(render);
+    }
+    requestAnimationFrame(render);
+
+    // --- FRICTION CIRCLE (G-G) COMET TAIL RENDERER ---
+    function renderFrictionCircle(now) {
+      const w = gCanvas.width;
+      const h = gCanvas.height;
+      const cx = w / 2;
+      const cy = h / 2;
+      const maxRadius = w * 0.40; // 1.5G boundary
+
+      gCtx.clearRect(0, 0, w, h);
+
+      // Outer 1.0G Circle
+      const r1G = (1.0 / 1.5) * maxRadius;
+      gCtx.beginPath();
+      gCtx.arc(cx, cy, r1G, 0, Math.PI * 2);
+      gCtx.strokeStyle = "rgba(255, 255, 255, 0.28)";
+      gCtx.lineWidth = 1.5;
+      gCtx.stroke();
+
+      // Inner 0.5G Dashed Circle
+      const rHalfG = (0.5 / 1.5) * maxRadius;
+      gCtx.beginPath();
+      gCtx.arc(cx, cy, rHalfG, 0, Math.PI * 2);
+      gCtx.setLineDash([3, 3]);
+      gCtx.strokeStyle = "rgba(255, 255, 255, 0.15)";
+      gCtx.lineWidth = 1;
+      gCtx.stroke();
+      gCtx.setLineDash([]);
+
+      // Crosshairs
+      gCtx.beginPath();
+      gCtx.moveTo(cx - maxRadius, cy);
+      gCtx.lineTo(cx + maxRadius, cy);
+      gCtx.moveTo(cx, cy - maxRadius);
+      gCtx.lineTo(cx, cy + maxRadius);
+      gCtx.strokeStyle = "rgba(255, 255, 255, 0.14)";
+      gCtx.lineWidth = 1;
+      gCtx.stroke();
+
+      // Cardinal Labels (BRAKE UP, ACCEL DOWN, L, R)
+      gCtx.font = "800 7px ui-monospace, sans-serif";
+      gCtx.textAlign = "center";
+      gCtx.textBaseline = "top";
+      gCtx.fillStyle = "#ef4444"; // Brake Red
+      gCtx.fillText("BRAKE", cx, 3);
+
+      gCtx.textBaseline = "bottom";
+      gCtx.fillStyle = "#22c55e"; // Accel Green
+      gCtx.fillText("ACCEL", cx, h - 2);
+
+      gCtx.textBaseline = "middle";
+      gCtx.fillStyle = "#94a3b8";
+      gCtx.fillText("L", 5, cy);
+      gCtx.fillText("R", w - 5, cy);
+
+      // Clamp dynamic forces
+      const curGx = Math.max(-1.5, Math.min(1.5, rawLateralG));
+      const curGy = Math.max(-1.5, Math.min(1.5, rawLongitudinalG));
+
+      // Coordinate mapping:
+      // Positive lateral G (turning left) pushes right (+curGx)
+      // Positive longitudinal G (braking) pushes UP (-curGy)
+      const activePx = cx + (curGx / 1.5) * maxRadius;
+      const activePy = cy - (curGy / 1.5) * maxRadius;
+
+      // Append to 2-second comet trail
+      gHistory.push({ x: activePx, y: activePy, time: now });
+
+      // Prune entries older than 2.0s
+      while (gHistory.length > 0 && (now - gHistory[0].time) > COMET_WINDOW_MS) {
+        gHistory.shift();
+      }
+
+      // Draw Comet Tail: fading smoothly from oldest to newest
+      if (gHistory.length > 1) {
+        for (let i = 0; i < gHistory.length - 1; i++) {
+          const p1 = gHistory[i];
+          const p2 = gHistory[i + 1];
+          const age = now - p1.time;
+          const alpha = Math.max(0, 1 - (age / COMET_WINDOW_MS)) * 0.75;
+
+          gCtx.beginPath();
+          gCtx.moveTo(p1.x, p1.y);
+          gCtx.lineTo(p2.x, p2.y);
+          gCtx.strokeStyle = `rgba(249, 115, 22, ${alpha})`;
+          gCtx.lineWidth = 2.8 * (1 - age / COMET_WINDOW_MS);
+          gCtx.lineCap = "round";
+          gCtx.stroke();
+        }
+      }
+
+      // Draw Active G-Dot
+      gCtx.beginPath();
+      gCtx.arc(activePx, activePy, 5.0, 0, Math.PI * 2);
+      gCtx.fillStyle = "#ffffff";
+      gCtx.shadowColor = "#f97316";
+      gCtx.shadowBlur = 9;
+      gCtx.fill();
+      gCtx.shadowBlur = 0;
+
+      // Numerical Readout & Peak Tracker
+      const totalG = Math.sqrt(curGx * curGx + curGy * curGy);
+      if (totalG > peakG) {
+        peakG = parseFloat(totalG.toFixed(1));
+        gPeakVal.textContent = `${peakG.toFixed(1)}G`;
+      }
+      gValText.textContent = `${totalG.toFixed(1)} G`;
+    }
+
+    // --- DEMO SIMULATION ENGINE (FOR PREVIEW / VERIFICATION) ---
+    function runDemoSimulation(now) {
+      const loopDuration = 112000;
+      const t = (now % loopDuration) / loopDuration;
+
+      const totalPoints = projectedSvgPoints.length - 1;
+      const indexFloat = t * totalPoints;
+      const idx1 = Math.floor(indexFloat);
+      const idx2 = (idx1 + 1) % projectedSvgPoints.length;
+      const frac = indexFloat - idx1;
+
+      const p1 = projectedSvgPoints[idx1];
+      const p2 = projectedSvgPoints[idx2];
+      const curX = p1.x + (p2.x - p1.x) * frac;
+      const curY = p1.y + (p2.y - p1.y) * frac;
+
+      svgCarBeacon.setAttribute("cx", curX.toFixed(1));
+      svgCarBeacon.setAttribute("cy", curY.toFixed(1));
+
+      targetSpeedMph = Math.round(58 + 32 * Math.cos(t * Math.PI * 6));
+      if (targetSpeedMph < 32) targetSpeedMph = 32;
+
+      // Simulate realistic lateral cornering G and braking longitudinal G
+      rawLateralG = Math.sin(t * Math.PI * 12) * 1.15;
+      rawLongitudinalG = Math.cos(t * Math.PI * 8) * 0.95;
+
+      if (t < 0.33) currentSectorTag.textContent = "S1 • T2 CREST";
+      else if (t < 0.66) currentSectorTag.textContent = "S2 • CAROUSEL";
+      else currentSectorTag.textContent = "S3 • ESSES";
+    }
+
+    // --- FIREBASE LIVE INGESTION ---
+    db.on("value", (snap) => {
+      const root = snap.val();
+      if (!root || isDemoMode) return;
+
+      // 1. Driver Name
+      const driver = root.driver || (root.autox && root.autox.driver) || activeDriver;
+      if (driver && driver.toUpperCase() !== activeDriver) {
+        activeDriver = driver.toUpperCase();
+        dpDriverName.textContent = activeDriver;
+        cfgDriver.value = activeDriver;
+      }
+
+      // 2. Lap Counts (Driver Stint & Team Total)
+      if (root.driverLaps !== undefined) driverLaps = Number(root.driverLaps);
+      else if (root.autox && root.autox.runNum) driverLaps = Number(root.autox.runNum);
+
+      if (root.teamLaps !== undefined) teamLaps = Number(root.teamLaps);
+      else if (root.laps && Array.isArray(root.laps)) teamLaps = root.laps.length;
+
+      // 3. Telemetry Ingestion (Speed, Lat/Lon, G-Force)
+      let telem = root;
+      if (root.lat === undefined && root.latitude === undefined) {
+        const keys = Object.keys(root).filter(k => typeof root[k] === 'object' && root[k] !== null && k !== 'autox');
+        if (keys.length > 0) {
+          telem = root[keys[keys.length - 1]];
+        }
+      }
+
+      // Speed
+      let calcMph = 0;
+      if (telem.speed !== undefined && telem.speed !== null) {
+        calcMph = Number(telem.speed);
+      } else if (telem.vel !== undefined && telem.vel !== null) {
+        calcMph = Number(telem.vel) * 0.621371;
+      }
+      if (calcMph < SPEED_CUTOFF_MPH || isNaN(calcMph)) calcMph = 0;
+      targetSpeedMph = calcMph;
+
+      // Server Accelerometer packets
+      if (telem.ax !== undefined && telem.ay !== undefined) {
+        rawLateralG = Number(telem.ax) / 9.81;
+        rawLongitudinalG = Number(telem.ay) / 9.81;
+      }
+
+      // Project Car Position onto SVG Minimap
+      const lat = Number(telem.latitude || telem.lat);
+      const lon = Number(telem.longitude || telem.lon);
+      if (lat && lon && lat !== 0 && lon !== 0) {
+        const px = SVG_PAD + ((lon - minLon) / (maxLon - minLon)) * (SVG_W - 2 * SVG_PAD);
+        const py = SVG_PAD + ((maxLat - lat) / (maxLat - minLat)) * (SVG_H - 2 * SVG_PAD);
+        svgCarBeacon.setAttribute("cx", Math.max(5, Math.min(SVG_W - 5, px)).toFixed(1));
+        svgCarBeacon.setAttribute("cy", Math.max(5, Math.min(SVG_H - 5, py)).toFixed(1));
+        gpsStatusPill.textContent = "GPS LOCK";
+        gpsStatusPill.style.color = "#4ade80";
+      }
+    });
+
+    // --- ACCELEROMETER LISTENER (PHONE VERTICAL IN LANDSCAPE ORIENTATION) ---
+    // When the phone is mounted vertical in landscape orientation:
+    // Earth's gravity vector (1.0G = 9.81 m/s²) points straight DOWN.
+    if (window.DeviceMotionEvent) {
+      window.addEventListener("devicemotion", (e) => {
+        if (isDemoMode) return;
+        
+        // Prefer linear acceleration (gravity filtered) if provided by browser
+        if (e.acceleration && (e.acceleration.x !== null || e.acceleration.y !== null)) {
+          const acc = e.acceleration;
+          // In landscape: horizontal axis = lateral G, normal Z-axis = braking/throttle
+          rawLateralG = (acc.y || 0) / 9.81;
+          rawLongitudinalG = (acc.z || 0) / 9.81;
+        } else if (e.accelerationIncludingGravity) {
+          const acc = e.accelerationIncludingGravity;
+          // In landscape vertical mounting:
+          // Earth's gravity (9.81 m/s²) points down along the vertical screen axis.
+          // Cornering lateral force acts along the horizontal screen axis (acc.y).
+          // Braking / throttle acts along normal Z-axis (acc.z).
+          rawLateralG = (acc.y || 0) / 9.81;
+          rawLongitudinalG = ((acc.z || 0) / 9.81);
+        }
+      });
+    }
+
+    // Zero G-Force / Gravity Calibration
+    btnZeroG.addEventListener("click", () => {
+      peakG = 0;
+      gPeakVal.textContent = "0.0G";
+      closeDrawer();
+    });
+
+    // Geolocation Fallback
+    if (navigator.geolocation) {
+      navigator.geolocation.watchPosition((pos) => {
+        if (isDemoMode) return;
+        const rawMps = pos.coords.speed;
+        if (rawMps !== null && !isNaN(rawMps) && rawMps >= 0) {
+          const mph = rawMps * 2.23694;
+          targetSpeedMph = mph < SPEED_CUTOFF_MPH ? 0 : mph;
+        }
+      }, () => {}, { enableHighAccuracy: true, maximumAge: 200, timeout: 5000 });
+    }
+
+    // --- SETTINGS DRAWER CONTROLS ---
+    function openDrawer() {
+      drawerOverlay.classList.add("open");
+      settingsDrawer.classList.add("open");
+    }
+    function closeDrawer() {
+      drawerOverlay.classList.remove("open");
+      settingsDrawer.classList.remove("open");
+    }
+
+    btnOpenSettings.addEventListener("click", openDrawer);
+    btnCloseDrawer.addEventListener("click", closeDrawer);
+    drawerOverlay.addEventListener("click", closeDrawer);
+
+    cfgDriver.addEventListener("change", (e) => {
+      activeDriver = e.target.value;
+      dpDriverName.textContent = activeDriver;
+      stintStartTime = Date.now();
+      driverLaps = 0; // Reset driver stint laps on swap
+    });
+
+    cfgCarNumber.addEventListener("input", (e) => {
+      carNumberBadge.textContent = e.target.value;
+    });
+
+    cfgEventTitle.addEventListener("input", (e) => {
+      watermarkEventTitle.textContent = e.target.value.toUpperCase();
+    });
+
+    cfgDriverLaps.addEventListener("input", (e) => {
+      driverLaps = parseInt(e.target.value) || 0;
+    });
+
+    cfgTeamLaps.addEventListener("input", (e) => {
+      teamLaps = parseInt(e.target.value) || 0;
+    });
+
+    btnResetStint.addEventListener("click", () => {
+      stintStartTime = Date.now();
+      driverLaps = 0;
+      closeDrawer();
+    });
+
+    btnToggleDemo.addEventListener("click", () => {
+      isDemoMode = !isDemoMode;
+      btnToggleDemo.classList.toggle("active", isDemoMode);
+      if (isDemoMode) {
+        lapStartTime = Date.now();
+        stintStartTime = Date.now() - (75 * 60 * 1000);
+      }
+      closeDrawer();
+    });
+
+    // --- URL PARAMETERS AUTO-CONFIGURATION ---
+    // Example: camera-hud.html?car=42&driver=Dave&driverLaps=14&teamLaps=87&demo=1
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get("demo") === "1" || urlParams.get("demo") === "true") {
+      isDemoMode = true;
+      btnToggleDemo.classList.add("active");
+      lapStartTime = Date.now();
+      stintStartTime = Date.now() - (75 * 60 * 1000);
+    }
+    if (urlParams.get("driver")) {
+      activeDriver = urlParams.get("driver").toUpperCase();
+      dpDriverName.textContent = activeDriver;
+      cfgDriver.value = activeDriver;
+    }
+    if (urlParams.get("car")) {
+      const c = urlParams.get("car");
+      carNumberBadge.textContent = c.startsWith("#") ? c : `#${c}`;
+      cfgCarNumber.value = carNumberBadge.textContent;
+    }
+    if (urlParams.get("event")) {
+      watermarkEventTitle.textContent = urlParams.get("event").toUpperCase();
+      cfgEventTitle.value = watermarkEventTitle.textContent;
+    }
+    if (urlParams.get("driverLaps")) {
+      driverLaps = parseInt(urlParams.get("driverLaps")) || driverLaps;
+      cfgDriverLaps.value = driverLaps;
+    }
+    if (urlParams.get("teamLaps")) {
+      teamLaps = parseInt(urlParams.get("teamLaps")) || teamLaps;
+      cfgTeamLaps.value = teamLaps;
+    }
+  </script>
+</body>
+</html>
