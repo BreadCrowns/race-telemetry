@@ -5,6 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Pit Wall Command Center - Sonoma 24 Hours of Lemons</title>
   
+  <!-- Google Fonts: Cinzel & JetBrains Mono for LOTR motorsport aesthetic -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800;900&family=Cinzel+Decorative:wght@700&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@600;700;800&display=swap" rel="stylesheet">
+
   <!-- Leaflet CSS for Track Map -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 
@@ -13,25 +18,32 @@
       box-sizing: border-box;
       margin: 0;
       padding: 0;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+      font-family: var(--font-ui);
     }
     
     :root {
-      --bg-dark: #070a13;
-      --panel-bg: #0f172a;
-      --panel-border: #1e293b;
-      --accent: #f97316;
-      --accent-glow: rgba(249, 115, 22, 0.25);
+      --bg-dark: #07090e;
+      --panel-bg: #0c101a;
+      --panel-border: rgba(212, 175, 55, 0.22);
+      --panel-border-muted: #1e2638;
+      --accent: #d4af37; /* One Ring Gold */
+      --accent-bright: #f5cf53;
+      --accent-glow: rgba(212, 175, 55, 0.3);
+      --mithril: #cbd5e1;
+      --mithril-light: #f8fafc;
       --green: #22c55e;
       --yellow: #eab308;
       --red: #ef4444;
       --blue: #38bdf8;
       --purple: #a855f7;
+      --font-lotr: 'Cinzel', serif;
+      --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;
+      --font-ui: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     }
 
     body {
-      background: var(--bg-dark);
-      color: #f8fafc;
+      background: radial-gradient(circle at 50% 0%, #151b29 0%, #07090e 70%);
+      color: var(--mithril-light);
       min-height: 100vh;
       display: flex;
       flex-direction: column;
@@ -44,12 +56,14 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
-      background: var(--panel-bg);
+      background: linear-gradient(180deg, #131926 0%, #0c101a 100%);
       border: 1px solid var(--panel-border);
+      border-top: 2px solid var(--accent);
       border-radius: 8px;
       padding: 10px 16px;
       flex-wrap: wrap;
       gap: 12px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.7), 0 0 16px rgba(212, 175, 55, 0.1);
     }
     .brand-section {
       display: flex;
@@ -57,24 +71,27 @@
       gap: 10px;
     }
     .brand-title {
+      font-family: var(--font-lotr);
       font-size: 17px;
-      font-weight: 900;
-      letter-spacing: 1px;
-      color: var(--accent);
+      font-weight: 800;
+      letter-spacing: 1.5px;
+      color: var(--accent-bright);
       text-transform: uppercase;
       display: flex;
       align-items: center;
-      gap: 8px;
+      gap: 10px;
+      text-shadow: 0 0 12px rgba(212, 175, 55, 0.4);
     }
     .event-badge {
+      font-family: var(--font-lotr);
       font-size: 11px;
-      font-weight: 800;
-      background: rgba(249, 115, 22, 0.18);
+      font-weight: 700;
+      background: rgba(212, 175, 55, 0.12);
       border: 1px solid var(--accent);
-      color: var(--accent);
-      padding: 3px 8px;
+      color: var(--accent-bright);
+      padding: 4px 10px;
       border-radius: 4px;
-      letter-spacing: 0.5px;
+      letter-spacing: 1px;
       text-transform: uppercase;
     }
 
@@ -90,12 +107,14 @@
       display: flex;
       align-items: center;
       gap: 8px;
-      background: #020617;
-      border: 1px solid #334155;
-      padding: 5px 10px;
+      background: #060911;
+      border: 1px solid rgba(212, 175, 55, 0.3);
+      padding: 5px 12px;
       border-radius: 6px;
       font-size: 11px;
-      font-family: ui-monospace, monospace;
+      font-family: var(--font-mono);
+      color: var(--mithril);
+      box-shadow: inset 0 0 6px rgba(0, 0, 0, 0.6);
     }
     .status-beacon {
       width: 8px;
@@ -105,24 +124,24 @@
       box-shadow: 0 0 6px var(--red);
     }
     .status-beacon.online {
-      background: var(--green);
-      box-shadow: 0 0 8px var(--green);
-      animation: pulse-green 1.5s infinite;
+      background: var(--accent-bright);
+      box-shadow: 0 0 10px var(--accent-bright);
+      animation: pulse-gold 1.6s infinite;
     }
-    @keyframes pulse-green {
+    @keyframes pulse-gold {
       0%, 100% { opacity: 1; transform: scale(1); }
-      50% { opacity: 0.6; transform: scale(0.9); }
+      50% { opacity: 0.55; transform: scale(0.9); }
     }
 
     /* ------------------------------------------------------------- */
     /* THE 3 TEAM INPUTS - PROMINENT PIT ACTION DECK                  */
     /* ------------------------------------------------------------- */
     .pit-actions-deck {
-      background: linear-gradient(180deg, #131d35 0%, #0f172a 100%);
-      border: 2px solid var(--accent);
+      background: linear-gradient(180deg, #121826 0%, #0a0e17 100%);
+      border: 1px solid var(--accent);
       border-radius: 10px;
       padding: 14px 18px;
-      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.6);
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.7), inset 0 1px 0 rgba(212, 175, 55, 0.25), 0 0 20px rgba(212, 175, 55, 0.12);
       display: grid;
       grid-template-columns: 1.2fr 1.3fr 1.5fr;
       gap: 16px;
@@ -132,32 +151,37 @@
     }
 
     .action-card {
-      background: #070c18;
-      border: 1px solid rgba(255, 255, 255, 0.1);
+      background: rgba(8, 11, 19, 0.85);
+      border: 1px solid rgba(212, 175, 55, 0.2);
       border-radius: 8px;
       padding: 12px 14px;
       display: flex;
       flex-direction: column;
       justify-content: space-between;
       gap: 8px;
+      box-shadow: inset 0 0 12px rgba(0, 0, 0, 0.4);
     }
     .action-header {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      font-size: 11px;
-      font-weight: 800;
+      font-family: var(--font-lotr);
+      font-size: 12px;
+      font-weight: 700;
       text-transform: uppercase;
-      letter-spacing: 0.8px;
-      color: #94a3b8;
+      letter-spacing: 1px;
+      color: var(--accent-bright);
     }
     .action-step {
-      background: var(--accent);
-      color: #fff;
+      font-family: var(--font-lotr);
+      background: rgba(212, 175, 55, 0.18);
+      border: 1px solid var(--accent);
+      color: var(--accent-bright);
       font-size: 9px;
-      padding: 1px 6px;
-      border-radius: 3px;
-      font-weight: 900;
+      padding: 2px 7px;
+      border-radius: 4px;
+      font-weight: 700;
+      letter-spacing: 0.6px;
     }
 
     /* Action 1: Status Input */
@@ -167,24 +191,27 @@
     }
     .text-input {
       flex: 1;
-      background: #0f172a;
-      border: 1px solid #334155;
+      background: #070a12;
+      border: 1px solid rgba(212, 175, 55, 0.25);
       color: #fff;
       font-size: 13px;
       padding: 8px 12px;
       border-radius: 6px;
       outline: none;
-      transition: border-color 0.15s;
+      transition: all 0.2s ease;
+      font-family: var(--font-ui);
     }
     .text-input:focus {
       border-color: var(--accent);
+      box-shadow: 0 0 10px rgba(212, 175, 55, 0.35);
     }
     .btn-action {
-      background: var(--accent);
-      border: none;
-      color: #fff;
-      font-weight: 800;
-      font-size: 12px;
+      background: linear-gradient(180deg, #e5c158 0%, #b89326 100%);
+      border: 1px solid #d4af37;
+      color: #080b11;
+      font-family: var(--font-lotr);
+      font-weight: 900;
+      font-size: 11px;
       padding: 8px 14px;
       border-radius: 6px;
       cursor: pointer;
@@ -192,39 +219,46 @@
       align-items: center;
       gap: 4px;
       text-transform: uppercase;
-      letter-spacing: 0.5px;
+      letter-spacing: 0.8px;
       white-space: nowrap;
+      box-shadow: 0 0 10px rgba(212, 175, 55, 0.3);
+      transition: all 0.15s ease;
     }
     .btn-action:hover {
-      background: #ea580c;
+      background: linear-gradient(180deg, #fef08a 0%, #d4af37 100%);
+      box-shadow: 0 0 16px rgba(212, 175, 55, 0.55);
     }
     .btn-action-clear {
-      background: #1e293b;
-      border: 1px solid #334155;
+      background: #141926;
+      border: 1px solid rgba(212, 175, 55, 0.25);
       color: #94a3b8;
+      font-family: var(--font-lotr);
       font-weight: 700;
-      font-size: 11px;
+      font-size: 10px;
       padding: 8px 10px;
       border-radius: 6px;
       cursor: pointer;
       text-transform: uppercase;
-      letter-spacing: 0.5px;
+      letter-spacing: 0.8px;
+      transition: all 0.15s ease;
     }
     .btn-action-clear:hover {
-      background: #334155;
+      background: #1d2538;
       color: #fff;
+      border-color: var(--accent);
     }
     .live-status-banner {
-      background: rgba(15, 23, 42, 0.9);
-      border: 1px solid rgba(56, 189, 248, 0.35);
+      background: rgba(10, 14, 23, 0.95);
+      border: 1px solid rgba(212, 175, 55, 0.35);
       border-radius: 6px;
-      padding: 6px 10px;
+      padding: 7px 10px;
       font-size: 12px;
-      color: #38bdf8;
+      color: #fef08a;
       display: flex;
       align-items: center;
-      gap: 6px;
+      gap: 8px;
       font-style: italic;
+      box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.6);
     }
 
     /* Action 2: Driver Selector */
@@ -234,29 +268,30 @@
       gap: 6px;
     }
     .driver-btn {
-      background: #0f172a;
-      border: 1px solid #334155;
+      background: #0a0e18;
+      border: 1px solid rgba(212, 175, 55, 0.22);
       color: #cbd5e1;
-      font-size: 13px;
-      font-weight: 800;
+      font-family: var(--font-lotr);
+      font-size: 12px;
+      font-weight: 700;
       padding: 10px 4px;
       border-radius: 6px;
       cursor: pointer;
       text-align: center;
       text-transform: uppercase;
-      letter-spacing: 0.5px;
+      letter-spacing: 1px;
       transition: all 0.15s ease;
     }
     .driver-btn:hover {
-      background: #1e293b;
+      background: #151d30;
       color: #fff;
-      border-color: #64748b;
+      border-color: var(--accent);
     }
     .driver-btn.active {
-      background: rgba(249, 115, 22, 0.2);
+      background: rgba(212, 175, 55, 0.2);
       border: 2px solid var(--accent);
-      color: #fff;
-      box-shadow: 0 0 14px rgba(249, 115, 22, 0.4);
+      color: var(--accent-bright);
+      box-shadow: 0 0 16px rgba(212, 175, 55, 0.5);
     }
     .driver-active-meta {
       font-size: 11px;
@@ -274,8 +309,8 @@
     }
     .fuel-input {
       width: 90px;
-      background: #0f172a;
-      border: 1px solid #334155;
+      background: #070a12;
+      border: 1px solid rgba(212, 175, 55, 0.25);
       color: #fff;
       font-size: 15px;
       font-weight: 700;
@@ -283,37 +318,44 @@
       border-radius: 6px;
       outline: none;
       text-align: center;
+      font-family: var(--font-mono);
     }
     .fuel-preset-btn {
-      background: #1e293b;
-      border: 1px solid #334155;
-      color: #94a3b8;
+      background: #131926;
+      border: 1px solid rgba(212, 175, 55, 0.25);
+      color: var(--mithril);
+      font-family: var(--font-lotr);
       font-size: 11px;
       font-weight: 700;
       padding: 7px 8px;
       border-radius: 4px;
       cursor: pointer;
+      transition: all 0.15s ease;
     }
     .fuel-preset-btn:hover {
-      background: #334155;
+      background: #1c2538;
       color: #fff;
+      border-color: var(--accent);
     }
     .btn-log-fuel {
       flex: 1;
-      background: #16a34a;
-      border: none;
+      background: linear-gradient(180deg, #16a34a 0%, #15803d 100%);
+      border: 1px solid #22c55e;
       color: #fff;
+      font-family: var(--font-lotr);
       font-weight: 800;
-      font-size: 12px;
+      font-size: 11px;
       padding: 8px 10px;
       border-radius: 6px;
       cursor: pointer;
       text-transform: uppercase;
-      letter-spacing: 0.5px;
+      letter-spacing: 0.8px;
       white-space: nowrap;
+      transition: all 0.15s ease;
     }
     .btn-log-fuel:hover {
-      background: #15803d;
+      background: linear-gradient(180deg, #22c55e 0%, #16a34a 100%);
+      box-shadow: 0 0 12px rgba(34, 197, 94, 0.4);
     }
 
     /* Fuel Strategic Metrics Bar */
@@ -324,42 +366,45 @@
       margin-top: 4px;
     }
     .fuel-stat-box {
-      background: #0f172a;
-      border: 1px solid rgba(255, 255, 255, 0.08);
+      background: #080b13;
+      border: 1px solid rgba(212, 175, 55, 0.15);
       border-radius: 6px;
       padding: 6px 8px;
       text-align: center;
     }
     .fuel-stat-title {
+      font-family: var(--font-lotr);
       font-size: 9px;
-      color: #64748b;
+      color: #94a3b8;
       font-weight: 700;
       text-transform: uppercase;
+      letter-spacing: 0.5px;
     }
     .fuel-stat-value {
       font-size: 14px;
       font-weight: 900;
-      color: #f1f5f9;
-      font-family: ui-monospace, monospace;
+      color: var(--mithril-light);
+      font-family: var(--font-mono);
     }
     .fuel-stat-value.alert { color: #ef4444; }
-    .fuel-stat-value.warn { color: #eab308; }
+    .fuel-stat-value.warn { color: var(--accent); }
     .fuel-stat-value.good { color: #4ade80; }
 
     .fuel-gauge-mini {
       height: 6px;
-      background: #1e293b;
+      background: #141926;
       border-radius: 3px;
       overflow: hidden;
       margin-top: 4px;
+      border: 1px solid rgba(212, 175, 55, 0.15);
     }
     .fuel-gauge-fill {
       height: 100%;
-      background: var(--green);
+      background: linear-gradient(90deg, #b45309 0%, #d4af37 60%, #fef08a 100%);
       transition: width 0.3s ease;
     }
-    .fuel-gauge-fill.warn { background: var(--yellow); }
-    .fuel-gauge-fill.crit { background: var(--red); }
+    .fuel-gauge-fill.warn { background: linear-gradient(90deg, #b45309 0%, #eab308 100%); }
+    .fuel-gauge-fill.crit { background: #ef4444; }
 
     /* ------------------------------------------------------------- */
     /* DASHBOARD MIDDLE SECTION: AUTOMATED TIMING & MAP              */
@@ -382,90 +427,99 @@
       display: flex;
       flex-direction: column;
       gap: 8px;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
     }
     .panel-header {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      border-bottom: 1px solid var(--panel-border);
+      border-bottom: 1px solid rgba(212, 175, 55, 0.15);
       padding-bottom: 6px;
     }
     .panel-title {
+      font-family: var(--font-lotr);
       font-size: 12px;
       font-weight: 800;
       text-transform: uppercase;
-      letter-spacing: 0.8px;
-      color: #cbd5e1;
+      letter-spacing: 1px;
+      color: var(--accent-bright);
       display: flex;
       align-items: center;
       gap: 6px;
     }
     .panel-badge {
+      font-family: var(--font-lotr);
       font-size: 10px;
-      font-weight: 800;
-      padding: 2px 6px;
+      font-weight: 700;
+      padding: 2px 7px;
       border-radius: 4px;
-      background: #1e293b;
-      color: #94a3b8;
-      font-family: ui-monospace, monospace;
+      background: rgba(212, 175, 55, 0.1);
+      border: 1px solid rgba(212, 175, 55, 0.25);
+      color: var(--mithril);
+      letter-spacing: 0.5px;
     }
 
     /* Automated GPS Lap Timer */
     .timer-display-box {
-      background: #020617;
-      border: 1px solid #334155;
-      border-left: 5px solid var(--green);
+      background: #060911;
+      border: 1px solid rgba(212, 175, 55, 0.3);
+      border-left: 5px solid var(--accent);
       border-radius: 8px;
       padding: 12px;
       text-align: center;
+      box-shadow: inset 0 0 12px rgba(0, 0, 0, 0.7);
     }
     .timer-mode-tag {
+      font-family: var(--font-lotr);
       font-size: 9px;
-      font-weight: 900;
-      color: var(--green);
-      letter-spacing: 1px;
+      font-weight: 800;
+      color: var(--accent-bright);
+      letter-spacing: 1.2px;
       text-transform: uppercase;
     }
     .lap-clock {
-      font-family: ui-monospace, monospace;
+      font-family: var(--font-mono);
       font-size: 42px;
       font-weight: 900;
       color: #fff;
       letter-spacing: -1px;
       line-height: 1.1;
       font-variant-numeric: tabular-nums;
+      text-shadow: 0 0 16px rgba(255, 255, 255, 0.2);
     }
     .timer-sub-row {
       display: flex;
       justify-content: space-around;
       margin-top: 6px;
-      border-top: 1px solid rgba(255, 255, 255, 0.08);
+      border-top: 1px solid rgba(212, 175, 55, 0.15);
       padding-top: 6px;
       font-size: 11px;
+      font-family: var(--font-lotr);
     }
     .timer-sub-val {
-      font-family: ui-monospace, monospace;
+      font-family: var(--font-mono);
       font-weight: 700;
       color: #f1f5f9;
     }
 
     /* Stint Watchdog (2-Hour Max Rule) */
     .stint-card {
-      background: #0b1222;
-      border: 1px solid #1e293b;
+      background: #080b13;
+      border: 1px solid rgba(212, 175, 55, 0.2);
       border-radius: 8px;
       padding: 10px 14px;
       display: flex;
       justify-content: space-between;
       align-items: center;
+      box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.5);
     }
     .stint-clock-large {
-      font-family: ui-monospace, monospace;
+      font-family: var(--font-mono);
       font-size: 24px;
       font-weight: 900;
-      color: #38bdf8;
+      color: var(--accent-bright);
     }
-    .stint-clock-large.warn { color: #f59e0b; }
+    .stint-clock-large.warn { color: var(--yellow); }
     .stint-clock-large.danger { color: #ef4444; animation: blink-red 1s infinite; }
     @keyframes blink-red { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
 
@@ -475,6 +529,7 @@
       width: 100%;
       border-radius: 6px;
       background: #020617;
+      border: 1px solid rgba(212, 175, 55, 0.2);
     }
 
     /* Live Telemetry Data HUD */
@@ -484,31 +539,34 @@
       gap: 6px;
     }
     .telem-pill {
-      background: #020617;
-      border: 1px solid #1e293b;
+      background: #060911;
+      border: 1px solid rgba(212, 175, 55, 0.2);
       border-radius: 6px;
       padding: 8px;
       text-align: center;
     }
     .telem-label {
+      font-family: var(--font-lotr);
       font-size: 9px;
       font-weight: 800;
-      color: #64748b;
+      color: var(--accent-bright);
       text-transform: uppercase;
+      letter-spacing: 0.8px;
     }
     .telem-value {
       font-size: 18px;
       font-weight: 900;
       color: #ffffff;
-      font-family: ui-monospace, monospace;
+      font-family: var(--font-mono);
     }
 
     /* Laps Database Table */
     .table-container {
       max-height: 260px;
       overflow-y: auto;
-      border: 1px solid #1e293b;
+      border: 1px solid rgba(212, 175, 55, 0.2);
       border-radius: 6px;
+      background: #060911;
     }
     table.lap-table {
       width: 100%;
@@ -517,25 +575,27 @@
       text-align: left;
     }
     table.lap-table th {
-      background: #0b1120;
-      color: #64748b;
+      background: #0c111c;
+      color: var(--accent-bright);
+      font-family: var(--font-lotr);
       font-weight: 800;
-      padding: 6px 8px;
+      padding: 7px 8px;
       position: sticky;
       top: 0;
-      border-bottom: 1px solid #1e293b;
+      border-bottom: 1px solid rgba(212, 175, 55, 0.25);
       text-transform: uppercase;
       font-size: 10px;
+      letter-spacing: 0.6px;
     }
     table.lap-table td {
       padding: 6px 8px;
       border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-      font-family: ui-monospace, monospace;
-      color: #cbd5e1;
+      font-family: var(--font-mono);
+      color: var(--mithril);
     }
     table.lap-table tr.best-lap {
-      background: rgba(34, 197, 94, 0.15);
-      color: #4ade80;
+      background: rgba(212, 175, 55, 0.15);
+      color: var(--accent-bright);
       font-weight: 800;
     }
 
@@ -566,16 +626,16 @@
   <!-- Top Command Header -->
   <header>
     <div class="brand-section">
-      <div class="brand-title">🏁 Sonoma 24 Hours of Lemons • Pit Wall</div>
-      <span class="event-badge">Arse-Freeze-Apalooza • 2.56-Mile Road Course</span>
+      <div class="brand-title">⚔️ Fellowship of the Pit Wall • Sonoma 24h</div>
+      <span class="event-badge">Arse-Freeze-Apalooza • Quest of the 2.56-Mile Circuit</span>
     </div>
 
     <div class="header-controls">
       <!-- Live Telemetry Watchdog Pill -->
       <div class="watchdog-pill">
         <div class="status-beacon" id="gps-beacon"></div>
-        <span id="gps-status-text">GPS SEARCHING</span>
-        <span style="color:#64748b;" id="gps-ping">--ms</span>
+        <span id="gps-status-text">PALANTÍR FEED SEARCHING</span>
+        <span style="color:var(--accent-bright);" id="gps-ping">--ms</span>
       </div>
     </div>
   </header>
@@ -588,25 +648,25 @@
     <!-- ACTION 1: CURRENT STATUS TEXT BOX -->
     <div class="action-card">
       <div class="action-header">
-        <span>💬 Action 1: Current Race Status</span>
-        <span class="action-step">Live on Stream Overlay</span>
+        <span>📜 Action 1: Dispatch to the Fellowship</span>
+        <span class="action-step">Palantír Stream Link</span>
       </div>
       <div class="status-input-row">
-        <input type="text" id="status-input" class="text-input" placeholder="Type status update (e.g. In P3, running clean, box in 2 laps)..." onkeydown="if(event.key==='Enter') updateCurrentStatus()" />
-        <button type="button" class="btn-action" onclick="updateCurrentStatus()">Post</button>
+        <input type="text" id="status-input" class="text-input" placeholder="Send word to driver (e.g. In P3, box this lap, fly you fools!)..." onkeydown="if(event.key==='Enter') updateCurrentStatus()" />
+        <button type="button" class="btn-action" onclick="updateCurrentStatus()">Dispatch</button>
         <button type="button" class="btn-action-clear" onclick="clearCurrentStatus()">Clear</button>
       </div>
       <div class="live-status-banner">
-        <span>📢</span>
-        <span id="live-status-text">No status set</span>
+        <span>📜</span>
+        <span id="live-status-text">No dispatch set</span>
       </div>
     </div>
 
     <!-- ACTION 2: DRIVER SELECTOR -->
     <div class="action-card">
       <div class="action-header">
-        <span>🏎️ Action 2: Choose Active Driver</span>
-        <span class="action-step">Instant Stint Swap</span>
+        <span>🛡️ Action 2: Fellowship of Drivers</span>
+        <span class="action-step">Champion Swap</span>
       </div>
       <div class="driver-btn-row">
         <button type="button" class="driver-btn active" id="btn-driver-Matt" onclick="selectDriver('Matt')">Matt</button>
@@ -616,7 +676,7 @@
         <button type="button" class="driver-btn" id="btn-driver-Tony" onclick="selectDriver('Tony')">Tony</button>
       </div>
       <div class="driver-active-meta">
-        <span>In Car: <strong id="active-driver-name" style="color:var(--accent);">MATT</strong></span>
+        <span>Champion in Car: <strong id="active-driver-name" style="color:var(--accent-bright);">MATT</strong></span>
         <span>Stint: <strong id="active-driver-stint-time" style="color:#fff;">00:00:00</strong> (Max 2h rule)</span>
       </div>
     </div>
@@ -624,21 +684,21 @@
     <!-- ACTION 3: FUEL LOGGING & PROJECTION -->
     <div class="action-card">
       <div class="action-header">
-        <span>⛽ Action 3: Fuel Added to Full Tank</span>
-        <span class="action-step">Auto Mileage & Pit Window</span>
+        <span>⚡ Action 3: Provisions & Fuel Strategy</span>
+        <span class="action-step">The Long March</span>
       </div>
       <div class="fuel-input-row">
         <input type="number" step="0.1" id="fuel-added-input" class="fuel-input" placeholder="Gal added" />
         <button type="button" class="fuel-preset-btn" onclick="setFuelInput(5)">+5G</button>
         <button type="button" class="fuel-preset-btn" onclick="setFuelInput(10)">+10G</button>
         <button type="button" class="fuel-preset-btn" onclick="setFuelInput(14)">14G</button>
-        <button type="button" class="btn-log-fuel" onclick="logRefuelAction()">⛽ Log Refuel to Full</button>
+        <button type="button" class="btn-log-fuel" onclick="logRefuelAction()">⚡ Log Provisions to Full</button>
       </div>
 
       <!-- Strategic Projections -->
       <div class="fuel-stat-grid">
         <div class="fuel-stat-box">
-          <div class="fuel-stat-title">Laps Until Refuel</div>
+          <div class="fuel-stat-title">Laps to Mt. Doom</div>
           <div class="fuel-stat-value good" id="proj-laps-remain">~26 LAPS</div>
         </div>
         <div class="fuel-stat-box">
@@ -646,7 +706,7 @@
           <div class="fuel-stat-value" id="proj-time-remain">~58 MINS</div>
         </div>
         <div class="fuel-stat-box">
-          <div class="fuel-stat-title">Measured Burn</div>
+          <div class="fuel-stat-title">Draught Rate</div>
           <div class="fuel-stat-value" id="proj-burn-rate">0.45 G/Lap</div>
         </div>
       </div>
@@ -668,15 +728,15 @@
       <!-- Automated GPS Lap Clock -->
       <div class="panel">
         <div class="panel-header">
-          <span class="panel-title">⏱️ Automated GPS Lap Timer</span>
+          <span class="panel-title">⏱️ Sundial of Sonoma • Automated Lap Clock</span>
         </div>
         <div class="timer-display-box">
-          <div class="timer-mode-tag">● AUTOMATED GPS TIMING (SONOMA S/F BEAM)</div>
+          <div class="timer-mode-tag">● AUTOMATED GPS BEAM (SONOMA FINISH GATE)</div>
           <div class="lap-clock" id="lap-clock">00:00.00</div>
           <div class="timer-sub-row">
             <div>Lap # <span class="timer-sub-val" id="val-lap-count">0</span></div>
             <div>Last: <span class="timer-sub-val" id="val-last-lap">--:--.--</span></div>
-            <div>Best: <span class="timer-sub-val" style="color:#4ade80;" id="val-best-lap">--:--.--</span></div>
+            <div>Best: <span class="timer-sub-val" style="color:var(--accent-bright);" id="val-best-lap">--:--.--</span></div>
           </div>
         </div>
       </div>
@@ -684,17 +744,17 @@
       <!-- Lemons Stint Rule Watchdog -->
       <div class="panel">
         <div class="panel-header">
-          <span class="panel-title">⏳ Driver Stint Clock</span>
+          <span class="panel-title">⏳ The Burden of the Ring • Stint Clock</span>
           <span class="panel-badge">Lemons 2h Max Rule</span>
         </div>
         <div class="stint-card">
           <div>
-            <div style="font-size:10px; color:#64748b; font-weight:800; text-transform:uppercase;">Current Stint Elapsed</div>
+            <div style="font-size:10px; color:#94a3b8; font-weight:800; font-family:var(--font-lotr); text-transform:uppercase;">Current Stint Elapsed</div>
             <div class="stint-clock-large" id="stint-clock-display">00:00:00</div>
           </div>
           <div style="text-align:right;">
-            <div style="font-size:10px; color:#64748b; font-weight:800;">DRIVER</div>
-            <div style="font-size:15px; font-weight:900; color:#fff;" id="stint-driver-display">MATT</div>
+            <div style="font-size:10px; color:#94a3b8; font-weight:800; font-family:var(--font-lotr);">CHAMPION</div>
+            <div style="font-size:15px; font-weight:900; color:var(--accent-bright); font-family:var(--font-lotr);" id="stint-driver-display">MATT</div>
           </div>
         </div>
       </div>
@@ -702,7 +762,7 @@
       <!-- Live Speed & Telemetry HUD -->
       <div class="panel">
         <div class="panel-header">
-          <span class="panel-title">📡 Live Car Telemetry</span>
+          <span class="panel-title">📡 Palantír Telemetry • Live Speed & Vitals</span>
           <span class="panel-badge" id="telem-source">Sensor Logger</span>
         </div>
         <div class="telemetry-row">
@@ -715,7 +775,7 @@
             <div class="telem-value" id="val-miles">0.0</div>
           </div>
           <div class="telem-pill">
-            <div class="telem-label">Fuel Remaining</div>
+            <div class="telem-label">Provisions Left</div>
             <div class="telem-value" id="val-fuel-gal">14.0 <span style="font-size:11px; color:#94a3b8;">G</span></div>
           </div>
         </div>
@@ -726,7 +786,7 @@
     <!-- CENTER COLUMN: High-Resolution Satellite Map -->
     <div class="panel" style="flex:1;">
       <div class="panel-header">
-        <span class="panel-title">🗺️ Sonoma Raceway Live GPS Map</span>
+        <span class="panel-title">🗺️ Map of Sonoma Raceway • Middle-earth Circuit</span>
         <span class="panel-badge">2.56-Mile Road Course</span>
       </div>
       <div id="map"></div>
@@ -738,22 +798,22 @@
       <!-- Lap Times Table -->
       <div class="panel" style="flex:1;">
         <div class="panel-header">
-          <span class="panel-title">🏁 Completed Laps (<span id="table-lap-count">0</span>)</span>
-          <button type="button" class="panel-badge" style="cursor:pointer;" onclick="exportLapsCsv()">Export CSV</button>
+          <span class="panel-title">📖 Chronicle of the Laps (<span id="table-lap-count">0</span>)</span>
+          <button type="button" class="panel-badge" style="cursor:pointer;" onclick="exportLapsCsv()">Export Scroll (CSV)</button>
         </div>
         <div class="table-container">
           <table class="lap-table">
             <thead>
               <tr>
                 <th>Lap</th>
-                <th>Driver</th>
+                <th>Champion</th>
                 <th>Time</th>
                 <th>Top MPH</th>
-                <th>Fuel</th>
+                <th>Provisions</th>
               </tr>
             </thead>
             <tbody id="lap-table-body">
-              <tr><td colspan="5" style="text-align:center; color:#64748b; padding:16px;">Automated GPS timing active.<br>Waiting for car to complete Lap 1...</td></tr>
+              <tr><td colspan="5" style="text-align:center; color:#94a3b8; font-family:var(--font-lotr); padding:16px;">Sundial beam armed.<br>Awaiting the Fellowship to complete Lap 1...</td></tr>
             </tbody>
           </table>
         </div>
@@ -762,12 +822,12 @@
       <!-- Team Race Logbook -->
       <div class="panel">
         <div class="panel-header">
-          <span class="panel-title">📋 Pit Logbook</span>
+          <span class="panel-title">📜 Lore of the Pit Wall • Live Event Log</span>
         </div>
         <div class="log-list" id="log-list">
           <div class="log-row">
             <span class="log-time">[START]</span>
-            <span class="log-msg">Sonoma 24 Hours of Lemons system armed.</span>
+            <span class="log-msg">Sonoma 24 Hours of Lemons system armed. Speak friend and enter.</span>
           </div>
         </div>
       </div>
