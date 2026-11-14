@@ -1152,10 +1152,14 @@
       rawLongitudinalG = Math.cos(t * Math.PI * 8) * 0.95;
     }
 
-    // --- FIREBASE LIVE INGESTION ---
+    // --- FIREBASE LIVE INGESTION (READS DIRECTLY FROM DATABASE ONLY) ---
+    let lastDbPacketTime = 0;
+
     db.on("value", (snap) => {
       const root = snap.val();
       if (!root || isDemoMode) return;
+
+      lastDbPacketTime = Date.now();
 
       // 1. Driver Name
       const driver = root.driver || (root.autox && root.autox.driver) || activeDriver;
@@ -1165,7 +1169,7 @@
         cfgDriver.value = activeDriver;
       }
 
-      // 2. Lap Counts
+      // 2. Lap Counts (Driver Stint & Team Total)
       if (root.driverLaps !== undefined) driverLaps = Number(root.driverLaps);
       else if (root.autox && root.autox.runNum) driverLaps = Number(root.autox.runNum);
 
@@ -1181,7 +1185,7 @@
         }
       }
 
-      // Speed
+      // Speed from Database
       let calcMph = 0;
       if (telem.speed !== undefined && telem.speed !== null) {
         calcMph = Number(telem.speed);
@@ -1191,37 +1195,49 @@
       if (calcMph < SPEED_CUTOFF_MPH || isNaN(calcMph)) calcMph = 0;
       targetSpeedMph = calcMph;
 
-      // Server Accelerometer packets
-      if (telem.ax !== undefined && telem.ay !== undefined) {
-        rawLateralG = Number(telem.ax) / 9.81;
-        rawLongitudinalG = Number(telem.ay) / 9.81;
+      // G-Force from Database (Sensor Logger 3-axis or 2-axis)
+      if (telem.latG !== undefined && telem.longG !== undefined) {
+        rawLateralG = Number(telem.latG);
+        rawLongitudinalG = Number(telem.longG);
+      } else if (telem.ax !== undefined || telem.ay !== undefined) {
+        const ax = Number(telem.ax || 0);
+        const ay = Number(telem.ay || 0);
+        const az = Number(telem.az || 0);
+        if (Math.abs(az) > 0.1 && Math.abs(ay) > 0.1) {
+          // Phone mounted vertical in landscape: ay = lateral, az = longitudinal
+          rawLateralG = ay / 9.81;
+          rawLongitudinalG = az / 9.81;
+        } else {
+          rawLateralG = ax / 9.81;
+          rawLongitudinalG = ay / 9.81;
+        }
       }
 
-      // Update Live GPS Map Position
+      // Live GPS Position from Database
       const lat = Number(telem.latitude || telem.lat);
       const lon = Number(telem.longitude || telem.lon);
       if (lat && lon && lat !== 0 && lon !== 0) {
         updateGpsPosition(lat, lon);
-        gpsStatusPill.textContent = "GPS LOCK";
+        gpsStatusPill.textContent = "DB GPS LOCK";
         gpsStatusPill.style.color = "#4ade80";
       }
     });
 
-    // --- ACCELEROMETER LISTENER (PHONE VERTICAL IN LANDSCAPE ORIENTATION) ---
-    if (window.DeviceMotionEvent) {
-      window.addEventListener("devicemotion", (e) => {
-        if (isDemoMode) return;
-        if (e.acceleration && (e.acceleration.x !== null || e.acceleration.y !== null)) {
-          const acc = e.acceleration;
-          rawLateralG = (acc.y || 0) / 9.81;
-          rawLongitudinalG = (acc.z || 0) / 9.81;
-        } else if (e.accelerationIncludingGravity) {
-          const acc = e.accelerationIncludingGravity;
-          rawLateralG = (acc.y || 0) / 9.81;
-          rawLongitudinalG = (acc.z || 0) / 9.81;
-        }
-      });
-    }
+    // Database Connection Watchdog (Verifies incoming stream from DB)
+    setInterval(() => {
+      if (isDemoMode) return;
+      const age = Date.now() - lastDbPacketTime;
+      if (!lastDbPacketTime || age > 8000) {
+        gpsStatusPill.textContent = "WAITING FOR DB";
+        gpsStatusPill.style.color = "#f87171";
+      } else if (age > 4000) {
+        gpsStatusPill.textContent = "DB DELAY";
+        gpsStatusPill.style.color = "#facc15";
+      } else {
+        gpsStatusPill.textContent = "DB GPS LOCK";
+        gpsStatusPill.style.color = "#4ade80";
+      }
+    }, 1000);
 
     // Zero G-Force Calibration
     btnZeroG.addEventListener("click", () => {
@@ -1229,22 +1245,6 @@
       gPeakVal.textContent = "0.0G";
       closeDrawer();
     });
-
-    // Native Phone GPS Geolocation Fallback
-    if (navigator.geolocation) {
-      navigator.geolocation.watchPosition((pos) => {
-        if (isDemoMode) return;
-        const lat = pos.coords.latitude;
-        const lon = pos.coords.longitude;
-        updateGpsPosition(lat, lon);
-
-        const rawMps = pos.coords.speed;
-        if (rawMps !== null && !isNaN(rawMps) && rawMps >= 0) {
-          const mph = rawMps * 2.23694;
-          targetSpeedMph = mph < SPEED_CUTOFF_MPH ? 0 : mph;
-        }
-      }, () => {}, { enableHighAccuracy: true, maximumAge: 200, timeout: 5000 });
-    }
 
     // --- SETTINGS DRAWER CONTROLS ---
     function openDrawer() {
