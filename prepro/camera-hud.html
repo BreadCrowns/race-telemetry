@@ -4,6 +4,11 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
   <title>Streamlabs Cockpit Telemetry HUD [PREPRO]</title>
+  
+  <!-- Leaflet CSS & JS for Live Dark Mode GPS Map -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
   <style>
     * {
       box-sizing: border-box;
@@ -284,7 +289,7 @@
     }
 
     /* ========================================================
-       BOTTOM ROW: LAP TIMER | FRICTION CIRCLE | SONOMA MINIMAP
+       BOTTOM ROW: LAP TIMER | FRICTION CIRCLE | LIVE GPS MAP
        ======================================================== */
     .hud-bottom-row {
       display: flex;
@@ -292,7 +297,7 @@
       align-items: flex-end;
       width: 100%;
       gap: 12px;
-      flex-wrap: nowrap; /* Never wrap off screen */
+      flex-wrap: nowrap;
     }
 
     /* Lap Timer Sub-Block (Bottom-Left) */
@@ -428,78 +433,90 @@
       letter-spacing: 0.5px;
     }
 
-    /* Sonoma Vector Minimap Panel (Guaranteed 100% Always Visible) */
-    .minimap-panel {
-      padding: 6px 10px;
+    /* ========================================================
+       LIVE DARK MODE GPS MAP WINDOW (GOOGLE MAPS STYLE)
+       ======================================================== */
+    .live-map-panel {
+      width: 195px;
+      height: 140px;
       display: flex;
       flex-direction: column;
-      align-items: center;
-      gap: 2px;
-      width: 180px;
-      min-width: 180px;
+      border-radius: 10px;
+      overflow: hidden;
       position: relative;
       flex-shrink: 0;
+      padding: 0 !important;
+      border: 1px solid var(--glass-border);
     }
-    .minimap-title-bar {
+    .live-map-header {
+      position: absolute;
+      top: 5px;
+      left: 6px;
+      right: 6px;
+      z-index: 999;
       display: flex;
       justify-content: space-between;
       align-items: center;
-      width: 100%;
+      background: rgba(10, 15, 29, 0.85);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      border-radius: 5px;
+      padding: 2px 6px;
+      pointer-events: none;
     }
-    .minimap-title {
+    .live-map-title {
       font-size: 8px;
       font-weight: 800;
       color: var(--accent);
-      letter-spacing: 1.5px;
+      letter-spacing: 1px;
       text-transform: uppercase;
+      display: flex;
+      align-items: center;
+      gap: 3px;
     }
-    .minimap-corner-tag {
+    .live-map-coords {
       font-size: 8px;
       font-weight: 700;
-      color: #94a3b8;
+      color: #cbd5e1;
       font-family: ui-monospace, SFMono-Regular, monospace;
     }
-    svg#minimap-svg {
-      width: 165px;
-      height: 105px;
-      overflow: visible;
-      display: block;
+    #live-gps-map {
+      width: 100%;
+      height: 100%;
+      background: #090d16;
     }
 
-    /* Track SVG Stylings */
-    .track-road {
-      stroke: #334155;
-      stroke-width: 11;
-      stroke-linecap: round;
-      stroke-linejoin: round;
-      fill: none;
+    /* Google Maps Style Pulsing GPS Puck */
+    .gps-puck-container {
+      position: relative;
+      width: 24px;
+      height: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
-    .track-line {
-      stroke: #f97316;
-      stroke-width: 3.5;
-      stroke-linecap: round;
-      stroke-linejoin: round;
-      fill: none;
-      filter: drop-shadow(0 0 6px rgba(249, 115, 22, 0.7));
+    .gps-puck-radar {
+      position: absolute;
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: rgba(249, 115, 22, 0.35);
+      border: 1px solid var(--accent);
+      animation: radar-pulse 1.8s infinite ease-out;
     }
-    .track-finish {
-      stroke: #ffffff;
-      stroke-width: 3.5;
-      stroke-dasharray: 2 2;
+    @keyframes radar-pulse {
+      0% { transform: scale(0.6); opacity: 1; }
+      100% { transform: scale(2.0); opacity: 0; }
     }
-    .turn-label {
-      fill: #cbd5e1;
-      font-size: 8px;
-      font-weight: 800;
-      font-family: ui-monospace, monospace;
-      text-shadow: 0 1px 3px #000;
-    }
-    .car-beacon {
-      fill: #ffffff;
-      stroke: #f97316;
-      stroke-width: 3;
-      filter: drop-shadow(0 0 8px #f97316);
-      transition: transform 0.08s linear;
+    .gps-puck-core {
+      position: relative;
+      width: 10px;
+      height: 10px;
+      background: var(--accent);
+      border: 2px solid #ffffff;
+      border-radius: 50%;
+      box-shadow: 0 0 10px var(--accent);
     }
 
     /* ========================================================
@@ -646,7 +663,7 @@
         <!-- Driver Name & Status -->
         <div class="dp-section">
           <span class="dp-tag">DRIVER</span>
-          <span class="dp-driver-val" id="dp-driver-name">DAVE</span>
+          <span class="dp-driver-val" id="dp-driver-name">MATT</span>
           <span class="dp-status-badge" id="dp-status">ON TRACK</span>
         </div>
 
@@ -683,7 +700,7 @@
         <!-- Driver Laps (This Stint) -->
         <div class="dp-section dp-laps-wrap">
           <span class="dp-tag">DRIVER</span>
-          <span class="dp-lap-num" id="driver-laps-val">14</span>
+          <span class="dp-lap-num" id="driver-laps-val">15</span>
           <span class="dp-lap-sub">LAPS</span>
         </div>
 
@@ -717,7 +734,7 @@
         </div>
       </div>
 
-      <!-- Bottom-Right Cluster: Friction Circle + Sonoma Minimap -->
+      <!-- Bottom-Right Cluster: Friction Circle + Small Dark Mode Google Maps Style Window -->
       <div class="bottom-right-cluster">
         
         <!-- Friction Circle Canvas (Calibrated for vertical phone in landscape, gravity down) -->
@@ -733,32 +750,13 @@
           </div>
         </div>
 
-        <!-- Sonoma Dynamic Vector Minimap (Pre-Rendered SVG Points) -->
-        <div class="glass-panel minimap-panel">
-          <div class="minimap-title-bar">
-            <span class="minimap-title">SONOMA RACEWAY</span>
-            <span class="minimap-corner-tag" id="current-sector-tag">S2 &bull; T7</span>
+        <!-- Small Google Maps Style Window in Corner (Dark Mode Live GPS Map) -->
+        <div class="glass-panel live-map-panel">
+          <div class="live-map-header">
+            <span class="live-map-title">📍 GPS MAP</span>
+            <span class="live-map-coords" id="live-map-coords">38.1607°, -122.4547°</span>
           </div>
-          <svg id="minimap-svg" viewBox="0 0 220 150">
-            <!-- Road Gray Backing -->
-            <polyline class="track-road" points="191.9,88.9 181.6,47.3 140.7,18 93.3,30.4 54.6,62.9 18,94.2 22.3,132 114.8,126.8 147.1,107.2 162.2,85.1 175.1,60.3 197.7,103.3 191.9,88.9"></polyline>
-            <!-- Vibrant Neon Orange Track Line -->
-            <polyline class="track-line" points="191.9,88.9 181.6,47.3 140.7,18 93.3,30.4 54.6,62.9 18,94.2 22.3,132 114.8,126.8 147.1,107.2 162.2,85.1 175.1,60.3 197.7,103.3 191.9,88.9"></polyline>
-            <!-- White Start / Finish Line -->
-            <line class="track-finish" x1="184" y1="86" x2="198" y2="92"></line>
-            
-            <!-- Turn Labels -->
-            <text class="turn-label" x="186" y="44">T1</text>
-            <text class="turn-label" x="140" y="14">T2</text>
-            <text class="turn-label" x="86" y="26">T3</text>
-            <text class="turn-label" x="22" y="112">Carousel</text>
-            <text class="turn-label" x="108" y="142">T7 Hairpin</text>
-            <text class="turn-label" x="150" y="104">Esses</text>
-            <text class="turn-label" x="198" y="118">T11</text>
-
-            <!-- Live Car Beacon -->
-            <circle class="car-beacon" id="svg-car-beacon" cx="191.9" cy="88.9" r="5.5"></circle>
-          </svg>
+          <div id="live-gps-map"></div>
         </div>
 
       </div>
@@ -779,8 +777,8 @@
     <div class="form-group">
       <label class="form-label">Active Driver</label>
       <select class="form-select" id="cfg-driver">
-        <option value="DAVE">Dave</option>
         <option value="MATT">Matt</option>
+        <option value="DAVE">Dave</option>
         <option value="CHRIS">Chris</option>
         <option value="IN PITS">In Pits / Standby</option>
       </select>
@@ -798,7 +796,7 @@
     <div class="form-group">
       <label class="form-label">Lap Counts (Driver Stint / Team Total)</label>
       <div style="display: flex; gap: 8px;">
-        <input type="number" class="form-input" id="cfg-driver-laps" value="14" style="flex: 1;" placeholder="Driver Laps" />
+        <input type="number" class="form-input" id="cfg-driver-laps" value="15" style="flex: 1;" placeholder="Driver Laps" />
         <input type="number" class="form-input" id="cfg-team-laps" value="87" style="flex: 1;" placeholder="Team Total" />
       </div>
     </div>
@@ -873,9 +871,8 @@
     const gValText = document.getElementById("g-val-text");
     const gPeakVal = document.getElementById("g-peak-val");
 
-    // Minimap Elements
-    const svgCarBeacon = document.getElementById("svg-car-beacon");
-    const currentSectorTag = document.getElementById("current-sector-tag");
+    // Live GPS Map Elements
+    const liveMapCoords = document.getElementById("live-map-coords");
 
     // Settings Drawer Elements
     const cfgDriver = document.getElementById("cfg-driver");
@@ -888,14 +885,14 @@
     const btnToggleDemo = document.getElementById("btn-toggle-demo");
 
     // --- STATE & TELEMETRY VARIABLES ---
-    let activeDriver = "DAVE";
+    let activeDriver = "MATT";
     let carNumber = "#42";
     let eventTitle = "24 HOURS OF LEMONS • SONOMA RACEWAY";
 
-    let stintStartTime = Date.now() - (62 * 60 * 1000); // Simulated 62 mins into stint
+    let stintStartTime = Date.now() - (62 * 60 * 1000); // 62 mins into stint
     const MAX_STINT_MS = 2 * 60 * 60 * 1000; // 2 hours max stint
 
-    let driverLaps = 14;
+    let driverLaps = 15;
     let teamLaps = 87;
 
     let currentLap = 14;
@@ -907,23 +904,61 @@
     let smoothSpeedMph = 0;
     const SPEED_CUTOFF_MPH = 2.5;
 
-    // --- VERTICAL LANDSCAPE G-FORCE CALIBRATION (GRAVITY DOWN) ---
-    // When the phone is mounted vertical in landscape orientation:
-    // • Gravity (1G = 9.81 m/s²) points straight DOWN towards the road (short edge of phone screen).
-    // • Lateral cornering forces act along the horizontal screen axis (long edge of phone screen).
-    // • Longitudinal braking/acceleration forces act perpendicular to the screen (normal Z-axis).
+    // --- VERTICAL LANDSCAPE G-FORCE CALIBRATION ---
     let rawLateralG = 0;
     let rawLongitudinalG = 0;
-    let calibGravityOffset = 9.81; // 1G static downward gravity offset
-    let peakG = 1.1;
+    let peakG = 1.2;
 
-    // Comet trail history array: [{ x, y, timestamp }]
     const gHistory = [];
-    const COMET_WINDOW_MS = 2000; // 2.0-second retention window
+    const COMET_WINDOW_MS = 2000; // 2-second comet trail
 
     let isDemoMode = false;
 
-    // --- SONOMA RACEWAY ROAD COURSE GEOMETRY ---
+    // --- INITIALIZE LEAFLET DARK MODE GPS MAP ---
+    const initialLat = 38.16071;
+    const initialLon = -122.45472;
+
+    const liveMap = L.map('live-gps-map', {
+      zoomControl: false,
+      attributionControl: false,
+      dragging: false,
+      scrollWheelZoom: false,
+      doubleClickZoom: false,
+      touchZoom: false,
+      boxZoom: false,
+      keyboard: false
+    }).setView([initialLat, initialLon], 16);
+
+    // CartoDB Dark Matter Tiles (High contrast dark mode map)
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+      subdomains: 'abcd',
+      maxZoom: 20
+    }).addTo(liveMap);
+
+    // Google Maps Style Pulsing GPS Puck
+    const gpsPuckIcon = L.divIcon({
+      className: 'gps-puck-container',
+      html: '<div class="gps-puck-radar"></div><div class="gps-puck-core"></div>',
+      iconSize: [24, 24],
+      iconAnchor: [12, 12]
+    });
+    const carGpsMarker = L.marker([initialLat, initialLon], { icon: gpsPuckIcon }).addTo(liveMap);
+
+    // GPS Breadcrumb Path
+    const gpsBreadcrumbs = L.polyline([[initialLat, initialLon]], {
+      color: '#f97316',
+      weight: 3.5,
+      opacity: 0.85,
+      lineCap: 'round',
+      lineJoin: 'round'
+    }).addTo(liveMap);
+
+    // Ensure map tiles render without gray tile glitch
+    setTimeout(() => {
+      liveMap.invalidateSize();
+    }, 250);
+
+    // --- SONOMA RACEWAY ROAD COURSE GEOMETRY (DEMO) ---
     const SONOMA_COORDS = [
       [38.16071, -122.45472], // Start/Finish
       [38.16390, -122.45520], // Turn 1 (Uphill)
@@ -939,16 +974,6 @@
       [38.15960, -122.45445], // Turn 11 (Hairpin)
       [38.16071, -122.45472]  // Main Straight
     ];
-
-    const minLat = 38.15740, maxLat = 38.16615;
-    const minLon = -122.46280, maxLon = -122.45425;
-    const SVG_W = 220, SVG_H = 150, SVG_PAD = 18;
-
-    const projectedSvgPoints = SONOMA_COORDS.map(([lat, lon]) => {
-      const x = SVG_PAD + ((lon - minLon) / (maxLon - minLon)) * (SVG_W - 2 * SVG_PAD);
-      const y = SVG_PAD + ((maxLat - lat) / (maxLat - minLat)) * (SVG_H - 2 * SVG_PAD);
-      return { x, y };
-    });
 
     // --- TIME FORMATTING UTILITIES ---
     function formatTimeMs(ms) {
@@ -1096,25 +1121,19 @@
       gCtx.fillText("L", 5, cy);
       gCtx.fillText("R", w - 5, cy);
 
-      // Clamp dynamic forces
       const curGx = Math.max(-1.5, Math.min(1.5, rawLateralG));
       const curGy = Math.max(-1.5, Math.min(1.5, rawLongitudinalG));
 
-      // Coordinate mapping:
-      // Positive lateral G (turning left) pushes right (+curGx)
-      // Positive longitudinal G (braking) pushes UP (-curGy)
       const activePx = cx + (curGx / 1.5) * maxRadius;
       const activePy = cy - (curGy / 1.5) * maxRadius;
 
       // Append to 2-second comet trail
       gHistory.push({ x: activePx, y: activePy, time: now });
 
-      // Prune entries older than 2.0s
       while (gHistory.length > 0 && (now - gHistory[0].time) > COMET_WINDOW_MS) {
         gHistory.shift();
       }
 
-      // Draw Comet Tail: fading smoothly from oldest to newest
       if (gHistory.length > 1) {
         for (let i = 0; i < gHistory.length - 1; i++) {
           const p1 = gHistory[i];
@@ -1141,7 +1160,6 @@
       gCtx.fill();
       gCtx.shadowBlur = 0;
 
-      // Numerical Readout & Peak Tracker
       const totalG = Math.sqrt(curGx * curGx + curGy * curGy);
       if (totalG > peakG) {
         peakG = parseFloat(totalG.toFixed(1));
@@ -1150,35 +1168,45 @@
       gValText.textContent = `${totalG.toFixed(1)} G`;
     }
 
-    // --- DEMO SIMULATION ENGINE (FOR PREVIEW / VERIFICATION) ---
+    // --- LIVE GPS POSITION UPDATER (FOLLOW-CAM & BREADCRUMBS) ---
+    function updateGpsPosition(lat, lon) {
+      if (!lat || !lon || isNaN(lat) || isNaN(lon)) return;
+      carGpsMarker.setLatLng([lat, lon]);
+      liveMap.panTo([lat, lon], { animate: false });
+      liveMapCoords.textContent = `${lat.toFixed(4)}°, ${lon.toFixed(4)}°`;
+
+      // Update path breadcrumbs (keep last 60 points)
+      gpsBreadcrumbs.addLatLng([lat, lon]);
+      const latLngs = gpsBreadcrumbs.getLatLngs();
+      if (latLngs.length > 60) {
+        latLngs.shift();
+        gpsBreadcrumbs.setLatLngs(latLngs);
+      }
+    }
+
+    // --- DEMO SIMULATION ENGINE ---
     function runDemoSimulation(now) {
       const loopDuration = 112000;
       const t = (now % loopDuration) / loopDuration;
 
-      const totalPoints = projectedSvgPoints.length - 1;
+      const totalPoints = SONOMA_COORDS.length - 1;
       const indexFloat = t * totalPoints;
       const idx1 = Math.floor(indexFloat);
-      const idx2 = (idx1 + 1) % projectedSvgPoints.length;
+      const idx2 = (idx1 + 1) % SONOMA_COORDS.length;
       const frac = indexFloat - idx1;
 
-      const p1 = projectedSvgPoints[idx1];
-      const p2 = projectedSvgPoints[idx2];
-      const curX = p1.x + (p2.x - p1.x) * frac;
-      const curY = p1.y + (p2.y - p1.y) * frac;
+      const p1 = SONOMA_COORDS[idx1];
+      const p2 = SONOMA_COORDS[idx2];
+      const curLat = p1[0] + (p2[0] - p1[0]) * frac;
+      const curLon = p1[1] + (p2[1] - p1[1]) * frac;
 
-      svgCarBeacon.setAttribute("cx", curX.toFixed(1));
-      svgCarBeacon.setAttribute("cy", curY.toFixed(1));
+      updateGpsPosition(curLat, curLon);
 
       targetSpeedMph = Math.round(58 + 32 * Math.cos(t * Math.PI * 6));
       if (targetSpeedMph < 32) targetSpeedMph = 32;
 
-      // Simulate realistic lateral cornering G and braking longitudinal G
       rawLateralG = Math.sin(t * Math.PI * 12) * 1.15;
       rawLongitudinalG = Math.cos(t * Math.PI * 8) * 0.95;
-
-      if (t < 0.33) currentSectorTag.textContent = "S1 • T2 CREST";
-      else if (t < 0.66) currentSectorTag.textContent = "S2 • CAROUSEL";
-      else currentSectorTag.textContent = "S3 • ESSES";
     }
 
     // --- FIREBASE LIVE INGESTION ---
@@ -1194,7 +1222,7 @@
         cfgDriver.value = activeDriver;
       }
 
-      // 2. Lap Counts (Driver Stint & Team Total)
+      // 2. Lap Counts
       if (root.driverLaps !== undefined) driverLaps = Number(root.driverLaps);
       else if (root.autox && root.autox.runNum) driverLaps = Number(root.autox.runNum);
 
@@ -1226,55 +1254,47 @@
         rawLongitudinalG = Number(telem.ay) / 9.81;
       }
 
-      // Project Car Position onto SVG Minimap
+      // Update Live GPS Map Position
       const lat = Number(telem.latitude || telem.lat);
       const lon = Number(telem.longitude || telem.lon);
       if (lat && lon && lat !== 0 && lon !== 0) {
-        const px = SVG_PAD + ((lon - minLon) / (maxLon - minLon)) * (SVG_W - 2 * SVG_PAD);
-        const py = SVG_PAD + ((maxLat - lat) / (maxLat - minLat)) * (SVG_H - 2 * SVG_PAD);
-        svgCarBeacon.setAttribute("cx", Math.max(5, Math.min(SVG_W - 5, px)).toFixed(1));
-        svgCarBeacon.setAttribute("cy", Math.max(5, Math.min(SVG_H - 5, py)).toFixed(1));
+        updateGpsPosition(lat, lon);
         gpsStatusPill.textContent = "GPS LOCK";
         gpsStatusPill.style.color = "#4ade80";
       }
     });
 
     // --- ACCELEROMETER LISTENER (PHONE VERTICAL IN LANDSCAPE ORIENTATION) ---
-    // When the phone is mounted vertical in landscape orientation:
-    // Earth's gravity vector (1.0G = 9.81 m/s²) points straight DOWN.
     if (window.DeviceMotionEvent) {
       window.addEventListener("devicemotion", (e) => {
         if (isDemoMode) return;
-        
-        // Prefer linear acceleration (gravity filtered) if provided by browser
         if (e.acceleration && (e.acceleration.x !== null || e.acceleration.y !== null)) {
           const acc = e.acceleration;
-          // In landscape: horizontal axis = lateral G, normal Z-axis = braking/throttle
           rawLateralG = (acc.y || 0) / 9.81;
           rawLongitudinalG = (acc.z || 0) / 9.81;
         } else if (e.accelerationIncludingGravity) {
           const acc = e.accelerationIncludingGravity;
-          // In landscape vertical mounting:
-          // Earth's gravity (9.81 m/s²) points down along the vertical screen axis.
-          // Cornering lateral force acts along the horizontal screen axis (acc.y).
-          // Braking / throttle acts along normal Z-axis (acc.z).
           rawLateralG = (acc.y || 0) / 9.81;
-          rawLongitudinalG = ((acc.z || 0) / 9.81);
+          rawLongitudinalG = (acc.z || 0) / 9.81;
         }
       });
     }
 
-    // Zero G-Force / Gravity Calibration
+    // Zero G-Force Calibration
     btnZeroG.addEventListener("click", () => {
       peakG = 0;
       gPeakVal.textContent = "0.0G";
       closeDrawer();
     });
 
-    // Geolocation Fallback
+    // Native Phone GPS Geolocation Fallback
     if (navigator.geolocation) {
       navigator.geolocation.watchPosition((pos) => {
         if (isDemoMode) return;
+        const lat = pos.coords.latitude;
+        const lon = pos.coords.longitude;
+        updateGpsPosition(lat, lon);
+
         const rawMps = pos.coords.speed;
         if (rawMps !== null && !isNaN(rawMps) && rawMps >= 0) {
           const mph = rawMps * 2.23694;
@@ -1301,7 +1321,7 @@
       activeDriver = e.target.value;
       dpDriverName.textContent = activeDriver;
       stintStartTime = Date.now();
-      driverLaps = 0; // Reset driver stint laps on swap
+      driverLaps = 0;
     });
 
     cfgCarNumber.addEventListener("input", (e) => {
@@ -1337,7 +1357,6 @@
     });
 
     // --- URL PARAMETERS AUTO-CONFIGURATION ---
-    // Example: camera-hud.html?car=42&driver=Dave&driverLaps=14&teamLaps=87&demo=1
     const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.get("demo") === "1" || urlParams.get("demo") === "true") {
       isDemoMode = true;
