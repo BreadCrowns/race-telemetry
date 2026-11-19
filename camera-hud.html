@@ -712,15 +712,15 @@
       <button class="btn-close" id="btn-close-drawer" type="button">✕</button>
     </div>
 
-    <!-- Overall Status Quick Selector -->
+    <!-- Timer / Car State Preset Buttons (Independent of Status Bar) -->
     <div class="form-group">
-      <label class="form-label">Overall Status</label>
+      <label class="form-label">Timer Control</label>
       <div class="btn-row">
-        <button class="drawer-btn active" id="btn-status-ontrack" type="button">
-          <span>🏎️ ON TRACK</span>
+        <button class="drawer-btn active" id="btn-state-track" type="button">
+          <span>🏎️ ON TRACK (RESET)</span>
         </button>
-        <button class="drawer-btn" id="btn-status-pit" type="button">
-          <span>🅿️ PITS</span>
+        <button class="drawer-btn" id="btn-state-pit" type="button">
+          <span>🅿️ IN PITS (STOP)</span>
         </button>
       </div>
     </div>
@@ -845,8 +845,8 @@
     const liveMapCoords = document.getElementById("live-map-coords");
 
     // Settings Drawer Elements
-    const btnStatusOnTrack = document.getElementById("btn-status-ontrack");
-    const btnStatusPit = document.getElementById("btn-status-pit");
+    const btnStateTrack = document.getElementById("btn-state-track");
+    const btnStatePit = document.getElementById("btn-state-pit");
 
     const cfgDriver = document.getElementById("cfg-driver");
     const cfgCarNumber = document.getElementById("cfg-car-number");
@@ -1039,8 +1039,7 @@
       driverLapsVal.textContent = driverLaps;
       teamLapsVal.textContent = teamLaps;
 
-      // 6. Running Lap Timer (or PITS when car is in pit)
-      const inPits = isPitStatus(currentCustomStatus);
+      // 6. Running Lap Timer (stops and displays PITS when in pits; resets when on track)
       if (inPits) {
         runningLapClock.textContent = "PITS";
         runningLapClock.style.color = "#facc15";
@@ -1226,43 +1225,47 @@
     let lastFreshDataWallTime = 0;
     const FIREBASE_REST_URL = "https://fiero-telemetry-default-rtdb.firebaseio.com/raceTelemetry.json";
 
-    // Pit Status Helper
-    function isPitStatus(str) {
-      if (!str) return false;
-      const s = str.trim().toUpperCase();
-      return s === "PIT" || s === "PITS" || s === "IN PIT" || s === "IN PITS" || s === "BOX" || s === "PIT LANE" || s === "IN THE PITS";
-    }
-
-    // Custom Text Status Ticker & Overall State
-    let currentCustomStatus = "ON TRACK";
+    // --- TIMER / PIT STATE (INDEPENDENT FROM STATUS BAR) ---
+    let inPits = false;
     let wasInPits = false;
 
-    function updateCustomStatus(text, broadcastToDb = false) {
-      const clean = (text || "ON TRACK").trim();
-      currentCustomStatus = clean;
-      if (customStatusText) customStatusText.textContent = clean.toUpperCase();
+    function setPitState(pits, broadcastToDb = false) {
+      inPits = !!pits;
 
-      const inPits = isPitStatus(clean);
-      if (btnStatusOnTrack && btnStatusPit) {
+      if (btnStateTrack && btnStatePit) {
         if (inPits) {
-          btnStatusPit.classList.add("active");
-          btnStatusOnTrack.classList.remove("active");
-        } else if (clean.toUpperCase() === "ON TRACK") {
-          btnStatusOnTrack.classList.add("active");
-          btnStatusPit.classList.remove("active");
+          btnStatePit.classList.add("active");
+          btnStateTrack.classList.remove("active");
         } else {
-          btnStatusOnTrack.classList.remove("active");
-          btnStatusPit.classList.remove("active");
+          btnStateTrack.classList.add("active");
+          btnStatePit.classList.remove("active");
         }
-      }
-
-      if (cfgCustomStatus && cfgCustomStatus.value !== clean) {
-        cfgCustomStatus.value = clean;
       }
 
       if (broadcastToDb) {
         try {
-          db.update({ statusText: clean, status: clean });
+          db.update({ inPits: inPits, pitState: inPits ? "pit" : "track" });
+          db.child("autox").update({ inPits: inPits, pitState: inPits ? "pit" : "track" });
+        } catch (e) {}
+      }
+    }
+
+    // --- STATUS BAR TEXT (COMPLETELY INDEPENDENT & ALWAYS CUSTOMIZABLE) ---
+    let currentCustomStatus = "ON TRACK";
+
+    function updateCustomStatus(text, broadcastToDb = false) {
+      const clean = (text !== undefined && text !== null ? String(text) : "ON TRACK").trim();
+      currentCustomStatus = clean || "ON TRACK";
+      if (customStatusText) customStatusText.textContent = currentCustomStatus.toUpperCase();
+
+      if (cfgCustomStatus && cfgCustomStatus.value !== currentCustomStatus) {
+        cfgCustomStatus.value = currentCustomStatus;
+      }
+
+      if (broadcastToDb) {
+        try {
+          db.update({ statusText: currentCustomStatus, status: currentCustomStatus });
+          db.child("autox").update({ statusText: currentCustomStatus, status: currentCustomStatus });
         } catch (e) {}
       }
 
@@ -1271,11 +1274,15 @@
         const containerWidth = tickerWrap ? tickerWrap.clientWidth : 0;
 
         if (containerWidth > 0 && textWidth > containerWidth) {
-          customStatusClone.textContent = `• • • ${clean.toUpperCase()}`;
-          customStatusClone.style.display = "inline";
-          tickerContent.classList.add("animate-marquee");
-          const duration = Math.max(10, Math.round(clean.length * 0.25));
-          tickerContent.style.animationDuration = `${duration}s`;
+          if (customStatusClone) {
+            customStatusClone.textContent = `• • • ${currentCustomStatus.toUpperCase()}`;
+            customStatusClone.style.display = "inline";
+          }
+          if (tickerContent) {
+            tickerContent.classList.add("animate-marquee");
+            const duration = Math.max(10, Math.round(currentCustomStatus.length * 0.25));
+            tickerContent.style.animationDuration = `${duration}s`;
+          }
         } else {
           if (customStatusClone) {
             customStatusClone.textContent = "";
@@ -1304,12 +1311,16 @@
         cfgDriver.value = activeDriver;
       }
 
-      // Live Custom Status update from Pit Wall text box / Firebase
+      // Live Custom Status update from Pit Wall text box / Firebase (Independent)
       const statusText = (root.statusText || root.status || root.notes || root.customStatus || root.customText || root.message || (root.autox && (root.autox.statusText || root.autox.status || root.autox.notes)) || "").trim();
       if (statusText) {
-        updateCustomStatus(statusText);
-      } else {
-        updateCustomStatus("ON TRACK");
+        updateCustomStatus(statusText, false);
+      }
+
+      // Pit state to control lap timer (stops in pits, resets on track)
+      if (root.inPits !== undefined || root.pitState !== undefined) {
+        const isPit = root.inPits === true || root.inPits === "true" || root.pitState === "pit" || root.pitState === "pits";
+        setPitState(isPit, false);
       }
 
       // 2. Lap Counts (Driver Stint & Team Total)
@@ -1486,7 +1497,7 @@
     cfgDriver.addEventListener("change", (e) => {
       activeDriver = e.target.value;
       if (activeDriver === "IN PITS") {
-        updateCustomStatus("PITS", true);
+        setPitState(true, true);
       }
       dpDriverName.textContent = activeDriver;
       stintStartTime = Date.now();
@@ -1526,15 +1537,15 @@
       cfgMapCorner.addEventListener("change", (e) => applyMapCorner(e.target.value));
     }
 
-    if (btnStatusOnTrack) {
-      btnStatusOnTrack.addEventListener("click", () => {
-        updateCustomStatus("ON TRACK", true);
+    if (btnStateTrack) {
+      btnStateTrack.addEventListener("click", () => {
+        setPitState(false, true);
       });
     }
 
-    if (btnStatusPit) {
-      btnStatusPit.addEventListener("click", () => {
-        updateCustomStatus("PITS", true);
+    if (btnStatePit) {
+      btnStatePit.addEventListener("click", () => {
+        setPitState(true, true);
       });
     }
 
