@@ -730,18 +730,250 @@
     }
     .log-time { color: #64748b; font-weight: 700; white-space: nowrap; }
     .log-msg { color: #e2e8f0; }
+
+    /* Brand Logo Clickable */
+    .brand-section {
+      cursor: pointer;
+      user-select: none;
+      transition: opacity 0.15s ease, transform 0.15s ease;
+    }
+    .brand-section:hover {
+      opacity: 0.92;
+      transform: translateY(-1px);
+    }
+    .brand-section:active {
+      transform: translateY(0);
+    }
+
+    /* Google Sheets Modal & Toast Notification */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(3, 7, 18, 0.85);
+      backdrop-filter: blur(6px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+      padding: 16px;
+    }
+    .modal-overlay.active {
+      display: flex;
+    }
+    .modal-card {
+      background: linear-gradient(180deg, #131926 0%, #0c101a 100%);
+      border: 1px solid var(--accent);
+      border-radius: 12px;
+      width: 100%;
+      max-width: 720px;
+      max-height: 90vh;
+      overflow-y: auto;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.85), 0 0 24px rgba(212, 175, 55, 0.25);
+      display: flex;
+      flex-direction: column;
+    }
+    .modal-header {
+      padding: 14px 18px;
+      border-bottom: 1px solid rgba(212, 175, 55, 0.25);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: rgba(212, 175, 55, 0.05);
+    }
+    .modal-title {
+      font-family: var(--font-lotr);
+      font-size: 16px;
+      font-weight: 800;
+      color: var(--accent-bright);
+      letter-spacing: 1px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .modal-close-btn {
+      background: transparent;
+      border: none;
+      color: #94a3b8;
+      font-size: 24px;
+      cursor: pointer;
+      line-height: 1;
+      transition: color 0.15s;
+    }
+    .modal-close-btn:hover {
+      color: #fff;
+    }
+    .modal-body {
+      padding: 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      font-size: 13px;
+      color: #cbd5e1;
+    }
+    .modal-section-title {
+      font-family: var(--font-lotr);
+      font-size: 11px;
+      font-weight: 800;
+      color: var(--accent);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .modal-field {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .modal-label {
+      font-family: var(--font-lotr);
+      font-size: 11px;
+      font-weight: 700;
+      color: #94a3b8;
+      letter-spacing: 0.5px;
+    }
+    .modal-input {
+      background: #060911;
+      border: 1px solid rgba(212, 175, 55, 0.3);
+      border-radius: 6px;
+      padding: 9px 12px;
+      color: #fff;
+      font-family: var(--font-mono);
+      font-size: 12px;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+    .modal-input:focus {
+      border-color: var(--accent-bright);
+      box-shadow: 0 0 8px rgba(212, 175, 55, 0.3);
+    }
+    .modal-code-box {
+      background: #04060c;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 6px;
+      padding: 10px 12px;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: #94a3b8;
+      max-height: 140px;
+      overflow-y: auto;
+      white-space: pre-wrap;
+      user-select: all;
+    }
+    .modal-actions {
+      padding: 12px 18px;
+      border-top: 1px solid rgba(212, 175, 55, 0.2);
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      background: rgba(0, 0, 0, 0.3);
+    }
+    .btn-modal-secondary {
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      color: #e2e8f0;
+      padding: 7px 14px;
+      border-radius: 6px;
+      font-family: var(--font-lotr);
+      font-size: 11px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .btn-modal-secondary:hover {
+      background: rgba(255, 255, 255, 0.16);
+      color: #fff;
+    }
+    .btn-modal-primary {
+      background: linear-gradient(180deg, #d4af37 0%, #b89628 100%);
+      border: 1px solid #f5cf53;
+      color: #0c101a;
+      padding: 7px 16px;
+      border-radius: 6px;
+      font-family: var(--font-lotr);
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 0.8px;
+      cursor: pointer;
+      transition: all 0.15s;
+      box-shadow: 0 0 10px rgba(212, 175, 55, 0.3);
+    }
+    .btn-modal-primary:hover {
+      background: linear-gradient(180deg, #f5cf53 0%, #d4af37 100%);
+      box-shadow: 0 0 16px rgba(212, 175, 55, 0.5);
+    }
+    .btn-sheet-link {
+      background: linear-gradient(180deg, #22c55e 0%, #16a34a 100%);
+      border: 1px solid #4ade80;
+      color: #022c22;
+      padding: 7px 14px;
+      border-radius: 6px;
+      font-family: var(--font-lotr);
+      font-size: 11px;
+      font-weight: 800;
+      cursor: pointer;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      box-shadow: 0 0 8px rgba(34, 197, 94, 0.3);
+    }
+    .btn-sheet-link:hover {
+      background: linear-gradient(180deg, #4ade80 0%, #22c55e 100%);
+      color: #000;
+    }
+
+    /* Toast Notification */
+    #toast {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: #0c101a;
+      border: 1px solid var(--accent);
+      color: #fff;
+      padding: 10px 18px;
+      border-radius: 8px;
+      font-family: var(--font-ui);
+      font-size: 12px;
+      font-weight: 600;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.8), 0 0 16px rgba(212, 175, 55, 0.25);
+      z-index: 10000;
+      opacity: 0;
+      transform: translateY(20px);
+      transition: opacity 0.25s ease, transform 0.25s ease;
+      pointer-events: none;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    #toast.show {
+      opacity: 1;
+      transform: translateY(0);
+      pointer-events: auto;
+    }
   </style>
 </head>
 <body>
 
   <!-- Top Command Header -->
   <header>
-    <div class="brand-section">
+    <div class="brand-section" onclick="openSheetsModal()" title="Click logo to open Google Sheets Live Auto Logger">
       <div class="brand-title">⚔️ Fellowship of the Pit Wall • Sonoma 24h</div>
       <span class="event-badge">Arse-Freeze-Apalooza • Quest of the 2.56-Mile Circuit</span>
     </div>
 
     <div class="header-controls">
+      <!-- Google Sheets Live Auto Logger Pill -->
+      <div class="watchdog-pill" id="sheets-pill" onclick="openSheetsModal()" style="cursor:pointer;" title="Click to configure Google Sheets Live Auto Logger">
+        <div class="status-beacon" id="sheets-beacon"></div>
+        <span id="sheets-status-text">SHEETS: SETUP</span>
+      </div>
+
       <!-- Live Telemetry Watchdog Pill -->
       <div class="watchdog-pill">
         <div class="status-beacon" id="gps-beacon"></div>
@@ -897,7 +1129,10 @@
       <div class="panel" style="flex:1;">
         <div class="panel-header">
           <span class="panel-title">&#x1F4D6; Chronicle of the Laps (<span id="table-lap-count">0</span>)</span>
-          <button type="button" class="panel-badge" style="cursor:pointer;" onclick="exportLapsCsv()">Export Scroll (CSV)</button>
+          <div style="display:flex; gap:6px;">
+            <button type="button" class="panel-badge" style="cursor:pointer; background:rgba(34,197,94,0.18); border-color:#22c55e; color:#4ade80;" onclick="exportAllLapsToSheets()">&#x1F4CA; Push to Sheet</button>
+            <button type="button" class="panel-badge" style="cursor:pointer;" onclick="exportLapsCsv()">Export Scroll (CSV)</button>
+          </div>
         </div>
         <div class="table-container">
           <table class="lap-table">
@@ -933,6 +1168,66 @@
     </div>
 
   </div>
+
+  <!-- GOOGLE SHEETS LIVE RACE LOGGER MODAL -->
+  <div class="modal-overlay" id="sheets-modal" onclick="handleModalOverlayClick(event)">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div class="modal-title">&#x1F4CA; Google Sheets Live Race Logger</div>
+        <button type="button" class="modal-close-btn" onclick="closeSheetsModal()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p style="line-height:1.5; color:#e2e8f0;">
+          Automatically output every lap time, pit stop, refuel calculation, driver stint change, and pit wall dispatch in real-time directly to your team's Google Sheet on race day.
+        </p>
+
+        <!-- Step 1: Apps Script Code -->
+        <div>
+          <div class="modal-section-title">&#x2699;&#xFE0F; Step 1: Add Free Apps Script to Your Google Sheet (1 Min)</div>
+          <div style="font-size:12px; color:#94a3b8; line-height:1.5; margin-bottom:8px;">
+            1. In your Google Sheet, click <strong>Extensions &gt; Apps Script</strong>.<br>
+            2. Delete any existing code, paste the script below, and click <strong>Deploy &gt; New deployment</strong>.<br>
+            3. Select type <strong>Web app</strong>, set <em>Execute as:</em> <strong>Me</strong>, and <em>Who has access:</em> <strong>Anyone</strong>.<br>
+            4. Copy the resulting Web app URL and paste it below.
+          </div>
+          <div style="position:relative;">
+            <div class="modal-code-box" id="apps-script-preview"></div>
+            <button type="button" class="btn-modal-secondary" style="position:absolute; top:8px; right:8px;" onclick="copyAppsScriptCode()">&#x1F4CB; Copy Code</button>
+          </div>
+        </div>
+
+        <!-- Step 2: Webhook URL Field -->
+        <div class="modal-field">
+          <label class="modal-label" for="sheets-webhook-input">&#x1F517; Step 2: Google Apps Script Webhook URL</label>
+          <input type="text" class="modal-input" id="sheets-webhook-input" placeholder="https://script.google.com/macros/s/.../exec" />
+        </div>
+
+        <!-- Step 3: Google Sheet URL (Optional) -->
+        <div class="modal-field">
+          <label class="modal-label" for="sheets-doc-input">&#x1F4C4; Step 3: Google Sheet Spreadsheet URL (Optional)</label>
+          <input type="text" class="modal-input" id="sheets-doc-input" placeholder="https://docs.google.com/spreadsheets/d/..." />
+        </div>
+
+        <!-- Actions Row -->
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; padding-top:6px;">
+          <div style="display:flex; gap:8px;">
+            <button type="button" class="btn-modal-secondary" onclick="testGoogleSheets()">&#x1F4E1; Test Webhook</button>
+            <button type="button" class="btn-modal-secondary" onclick="exportAllLapsToSheets()">&#x1F4CA; Push All Laps to Sheet</button>
+          </div>
+          <div>
+            <a id="modal-open-sheet-btn" href="#" target="_blank" class="btn-sheet-link" style="display:none;">&#x2197;&#xFE0F; Open Live Sheet</a>
+          </div>
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn-modal-secondary" onclick="closeSheetsModal()">Cancel</button>
+        <button type="button" class="btn-modal-primary" onclick="saveSheetsConfig()">&#x1F4BE; Save &amp; Sync to Pit Wall</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification Notification -->
+  <div id="toast"></div>
 
   <!-- Leaflet JS for Map -->
 
@@ -1006,6 +1301,327 @@
     let lastLapFinishTime = 0;
 
     let lapDatabase = JSON.parse(localStorage.getItem("race_team_laps") || "[]");
+
+    // --- GOOGLE SHEETS LIVE RACE LOGGER (APPS SCRIPT WEBHOOK) ---
+    const APPS_SCRIPT_TEMPLATE = `/**
+ * 24 HOURS OF LEMONS - SONOMA RACEWAY
+ * Pit Wall Telemetry & Race Log Receiver -> Google Sheets
+ * 
+ * SETUP INSTRUCTIONS:
+ * 1. In your Google Sheet, click Extensions > Apps Script.
+ * 2. Delete any code in the editor, and paste this entire code.
+ * 3. Click 'Deploy' (top right) > 'New deployment'.
+ * 4. Click the gear icon next to 'Select type' and choose 'Web app'.
+ * 5. Under 'Execute as', select: 'Me'.
+ * 6. Under 'Who has access', select: 'Anyone' (IMPORTANT: allows pit wall client to log without OAuth login prompts).
+ * 7. Click 'Deploy', authorize permissions if prompted, and copy the 'Web app URL'.
+ * 8. Paste that Web app URL into the Pit Wall Command Center!
+ */
+
+function doPost(e) {
+  try {
+    if (!e || !e.postData || !e.postData.contents) {
+      return ContentService.createTextOutput(JSON.stringify({ status: "error", message: "No data payload" }))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+    
+    var data = JSON.parse(e.postData.contents);
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var now = new Date();
+    var timeStr = Utilities.formatDate(now, "America/Los_Angeles", "yyyy-MM-dd HH:mm:ss");
+
+    // 1. MASTER RACE LOG TAB (Every single event chronologically)
+    var masterSheet = getOrCreateSheet(ss, "Master Race Log", [
+      "Timestamp (PST)", "Event Type", "Driver", "Lap #", "Lap Time", "Top MPH", "Avg MPH", "Fuel Left (Gal)", "Notes / Dispatch"
+    ]);
+    
+    var eventType = (data.type || "EVENT").toUpperCase();
+    var driver = data.driver || "";
+    var lapNum = data.lapNum || "";
+    var lapTime = data.timeFormatted || "";
+    var topMph = data.topSpeed || "";
+    var avgMph = data.avgSpeed || "";
+    var fuelLeft = data.fuelRemaining !== undefined ? data.fuelRemaining : "";
+    var notes = data.message || data.notes || "";
+
+    masterSheet.appendRow([timeStr, eventType, driver, lapNum, lapTime, topMph, avgMph, fuelLeft, notes]);
+
+    // 2. SPECIALIZED TABS BASED ON EVENT TYPE
+    if (eventType === "LAP") {
+      var lapSheet = getOrCreateSheet(ss, "Lap Times", [
+        "Timestamp (PST)", "Lap #", "Driver", "Time", "Time (ms)", "Top Speed (MPH)", "Avg Speed (MPH)", "Fuel Used (Gal)", "Fuel Remaining (Gal)", "Best Lap?"
+      ]);
+      lapSheet.appendRow([
+        timeStr,
+        data.lapNum || "",
+        data.driver || "",
+        data.timeFormatted || "",
+        data.timeMs || "",
+        data.topSpeed || "",
+        data.avgSpeed || "",
+        data.fuelUsed || "",
+        data.fuelRemaining !== undefined ? data.fuelRemaining : "",
+        data.isBest ? "â˜… BEST" : ""
+      ]);
+    } else if (eventType === "REFUEL" || eventType === "PIT_STOP") {
+      var fuelSheet = getOrCreateSheet(ss, "Pit Stops & Fuel", [
+        "Timestamp (PST)", "Driver", "Gallons Added", "Tank Status", "Measured Gal/Lap", "Measured MPG", "Laps Completed on Tank", "Total Race Miles"
+      ]);
+      fuelSheet.appendRow([
+        timeStr,
+        data.driver || "",
+        data.galAdded || "",
+        "Full (14.0 G)",
+        data.galPerLap || "",
+        data.mpg || "",
+        data.lapsSinceFill || "",
+        data.totalMiles || ""
+      ]);
+    } else if (eventType === "DRIVER_CHANGE") {
+      var stintSheet = getOrCreateSheet(ss, "Driver Stints", [
+        "Timestamp (PST)", "Incoming Driver", "Outgoing Driver", "Stint Duration (Mins)", "Total Race Miles"
+      ]);
+      stintSheet.appendRow([
+        timeStr,
+        data.driver || "",
+        data.prevDriver || "",
+        data.stintMinutes || "",
+        data.totalMiles || ""
+      ]);
+    } else if (eventType === "DISPATCH") {
+      var dispatchSheet = getOrCreateSheet(ss, "Driver Dispatches", [
+        "Timestamp (PST)", "Active Driver", "Dispatch Message Sent to In-Car HUD"
+      ]);
+      dispatchSheet.appendRow([
+        timeStr,
+        data.driver || "",
+        data.message || ""
+      ]);
+    }
+
+    return ContentService.createTextOutput(JSON.stringify({ status: "success", received: eventType }))
+      .setMimeType(ContentService.MimeType.JSON);
+
+  } catch (err) {
+    return ContentService.createTextOutput(JSON.stringify({ status: "error", error: err.toString() }))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+}
+
+function getOrCreateSheet(ss, sheetName, headers) {
+  var sheet = ss.getSheetByName(sheetName);
+  if (!sheet) {
+    sheet = ss.insertSheet(sheetName);
+    sheet.appendRow(headers);
+    var headerRange = sheet.getRange(1, 1, 1, headers.length);
+    headerRange.setBackground("#0c111c")
+      .setFontColor("#f5cf53")
+      .setFontWeight("bold");
+    sheet.setFrozenRows(1);
+    try {
+      sheet.autoResizeColumns(1, headers.length);
+    } catch(e) {}
+  }
+  return sheet;
+}
+
+function doGet(e) {
+  return ContentService.createTextOutput(JSON.stringify({ status: "online", system: "Fellowship Sonoma 24h Pit Wall Webhook" }))
+    .setMimeType(ContentService.MimeType.JSON);
+}`;
+
+    let sheetsWebhookUrl = localStorage.getItem("pitwall_sheets_webhook") || "";
+    let sheetsDocUrl = localStorage.getItem("pitwall_sheets_doc_url") || "";
+    let sheetsAutoSync = localStorage.getItem("pitwall_sheets_autosync") !== "false";
+
+    function updateSheetsUI() {
+      const sheetsBeacon = document.getElementById("sheets-beacon");
+      const sheetsStatusText = document.getElementById("sheets-status-text");
+      const linkBtn = document.getElementById("modal-open-sheet-btn");
+      const docInput = document.getElementById("sheets-doc-input");
+      const webhookInput = document.getElementById("sheets-webhook-input");
+
+      if (webhookInput && document.activeElement !== webhookInput) webhookInput.value = sheetsWebhookUrl;
+      if (docInput && document.activeElement !== docInput) docInput.value = sheetsDocUrl;
+
+      if (linkBtn) {
+        if (sheetsDocUrl) {
+          linkBtn.href = sheetsDocUrl;
+          linkBtn.style.display = "inline-flex";
+        } else {
+          linkBtn.style.display = "none";
+        }
+      }
+
+      if (sheetsBeacon && sheetsStatusText) {
+        if (sheetsWebhookUrl) {
+          sheetsBeacon.className = "status-beacon online";
+          sheetsStatusText.textContent = "SHEETS: STREAMING";
+          sheetsStatusText.style.color = "#4ade80";
+        } else {
+          sheetsBeacon.className = "status-beacon";
+          sheetsStatusText.textContent = "SHEETS: SETUP";
+          sheetsStatusText.style.color = "#cbd5e1";
+        }
+      }
+    }
+
+    function openSheetsModal() {
+      const modal = document.getElementById("sheets-modal");
+      if (modal) modal.classList.add("active");
+      const webhookInput = document.getElementById("sheets-webhook-input");
+      const docInput = document.getElementById("sheets-doc-input");
+      if (webhookInput) webhookInput.value = sheetsWebhookUrl;
+      if (docInput) docInput.value = sheetsDocUrl;
+      const preview = document.getElementById("apps-script-preview");
+      if (preview && !preview.textContent) preview.textContent = APPS_SCRIPT_TEMPLATE;
+      updateSheetsUI();
+    }
+
+    function closeSheetsModal() {
+      const modal = document.getElementById("sheets-modal");
+      if (modal) modal.classList.remove("active");
+    }
+
+    function handleModalOverlayClick(e) {
+      if (e.target && e.target.id === "sheets-modal") {
+        closeSheetsModal();
+      }
+    }
+
+        function saveSheetsConfig() {
+      const webhookInput = document.getElementById("sheets-webhook-input");
+      const docInput = document.getElementById("sheets-doc-input");
+      const newWebhook = webhookInput ? webhookInput.value.trim() : "";
+      const newDocUrl = docInput ? docInput.value.trim() : "";
+
+      sheetsWebhookUrl = newWebhook;
+      sheetsDocUrl = newDocUrl;
+
+      localStorage.setItem("pitwall_sheets_webhook", sheetsWebhookUrl);
+      localStorage.setItem("pitwall_sheets_doc_url", sheetsDocUrl);
+
+      // Save to Firebase config so ALL pit wall crew tablets/phones get the same sheet instantly!
+      db.child("config").update({
+        sheetsWebhook: sheetsWebhookUrl,
+        sheetsDocUrl: sheetsDocUrl,
+        sheetsUpdatedAt: Date.now()
+      });
+
+      updateSheetsUI();
+      closeSheetsModal();
+      showToast(sheetsWebhookUrl ? "[OK] Google Sheet live auto-sync enabled!" : "[INFO] Google Sheet webhook cleared.");
+    }
+
+    function copyAppsScriptCode() {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(APPS_SCRIPT_TEMPLATE).then(() => {
+          showToast("[COPIED] Apps Script code copied to clipboard!");
+        }).catch(() => {
+          fallbackCopyText(APPS_SCRIPT_TEMPLATE);
+        });
+      } else {
+        fallbackCopyText(APPS_SCRIPT_TEMPLATE);
+      }
+    }
+
+    function fallbackCopyText(text) {
+      const ta = document.createElement("textarea");
+      ta.value = text;
+      ta.style.position = "fixed";
+      ta.style.opacity = "0";
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand("copy");
+      document.body.removeChild(ta);
+      showToast("[COPIED] Apps Script code copied to clipboard!");
+    }
+
+    let toastTimer = null;
+    function showToast(msg) {
+      const t = document.getElementById("toast");
+      if (!t) return;
+      t.textContent = msg;
+      t.classList.add("show");
+      if (toastTimer) clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => {
+        t.classList.remove("show");
+      }, 3500);
+    }
+
+    async function sendToGoogleSheets(entry) {
+      if (!sheetsWebhookUrl || !sheetsAutoSync) return;
+      try {
+        const payload = Object.assign({
+          race: "Sonoma 24 Hours of Lemons",
+          car: "#42 Fiero",
+          wallTime: new Date().toISOString()
+        }, entry);
+
+        // mode: "no-cors" with text/plain prevents CORS preflight issues on Google Apps Script
+        await fetch(sheetsWebhookUrl, {
+          method: "POST",
+          mode: "no-cors",
+          headers: { "Content-Type": "text/plain;charset=utf-8" },
+          body: JSON.stringify(payload)
+        });
+      } catch (err) {
+        console.warn("Google Sheets streaming error:", err);
+      }
+    }
+
+    async function testGoogleSheets() {
+      const url = document.getElementById("sheets-webhook-input").value.trim();
+      if (!url) {
+        showToast("[!] Enter an Apps Script Webhook URL first.");
+        return;
+      }
+      showToast("[PING] Sending test ping to Google Sheet...");
+      try {
+        await fetch(url, {
+          method: "POST",
+          mode: "no-cors",
+          headers: { "Content-Type": "text/plain;charset=utf-8" },
+          body: JSON.stringify({
+            type: "LOG",
+            driver: activeDriver,
+            message: "Fellowship Sonoma 24h Pit Wall Webhook test connection successful!"
+          })
+        });
+        showToast("[OK] Test packet sent to Google Sheet!");
+      } catch (err) {
+        showToast("[ERR] Error sending to Sheet: " + err.message);
+      }
+    }
+
+    async function exportAllLapsToSheets() {
+      if (!sheetsWebhookUrl) {
+        openSheetsModal();
+        showToast("[!] Please configure the Google Sheets Webhook URL first.");
+        return;
+      }
+      if (lapDatabase.length === 0) {
+        showToast("[INFO] No laps recorded yet to export.");
+        return;
+      }
+      showToast("[SYNC] Pushing " + lapDatabase.length + " laps to Google Sheet...");
+      for (const lap of lapDatabase.slice().reverse()) {
+        await sendToGoogleSheets({
+          type: "LAP",
+          lapNum: lap.lapNum,
+          driver: lap.driver,
+          timeFormatted: lap.timeFormatted,
+          timeMs: lap.timeMs,
+          topSpeed: lap.topSpeed,
+          avgSpeed: lap.avgSpeed,
+          fuelUsed: lap.fuelUsed,
+          fuelRemaining: currentFuelGal.toFixed(1),
+          isBest: lap.isBest,
+          timestamp: lap.timestamp
+        });
+      }
+      showToast("[OK] Successfully queued " + lapDatabase.length + " laps to Google Sheet!");
+    }
 
     // --- DOM REFERENCES ---
     const gpsBeacon = document.getElementById("gps-beacon");
@@ -1221,6 +1837,14 @@
         status: text
       });
 
+      // Stream status update to Google Sheets
+      sendToGoogleSheets({
+        type: "DISPATCH",
+        driver: activeDriver,
+        message: text,
+        timestamp: Date.now()
+      });
+
       playChime(659.25, 0.15);
     }
 
@@ -1267,6 +1891,16 @@
       // Update Firebase (instantly updates driver name on live YouTube HUD)
       db.update({ driver: name, stintStartTime: Date.now() });
       db.child("autox").update({ driver: name });
+
+      // Stream driver change to Google Sheets
+      sendToGoogleSheets({
+        type: "DRIVER_CHANGE",
+        driver: name,
+        prevDriver: prev,
+        stintMinutes: stintMins,
+        totalMiles: totalMiles.toFixed(1),
+        timestamp: Date.now()
+      });
 
       playChime(880, 0.25);
     }
@@ -1323,6 +1957,18 @@
         mpg: measuredMpg,
         lastAdded: added,
         updatedAt: Date.now()
+      });
+
+      // Stream refuel to Google Sheets
+      sendToGoogleSheets({
+        type: "REFUEL",
+        driver: activeDriver,
+        galAdded: added.toFixed(1),
+        galPerLap: measuredGalPerLap.toFixed(2),
+        mpg: measuredMpg.toFixed(1),
+        lapsSinceFill: fuelLapsSinceFill,
+        totalMiles: totalMiles.toFixed(1),
+        timestamp: Date.now()
       });
 
       playChime(523.25, 0.3);
@@ -1466,6 +2112,21 @@
       db.child("fuel").update({
         currentFuel: Number(currentFuelGal.toFixed(2))
       });
+
+      // Stream completed lap directly to Google Sheets
+      sendToGoogleSheets({
+        type: "LAP",
+        lapNum: record.lapNum,
+        driver: activeDriver,
+        timeFormatted: record.timeFormatted,
+        timeMs: record.timeMs,
+        topSpeed: topMph,
+        avgSpeed: avgMph,
+        fuelUsed: measuredGalPerLap.toFixed(2),
+        fuelRemaining: currentFuelGal.toFixed(1),
+        isBest: isBest,
+        timestamp: now
+      });
     }
 
     function formatTimeMs(ms) {
@@ -1494,13 +2155,24 @@
       `).join("");
     }
 
-    function addLogEntry(text) {
+        function addLogEntry(text) {
       if (!text) return;
       const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
       const row = document.createElement("div");
       row.className = "log-row";
       row.innerHTML = `<span class="log-time">[${timeStr}]</span> <span class="log-msg">${text}</span>`;
       logList.prepend(row);
+
+      // Forward general log entries to Google Sheets Master Log (skipping duplicated events)
+      const isAutoLog = text.includes("Lap #") || text.includes("Driver Change:") || text.includes("Pit Refuel:") || text.includes("Status updated");
+      if (!isAutoLog) {
+        sendToGoogleSheets({
+          type: "LOG",
+          driver: activeDriver,
+          message: text,
+          timestamp: Date.now()
+        });
+      }
     }
 
     function exportLapsCsv() {
@@ -1561,6 +2233,20 @@
     // --- INGEST TELEMETRY FROM FIREBASE DATABASE (EXACT HUD PARITY) ---
     function ingestTelemetryRoot(root) {
       if (!root) return;
+
+      // 0. Google Sheets Webhook Configuration from Firebase
+      if (root.config) {
+        if (root.config.sheetsWebhook && root.config.sheetsWebhook !== sheetsWebhookUrl) {
+          sheetsWebhookUrl = root.config.sheetsWebhook;
+          localStorage.setItem("pitwall_sheets_webhook", sheetsWebhookUrl);
+          updateSheetsUI();
+        }
+        if (root.config.sheetsDocUrl && root.config.sheetsDocUrl !== sheetsDocUrl) {
+          sheetsDocUrl = root.config.sheetsDocUrl;
+          localStorage.setItem("pitwall_sheets_doc_url", sheetsDocUrl);
+          updateSheetsUI();
+        }
+      }
 
       const autox = root.autox || {};
 
@@ -1831,6 +2517,9 @@
     requestAnimationFrame(timerTick);
 
     // --- INITIALIZATION ---
+    updateSheetsUI();
+    const appsScriptPreview = document.getElementById("apps-script-preview");
+    if (appsScriptPreview) appsScriptPreview.textContent = APPS_SCRIPT_TEMPLATE;
     updateDriverUI();
     updateFuelUI();
     renderLapTable();
