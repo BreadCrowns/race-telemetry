@@ -712,6 +712,19 @@
       <button class="btn-close" id="btn-close-drawer" type="button">✕</button>
     </div>
 
+    <!-- Overall Status Quick Selector -->
+    <div class="form-group">
+      <label class="form-label">Overall Status</label>
+      <div class="btn-row">
+        <button class="drawer-btn active" id="btn-status-ontrack" type="button">
+          <span>🏎️ ON TRACK</span>
+        </button>
+        <button class="drawer-btn" id="btn-status-pit" type="button">
+          <span>🅿️ PITS</span>
+        </button>
+      </div>
+    </div>
+
     <!-- Active Driver Control -->
     <div class="form-group">
       <label class="form-label">Active Driver</label>
@@ -832,6 +845,9 @@
     const liveMapCoords = document.getElementById("live-map-coords");
 
     // Settings Drawer Elements
+    const btnStatusOnTrack = document.getElementById("btn-status-ontrack");
+    const btnStatusPit = document.getElementById("btn-status-pit");
+
     const cfgDriver = document.getElementById("cfg-driver");
     const cfgCarNumber = document.getElementById("cfg-car-number");
     const cfgEventTitle = document.getElementById("cfg-event-title");
@@ -1023,9 +1039,21 @@
       driverLapsVal.textContent = driverLaps;
       teamLapsVal.textContent = teamLaps;
 
-      // 6. Running Lap Timer
-      const lapElapsed = Math.max(0, now - lapStartTime);
-      runningLapClock.textContent = formatTimeMs(lapElapsed);
+      // 6. Running Lap Timer (or PITS when car is in pit)
+      const inPits = isPitStatus(currentCustomStatus);
+      if (inPits) {
+        runningLapClock.textContent = "PITS";
+        runningLapClock.style.color = "#facc15";
+        wasInPits = true;
+      } else {
+        if (wasInPits) {
+          lapStartTime = now;
+          wasInPits = false;
+        }
+        const lapElapsed = Math.max(0, now - lapStartTime);
+        runningLapClock.textContent = formatTimeMs(lapElapsed);
+        runningLapClock.style.color = "#ffffff";
+      }
 
       // 7. Friction Circle G-Meter with 2-Second Retention Comet Tail
       renderFrictionCircle(now);
@@ -1198,15 +1226,48 @@
     let lastFreshDataWallTime = 0;
     const FIREBASE_REST_URL = "https://fiero-telemetry-default-rtdb.firebaseio.com/raceTelemetry.json";
 
-    // Custom Text Status Ticker (Auto-scrolls when text exceeds width)
+    // Pit Status Helper
+    function isPitStatus(str) {
+      if (!str) return false;
+      const s = str.trim().toUpperCase();
+      return s === "PIT" || s === "PITS" || s === "IN PIT" || s === "IN PITS" || s === "BOX" || s === "PIT LANE" || s === "IN THE PITS";
+    }
+
+    // Custom Text Status Ticker & Overall State
     let currentCustomStatus = "ON TRACK";
-    function updateCustomStatus(text) {
+    let wasInPits = false;
+
+    function updateCustomStatus(text, broadcastToDb = false) {
       const clean = (text || "ON TRACK").trim();
       currentCustomStatus = clean;
-      customStatusText.textContent = clean.toUpperCase();
+      if (customStatusText) customStatusText.textContent = clean.toUpperCase();
+
+      const inPits = isPitStatus(clean);
+      if (btnStatusOnTrack && btnStatusPit) {
+        if (inPits) {
+          btnStatusPit.classList.add("active");
+          btnStatusOnTrack.classList.remove("active");
+        } else if (clean.toUpperCase() === "ON TRACK") {
+          btnStatusOnTrack.classList.add("active");
+          btnStatusPit.classList.remove("active");
+        } else {
+          btnStatusOnTrack.classList.remove("active");
+          btnStatusPit.classList.remove("active");
+        }
+      }
+
+      if (cfgCustomStatus && cfgCustomStatus.value !== clean) {
+        cfgCustomStatus.value = clean;
+      }
+
+      if (broadcastToDb) {
+        try {
+          db.update({ statusText: clean, status: clean });
+        } catch (e) {}
+      }
 
       requestAnimationFrame(() => {
-        const textWidth = customStatusText.scrollWidth;
+        const textWidth = customStatusText ? customStatusText.scrollWidth : 0;
         const containerWidth = tickerWrap ? tickerWrap.clientWidth : 0;
 
         if (containerWidth > 0 && textWidth > containerWidth) {
@@ -1216,9 +1277,11 @@
           const duration = Math.max(10, Math.round(clean.length * 0.25));
           tickerContent.style.animationDuration = `${duration}s`;
         } else {
-          customStatusClone.textContent = "";
-          customStatusClone.style.display = "none";
-          tickerContent.classList.remove("animate-marquee");
+          if (customStatusClone) {
+            customStatusClone.textContent = "";
+            customStatusClone.style.display = "none";
+          }
+          if (tickerContent) tickerContent.classList.remove("animate-marquee");
         }
       });
     }
@@ -1422,6 +1485,9 @@
 
     cfgDriver.addEventListener("change", (e) => {
       activeDriver = e.target.value;
+      if (activeDriver === "IN PITS") {
+        updateCustomStatus("PITS", true);
+      }
       dpDriverName.textContent = activeDriver;
       stintStartTime = Date.now();
       driverLaps = 0;
@@ -1460,9 +1526,21 @@
       cfgMapCorner.addEventListener("change", (e) => applyMapCorner(e.target.value));
     }
 
+    if (btnStatusOnTrack) {
+      btnStatusOnTrack.addEventListener("click", () => {
+        updateCustomStatus("ON TRACK", true);
+      });
+    }
+
+    if (btnStatusPit) {
+      btnStatusPit.addEventListener("click", () => {
+        updateCustomStatus("PITS", true);
+      });
+    }
+
     if (cfgCustomStatus) {
       cfgCustomStatus.addEventListener("input", (e) => {
-        updateCustomStatus(e.target.value);
+        updateCustomStatus(e.target.value, true);
       });
     }
 
