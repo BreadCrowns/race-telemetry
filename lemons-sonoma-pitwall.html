@@ -770,10 +770,12 @@
     <!-- ACTION 2: DISPATCH STATUS TO DRIVER -->
     <div class="dock-cluster" style="flex:1; min-width:240px;">
       <span class="dock-label">&#x1F4DC; Status</span>
-      <div class="status-input-row" style="flex:1;">
+      <div class="status-input-row" style="flex:1; display:flex; gap:6px; flex-wrap:wrap; align-items:center;">
         <input type="text" id="status-input" class="dock-input" placeholder="Dispatch word to driver (e.g. In P3, Box this lap, Fly you fools!)..." onkeydown="if(event.key==='Enter') updateCurrentStatus()" />
         <button type="button" class="btn-action" onclick="updateCurrentStatus()">Send</button>
         <button type="button" class="btn-action-clear" onclick="clearCurrentStatus()">Clear</button>
+        <button type="button" class="driver-btn" id="btn-status-track" onclick="sendQuickStatus('ON TRACK')" style="font-size:10px; padding:4px 8px; border-color:rgba(34,197,94,0.4); color:#4ade80;">🏎️ On Track</button>
+        <button type="button" class="driver-btn" id="btn-status-pit" onclick="sendQuickStatus('PIT')" style="font-size:10px; padding:4px 8px; border-color:rgba(234,179,8,0.5); color:#facc15;">🅿️ Pit</button>
       </div>
     </div>
 
@@ -1151,6 +1153,28 @@
     const pathLine = L.polyline([], { color: '#38bdf8', weight: 4, opacity: 0.85 }).addTo(map);
 
     // --- ACTION 1: CURRENT STATUS TEXT BOX ---
+    function sendQuickStatus(text) {
+      statusInput.value = text;
+      updateCurrentStatus();
+    }
+
+    function syncPitwallStatusButtons(text) {
+      const btnTrack = document.getElementById("btn-status-track");
+      const btnPit = document.getElementById("btn-status-pit");
+      if (!btnTrack || !btnPit) return;
+      const s = (text || "").trim().toUpperCase();
+      if (s === "PIT" || s === "PITS" || s === "IN PIT" || s === "IN PITS") {
+        btnPit.classList.add("active");
+        btnTrack.classList.remove("active");
+      } else if (s === "ON TRACK") {
+        btnTrack.classList.add("active");
+        btnPit.classList.remove("active");
+      } else {
+        btnTrack.classList.remove("active");
+        btnPit.classList.remove("active");
+      }
+    }
+
     function updateCurrentStatus() {
       const text = statusInput.value.trim();
       if (!text) return;
@@ -1159,6 +1183,7 @@
       liveStatusText.textContent = text;
       statusInput.value = "";
       localStorage.setItem("pitwall_status_text", text);
+      syncPitwallStatusButtons(text);
 
       // Instantly sync to Firebase for Streamlabs live HUD overlay & team devices
       const payload = {
@@ -1191,6 +1216,7 @@
       liveStatusText.textContent = "No status set";
       statusInput.value = "";
       localStorage.removeItem("pitwall_status_text");
+      syncPitwallStatusButtons("");
 
       db.update({
         statusText: "",
@@ -1550,10 +1576,12 @@
         currentStatusText = statusUpdate;
         liveStatusText.textContent = currentStatusText;
         localStorage.setItem("pitwall_status_text", currentStatusText);
+        syncPitwallStatusButtons(currentStatusText);
       } else if (!statusUpdate && currentStatusText) {
         currentStatusText = "";
         liveStatusText.textContent = "No dispatch set";
         localStorage.removeItem("pitwall_status_text");
+        syncPitwallStatusButtons("");
       }
 
       // 3. Fuel Provisions from DB
