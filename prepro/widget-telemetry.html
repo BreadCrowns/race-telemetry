@@ -74,7 +74,7 @@
       box-shadow: 0 8px 30px rgba(0, 0, 0, 0.7);
       flex-shrink: 0;
       transition: transform 0.15s ease, box-shadow 0.15s ease;
-      min-width: 460px;
+      min-width: 440px;
     }
     .combined-pill:active {
       transform: scale(0.985);
@@ -94,10 +94,10 @@
       align-items: center;
       gap: 6px;
       overflow: hidden;
-      height: 18px;
+      height: 20px;
     }
     .cp-status-tag {
-      font-size: 7.5px;
+      font-size: 8px;
       font-weight: 900;
       letter-spacing: 0.8px;
       text-transform: uppercase;
@@ -121,7 +121,7 @@
     }
     .ticker-text {
       font-family: ui-monospace, SFMono-Regular, monospace;
-      font-size: 9px;
+      font-size: 10.5px;
       font-weight: 800;
       letter-spacing: 0.6px;
       text-transform: uppercase;
@@ -146,13 +146,20 @@
       flex-direction: column;
       gap: 2px;
     }
+    .car-badge-wrap {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
     .car-badge {
       background: var(--accent);
       color: #000;
       font-weight: 900;
-      font-size: 15px;
+      font-size: 17px;
       letter-spacing: -0.5px;
-      padding: 5px 8px;
+      padding: 4px 8px;
       border-radius: 6px;
       font-family: ui-monospace, SFMono-Regular, monospace;
       box-shadow: 0 0 10px var(--accent-glow);
@@ -161,79 +168,28 @@
       justify-content: center;
       line-height: 1;
       flex-shrink: 0;
-      height: 32px;
+      height: 34px;
       box-sizing: border-box;
     }
-    .dp-driver-row {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
-    .cp-laps-pair {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-    .cp-meta {
-      display: flex;
-      flex-direction: column;
-      gap: 2px;
-      min-width: 110px;
-    }
-    .watermark-meta {
-      display: flex;
-      flex-direction: column;
-      gap: 1px;
-    }
-    .watermark-title {
-      font-size: 9px;
-      font-weight: 900;
-      letter-spacing: 0.8px;
-      text-transform: uppercase;
-      color: #ffffff;
-      white-space: nowrap;
-    }
-    .watermark-sub {
-      display: flex;
-      align-items: center;
-      gap: 5px;
-      font-size: 8px;
-      color: #94a3b8;
-      font-family: ui-monospace, SFMono-Regular, monospace;
-    }
-    .rec-indicator {
-      display: inline-flex;
-      align-items: center;
-      gap: 3px;
-      color: #ef4444;
-      font-weight: 800;
-      letter-spacing: 0.5px;
-    }
-    .rec-dot {
-      width: 5px;
-      height: 5px;
-      background: #ef4444;
+    .db-lock-dot {
+      position: absolute;
+      top: -2px;
+      right: -2px;
+      width: 8px;
+      height: 8px;
       border-radius: 50%;
-      box-shadow: 0 0 8px #ef4444;
-      animation: blink 1s infinite;
+      background: #22c55e;
+      border: 1.5px solid rgba(10, 15, 29, 0.95);
+      box-shadow: 0 0 6px #22c55e;
+      transition: background 0.3s ease, box-shadow 0.3s ease;
     }
-    @keyframes blink {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.25; }
+    .db-lock-dot.delay {
+      background: #eab308;
+      box-shadow: 0 0 6px #eab308;
     }
-    .gps-lock-badge {
-      font-size: 7.5px;
-      font-weight: 800;
-      padding: 1px 5px;
-      border-radius: 3px;
-      background: rgba(34, 197, 94, 0.18);
-      color: #4ade80;
-      border: 1px solid rgba(74, 222, 128, 0.4);
-      letter-spacing: 0.5px;
-      width: fit-content;
-      text-transform: uppercase;
-      font-family: ui-monospace, monospace;
-      transition: color 0.3s ease, border-color 0.3s ease;
+    .db-lock-dot.offline {
+      background: #ef4444;
+      box-shadow: 0 0 6px #ef4444;
     }
     .dp-divider {
       width: 1px;
@@ -251,53 +207,28 @@
     
     /* 1. Driver Name */
     .dp-driver-val {
-      font-size: 15px;
+      font-size: 17px;
       font-weight: 900;
       color: #ffffff;
       letter-spacing: 0.5px;
       white-space: nowrap;
-    }
-
-    /* 2. Lap Timer Sub-Section in Combined Pill */
-    .cp-lap-wrap {
-      display: flex;
-      flex-direction: column;
-      gap: 1px;
-      min-width: 115px;
-    }
-    .running-lap-clock {
-      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-      font-variant-numeric: tabular-nums;
-      font-weight: 900;
-      font-size: 20px;
       line-height: 1.1;
-      color: #ffffff;
-      letter-spacing: -0.5px;
-    }
-    .lap-comparison-row {
-      display: flex;
-      align-items: center;
-      gap: 5px;
-      font-family: ui-monospace, SFMono-Regular, monospace;
-      font-size: 8.5px;
-      color: #94a3b8;
-      white-space: nowrap;
     }
 
-    /* 3. Current Speed */
+    /* 2. Speed (Enlarged 38px) */
     .dp-speed-wrap {
       display: flex;
       align-items: baseline;
       gap: 3px;
     }
     .dp-speed-digits {
-      font-size: 32px;
+      font-size: 38px;
       font-weight: 900;
       font-variant-numeric: tabular-nums;
       letter-spacing: -1.5px;
       line-height: 1;
       color: #ffffff;
-      min-width: 42px;
+      min-width: 44px;
       text-align: right;
     }
     .dp-speed-unit {
@@ -307,9 +238,65 @@
       letter-spacing: 0.5px;
     }
 
-    /* 4. Stint Time & 2-Hour Limit Countdown */
+    /* 3. Lap Timer with Integrated Counts */
+    .cp-lap-wrap {
+      display: flex;
+      flex-direction: column;
+      gap: 1px;
+      min-width: 138px;
+    }
+    .cp-lap-header {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 6px;
+    }
+    .cp-lap-count {
+      font-family: ui-monospace, SFMono-Regular, monospace;
+      font-size: 11px;
+      font-weight: 800;
+      color: var(--blue);
+      letter-spacing: 0.5px;
+    }
+    .cp-lap-count strong {
+      font-size: 12px;
+      font-weight: 900;
+      color: #ffffff;
+    }
+    .team-lap-sub {
+      color: #94a3b8;
+      font-size: 9.5px;
+      font-weight: 700;
+    }
+    .running-lap-clock {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-variant-numeric: tabular-nums;
+      font-weight: 900;
+      font-size: 22px;
+      line-height: 1.05;
+      color: #ffffff;
+      letter-spacing: -0.5px;
+    }
+    .lap-comparison-row {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      font-family: ui-monospace, SFMono-Regular, monospace;
+      font-size: 10px;
+      font-weight: 700;
+      color: #94a3b8;
+      white-space: nowrap;
+    }
+    .lap-sep {
+      opacity: 0.4;
+    }
+
+    /* 4. Stint Timer & Countdown Bar */
     .dp-stint-wrap {
-      min-width: 130px;
+      min-width: 95px;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
     }
     .dp-stint-header {
       display: flex;
@@ -317,63 +304,44 @@
       align-items: baseline;
       gap: 6px;
     }
+    .dp-stint-remain {
+      font-size: 10px;
+      font-weight: 800;
+      color: #cbd5e1;
+      text-transform: uppercase;
+      font-family: ui-monospace, monospace;
+    }
+    .dp-stint-remain.alert-red {
+      color: #ef4444;
+    }
+    .dp-stint-remain.warn-amber {
+      color: #facc15;
+    }
     .dp-stint-clock {
       font-family: ui-monospace, SFMono-Regular, monospace;
       font-variant-numeric: tabular-nums;
-      font-size: 13px;
+      font-size: 15px;
       font-weight: 800;
+      line-height: 1.1;
       color: #f8fafc;
     }
     .stint-bar-wrap {
       width: 100%;
-      height: 5px;
+      height: 4px;
       background: rgba(255, 255, 255, 0.12);
-      border-radius: 3px;
+      border-radius: 2px;
       overflow: hidden;
-      margin-top: 3px;
+      margin-top: 2px;
     }
     .stint-bar-fill {
       height: 100%;
       width: 15%;
       background: var(--green);
       transition: width 0.5s ease, background 0.3s ease;
-      border-radius: 3px;
+      border-radius: 2px;
     }
     .stint-bar-fill.warn-amber { background: var(--yellow); }
     .stint-bar-fill.alert-red { background: var(--red); }
-    .dp-stint-remain {
-      font-size: 8px;
-      font-weight: 800;
-      color: #cbd5e1;
-      text-transform: uppercase;
-      margin-top: 2px;
-      display: flex;
-      justify-content: space-between;
-    }
-
-    /* 5. Driver Laps & Total Team Laps */
-    .dp-laps-wrap {
-      text-align: center;
-      min-width: 55px;
-    }
-    .dp-lap-num {
-      font-family: ui-monospace, SFMono-Regular, monospace;
-      font-variant-numeric: tabular-nums;
-      font-size: 18px;
-      font-weight: 900;
-      color: #ffffff;
-      line-height: 1.1;
-    }
-    .dp-lap-num.team {
-      color: var(--blue);
-    }
-    .dp-lap-sub {
-      font-size: 7px;
-      font-weight: 800;
-      color: #64748b;
-      letter-spacing: 0.5px;
-      text-transform: uppercase;
-    }
 
     /* Settings Flyout Drawer */
     .drawer-overlay {
@@ -500,36 +468,24 @@
       
       <!-- Top Metrics Row -->
       <div class="cp-top-row">
-        <!-- Car Number Badge -->
-        <span class="car-badge" id="car-number-badge">#901</span>
+        <!-- Car Number Badge with Integrated GPS LED Status Dot -->
+        <div class="car-badge-wrap">
+          <span class="car-badge" id="car-number-badge">#901</span>
+          <span class="db-lock-dot" id="gps-status-pill" title="DB GPS Locked"></span>
+        </div>
 
         <div class="dp-divider"></div>
 
         <!-- Driver Name -->
         <div class="cp-section cp-driver">
           <span class="dp-tag">DRIVER</span>
-          <div class="dp-driver-row">
-            <span class="dp-driver-val" id="dp-driver-name">MATT</span>
-          </div>
+          <span class="dp-driver-val" id="dp-driver-name">MATT</span>
         </div>
 
         <div class="dp-divider"></div>
 
-        <!-- Integrated Lap Times & Running Lap Clock -->
-        <div class="cp-section cp-lap-wrap">
-          <span class="dp-tag">LAP TIME</span>
-          <div class="running-lap-clock" id="running-lap-clock">00:00.00</div>
-          <div class="lap-comparison-row">
-            <span>LAST: <strong id="last-lap-val" style="color:#f8fafc;">01:53.40</strong></span>
-            <span style="opacity: 0.35;">•</span>
-            <span>BEST: <strong id="best-lap-val" style="color:#a855f7;">01:51.15</strong></span>
-          </div>
-        </div>
-
-        <div class="dp-divider"></div>
-
-        <!-- Current Speed (MPH Only) -->
-        <div class="cp-section">
+        <!-- Current Speed (MPH Only, 38px Bold) -->
+        <div class="cp-section cp-speed">
           <span class="dp-tag">SPEED</span>
           <div class="dp-speed-wrap">
             <span class="dp-speed-digits" id="speed-digits">0</span>
@@ -539,48 +495,32 @@
 
         <div class="dp-divider"></div>
 
-        <!-- Stint Time & 2-Hour Limit Countdown -->
+        <!-- Integrated Lap Times & Lap Counts -->
+        <div class="cp-section cp-lap-wrap">
+          <div class="cp-lap-header">
+            <span class="dp-tag">LAP TIME</span>
+            <span class="cp-lap-count">LAP <strong id="driver-laps-val">15</strong><span class="team-lap-sub">/<span id="team-laps-val">87</span></span></span>
+          </div>
+          <div class="running-lap-clock" id="running-lap-clock">00:00.00</div>
+          <div class="lap-comparison-row">
+            <span>L: <strong id="last-lap-val" style="color:#f8fafc;">01:53.40</strong></span>
+            <span class="lap-sep">•</span>
+            <span>B: <strong id="best-lap-val" style="color:#c084fc;">01:51.15</strong></span>
+          </div>
+        </div>
+
+        <div class="dp-divider"></div>
+
+        <!-- Stint Time & Simplified Countdown Bar -->
         <div class="cp-section dp-stint-wrap" id="stint-box">
           <div class="dp-stint-header">
-            <span class="dp-tag">STINT TIME</span>
-            <span class="dp-stint-clock" id="stint-clock-val">00:00:00</span>
+            <span class="dp-tag">STINT</span>
+            <span class="dp-stint-remain" id="stint-remain-text">58m REM</span>
           </div>
+          <div class="dp-stint-clock" id="stint-clock-val">00:00:00</div>
           <div class="stint-bar-wrap">
             <div class="stint-bar-fill" id="stint-bar-fill" style="width: 15%;"></div>
           </div>
-          <div class="dp-stint-remain">
-            <span id="stint-alert-text">NORMAL STINT</span>
-            <span id="stint-remain-text">1h 48m REM</span>
-          </div>
-        </div>
-
-        <div class="dp-divider"></div>
-
-        <!-- Driver Laps & Total Team Laps -->
-        <div class="cp-section cp-laps-pair">
-          <div class="dp-laps-wrap">
-            <span class="dp-tag">DRIVER</span>
-            <span class="dp-lap-num" id="driver-laps-val">15</span>
-            <span class="dp-lap-sub">LAPS</span>
-          </div>
-          <div class="dp-laps-wrap">
-            <span class="dp-tag">TEAM</span>
-            <span class="dp-lap-num team" id="team-laps-val">87</span>
-            <span class="dp-lap-sub">TOTAL</span>
-          </div>
-        </div>
-
-        <div class="dp-divider"></div>
-
-        <!-- Event Watermark, REC Timecode & GPS Status Lock -->
-        <div class="cp-section cp-meta">
-          <div class="watermark-title" id="watermark-event-title">24H LEMONS • SONOMA</div>
-          <div class="watermark-sub">
-            <span class="rec-indicator"><span class="rec-dot"></span>REC</span>
-            <span>&bull;</span>
-            <span id="live-timecode-val">00:00:00 UTC</span>
-          </div>
-          <span class="gps-lock-badge" id="gps-status-pill">DB GPS LOCK</span>
         </div>
       </div>
 
@@ -761,7 +701,7 @@
 
       // 2. UTC Master Clock Timecode
       const d = new Date(now);
-      liveTimecodeVal.textContent = `${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())}:${pad(d.getUTCSeconds())} UTC`;
+      if (liveTimecodeVal) liveTimecodeVal.textContent = `${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())}:${pad(d.getUTCSeconds())} UTC`;
 
       // 3. Stint Clock & Visual Bar
       const stintElapsed = now - stintStartTime;
@@ -774,21 +714,18 @@
 
       if (remainMinutes <= 5) {
         stintBarFill.className = "stint-bar-fill alert-red";
-        stintAlertText.textContent = "🚨 BOX THIS LAP (MAX STINT)";
-        stintAlertText.style.color = "#ef4444";
-        stintRemainText.textContent = `${remainMinutes}m REM`;
+        stintRemainText.className = "dp-stint-remain alert-red";
+        stintRemainText.textContent = `BOX NOW! (${remainMinutes}m)`;
       } else if (remainMinutes <= 20) {
         stintBarFill.className = "stint-bar-fill warn-amber";
-        stintAlertText.textContent = "⚠️ PIT WINDOW OPEN";
-        stintAlertText.style.color = "#facc15";
-        stintRemainText.textContent = `${remainMinutes}m REM`;
+        stintRemainText.className = "dp-stint-remain warn-amber";
+        stintRemainText.textContent = `PIT (${remainMinutes}m)`;
       } else {
         stintBarFill.className = "stint-bar-fill";
-        stintAlertText.textContent = "NORMAL STINT";
-        stintAlertText.style.color = "#cbd5e1";
+        stintRemainText.className = "dp-stint-remain";
         const hRem = Math.floor(remainMinutes / 60);
         const mRem = remainMinutes % 60;
-        stintRemainText.textContent = `${hRem}h ${mRem}m REM`;
+        stintRemainText.textContent = hRem > 0 ? `${hRem}h ${mRem}m` : `${mRem}m REM`;
       }
 
       // 4. Lap Counts
@@ -918,15 +855,17 @@
       const now = Date.now();
       const age = lastFreshDataWallTime ? (now - lastFreshDataWallTime) : Infinity;
 
-      if (age < 4000) {
-        gpsStatusPill.textContent = "DB GPS LOCK";
-        gpsStatusPill.style.color = "#4ade80";
-      } else if (age < 8000) {
-        gpsStatusPill.textContent = "DB DELAY";
-        gpsStatusPill.style.color = "#facc15";
-      } else {
-        gpsStatusPill.textContent = "WAITING FOR DB";
-        gpsStatusPill.style.color = "#f87171";
+      if (gpsStatusPill) {
+        gpsStatusPill.className = "db-lock-dot";
+        if (age < 4000) {
+          gpsStatusPill.title = "DB GPS Locked";
+        } else if (age < 8000) {
+          gpsStatusPill.classList.add("delay");
+          gpsStatusPill.title = "DB Delay";
+        } else {
+          gpsStatusPill.classList.add("offline");
+          gpsStatusPill.title = "Waiting for DB";
+        }
       }
     }
 
@@ -983,7 +922,7 @@
     });
 
     cfgEventTitle.addEventListener("input", (e) => {
-      watermarkEventTitle.textContent = e.target.value.toUpperCase();
+      if (watermarkEventTitle) watermarkEventTitle.textContent = e.target.value.toUpperCase();
     });
 
     cfgDriverLaps.addEventListener("input", (e) => {
@@ -1035,8 +974,10 @@
       cfgCarNumber.value = carNumberBadge.textContent;
     }
     if (urlParams.get("event")) {
-      watermarkEventTitle.textContent = urlParams.get("event").toUpperCase();
-      cfgEventTitle.value = watermarkEventTitle.textContent;
+      if (watermarkEventTitle) {
+        watermarkEventTitle.textContent = urlParams.get("event").toUpperCase();
+        cfgEventTitle.value = watermarkEventTitle.textContent;
+      }
     }
     if (urlParams.get("driverLaps")) {
       driverLaps = parseInt(urlParams.get("driverLaps")) || driverLaps;
@@ -1066,7 +1007,7 @@
       }
 
       scaleWrapper.style.transform = "none";
-      const natW = combinedPillCard.offsetWidth || 690;
+      const natW = combinedPillCard.offsetWidth || 485;
       const natH = combinedPillCard.offsetHeight || 62;
 
       const availW = window.innerWidth || natW;
